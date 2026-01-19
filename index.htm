@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Bubble Shot: Hi-MAT</title>
+    <title>Bubble Shot</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #050510;
+            background-color: #111;
             color: white;
-            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            font-family: 'Helvetica Neue', 'Arial', sans-serif;
             touch-action: none;
             user-select: none;
             -webkit-user-select: none;
@@ -20,7 +20,8 @@
             width: 100vw;
             height: 100dvh;
             overflow: hidden;
-            /* 背景にグリッド線を入れてOSっぽさを出す */
+            background-color: #050510;
+            /* 背景グリッド演出 */
             background-image: 
                 linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
@@ -51,14 +52,14 @@
             flex-direction: column;
             align-items: center;
             justify-content: flex-start;
-            background: linear-gradient(to bottom, rgba(0,20,30,0.9), rgba(0,0,0,0));
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0));
             z-index: 10;
             padding-top: 10px;
             box-sizing: border-box;
             position: relative;
         }
 
-        /* 丸ボタン共通 */
+        /* 共通ボタン（丸形） */
         .circle-btn {
             position: absolute;
             top: 15px;
@@ -73,59 +74,60 @@
             z-index: 20;
             font-weight: bold;
             font-size: 20px;
-            transition: all 0.1s;
+            transition: transform 0.1s;
             backdrop-filter: blur(4px);
         }
         .circle-btn:active { transform: scale(0.9); }
 
+        /* ヒントボタン (左上) */
         #hint-btn {
             left: 15px;
             background: rgba(0, 255, 255, 0.1);
             border: 2px solid #00FFFF;
             color: #00FFFF;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
         }
 
+        /* シャッフルボタン (右上) */
         #shuffle-btn {
             right: 15px;
             background: rgba(46, 204, 64, 0.1);
             border: 2px solid #2ECC40;
             color: #2ECC40;
-            box-shadow: 0 0 15px rgba(46, 204, 64, 0.3);
+            box-shadow: 0 0 10px rgba(46, 204, 64, 0.2);
             font-size: 24px;
         }
 
+        /* ヒント表示 */
         #hint-overlay {
             position: absolute;
             top: 70px;
             left: 15px;
-            background: rgba(0, 10, 20, 0.9);
+            background: rgba(0, 0, 0, 0.9);
             border: 1px solid #00FFFF;
             padding: 8px 12px;
-            border-radius: 4px;
+            border-radius: 8px;
             color: #FFDC00;
             font-size: 14px;
             font-weight: bold;
-            font-family: monospace;
             pointer-events: none;
             z-index: 20;
             white-space: nowrap;
             display: none;
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
         }
         #hint-overlay.show { display: block; }
 
         /* タイムバー */
         #time-bar-wrapper {
             width: 60%;
-            height: 6px;
-            background: #111;
+            height: 8px;
+            background: #222;
+            border-radius: 4px;
             margin-bottom: 8px;
             border: 1px solid #555;
             position: relative;
             overflow: hidden;
-            /* 斜めカットのデザイン */
-            clip-path: polygon(0 0, 100% 0, 98% 100%, 2% 100%);
         }
         #time-bar {
             width: 100%;
@@ -147,22 +149,23 @@
             letter-spacing: -2px;
         }
         #status-bar {
-            color: #888;
+            color: #aaa;
             font-family: monospace;
-            font-size: 14px;
+            font-size: 16px;
             display: flex;
             gap: 20px;
             font-weight: bold;
             margin-top: 5px;
-            text-shadow: 0 0 2px #fff;
+            text-shadow: 0 0 2px #000;
         }
 
         /* フィーバーゲージ */
-        #fever-label { font-size: 10px; color: #666; margin-top: 8px; letter-spacing: 2px;}
+        #fever-label { font-size: 10px; color: #888; margin-top: 5px; letter-spacing: 2px;}
         #fever-gauge-container {
             width: 200px;
             height: 4px;
-            background: #222;
+            background: #333;
+            border-radius: 2px;
             overflow: hidden;
             margin-top: 2px;
         }
@@ -190,7 +193,7 @@
             color: #00FFFF;
             font-size: 12px;
             margin-bottom: 5px;
-            min-height: 18px;
+            min-height: 20px;
             text-shadow: 0 0 5px #00FFFF;
             letter-spacing: 1px;
         }
@@ -260,7 +263,7 @@
             box-shadow: 0 0 5px rgba(0, 255, 255, 0.2);
         }
 
-        /* オーバーレイ */
+        /* --- 画面オーバーレイ --- */
         #menu-screen, #gameover-screen {
             position: absolute;
             top: 0;
@@ -312,10 +315,11 @@
             box-shadow: 0 0 30px #FFDC00;
         }
         
-        /* リザルト画面 */
+        /* リザルト用 */
         #result-title { color: #FF4136; text-shadow: 0 0 20px #FF4136; margin-bottom: 5px; }
         #result-final { color: #fff; font-size: 48px; font-weight: bold; margin: 0; text-shadow: 0 0 10px white;}
         
+        /* スコア詳細 */
         #score-breakdown {
             background: rgba(255,255,255,0.05);
             padding: 15px;
@@ -334,6 +338,7 @@
         }
         .penalty-text { color: #FF4136; }
 
+        /* ランク一覧スタイル */
         #rank-list-container {
             width: 100%;
             max-width: 350px;
@@ -375,6 +380,7 @@
         <div id="top-area">
             <div id="hint-btn" class="circle-btn" onclick="game.toggleHint()">?</div>
             <div id="hint-overlay">Hint...</div>
+
             <div id="shuffle-btn" class="circle-btn" onclick="game.shuffle()">↻</div>
 
             <div id="time-bar-wrapper">
@@ -385,7 +391,7 @@
             <div id="target-display">??</div>
             <div id="status-bar">
                 <span id="score-display">SCORE: 0</span>
-                <span id="timer-display">TIME: 120</span>
+                <span id="timer-display">TIME: 90</span>
             </div>
             
             <div id="fever-label">SYNC RATIO</div>
@@ -436,7 +442,8 @@
             </div>
         </div>
         
-        <div id="rank-list-container"></div>
+        <div id="rank-list-container">
+            </div>
 
         <button class="btn" onclick="location.reload()">RE-ENGAGE</button>
     </div>
@@ -478,12 +485,15 @@ class Game {
         this.state = 'menu';
         this.score = 0;
         this.hintCount = 0;
-        this.maxTime = 120;
+        
+        // ★時間設定: 90秒
+        this.maxTime = 90; 
+        
         this.timeLeft = this.maxTime;
         this.targetNum = 0;
         
         this.entities = [];
-        this.formulaStack = []; // { entity, time }
+        this.formulaStack = [];
         this.clearCount = 0;
 
         this.feverTimer = 0;
@@ -497,7 +507,6 @@ class Game {
         this.centerY = 0;
         this.lastTime = 0;
         
-        // 演出用
         this.scanAngle = 0;
 
         this.canvas.addEventListener('pointerdown', (e) => this.handleClick(e));
@@ -589,14 +598,13 @@ class Game {
         
         if (!safe) return;
 
-        // 登場アニメーション用パラメータ
         const ent = { 
             type: isFever ? 'num' : (Math.random() < 0.5 ? 'num' : 'op'),
             val: 0,
             x: x, y: y, r: r, 
             selected: false, 
             isFever: !!isFever,
-            scale: 0 // 登場時に拡大する
+            scale: 0
         };
 
         if (ent.type === 'num') {
@@ -626,7 +634,7 @@ class Game {
         for(let i=0; i<20; i++) {
             this.spawnEntity(true);
         }
-        this.addEffect({type: 'text', text: 'FULL BURST MODE!', color: '#FF4136', size: 30});
+        this.addEffect({type: 'text', text: 'FEVER START!!', color: '#FF4136', size: 30});
         this.updateTimeBar();
     }
 
@@ -664,15 +672,17 @@ class Game {
         }
     }
 
+    // --- シャッフル (無料) ---
     shuffle() {
         if (this.state !== 'playing') return;
         
+        // 全消去＆補充
         this.entities = [];
         this.clearFormula();
         const count = (this.width < 400) ? 14 : 20;
         this.replenishEntities(count);
         
-        this.addEffect({text: "RELOADING...", color: "#2ECC40", size: 24});
+        this.addEffect({text: "SHUFFLE!", color: "#2ECC40", size: 24});
     }
 
     toggleHint() {
@@ -685,6 +695,7 @@ class Game {
         document.getElementById('hint-overlay').classList.remove('show');
     }
 
+    // ヒント (厳密チェック版)
     showHint() {
         if (this.state !== 'playing') return;
 
@@ -714,6 +725,7 @@ class Game {
             return count1 >= 1 && count2 >= 1;
         };
 
+        // 2手
         for (let i = 0; i < nums.length; i++) {
             for (let j = 0; j < nums.length; j++) {
                 if (i === j) continue;
@@ -732,6 +744,7 @@ class Game {
             if (found) break;
         }
 
+        // 3手
         if (!found) {
             for (let i = 0; i < nums.length; i++) {
                 for (let j = 0; j < nums.length; j++) {
@@ -843,10 +856,8 @@ class Game {
 
         ent.selected = true;
         ent.order = this.formulaStack.length + 1;
-        // タイムスタンプを追加して履歴保存
         this.formulaStack.push({ entity: ent, time: Date.now() });
         
-        // エフェクト（小）
         this.addEffect({text: 'LOCK', x: ent.x, y: ent.y - 30, color: '#00FFFF', life: 10, size: 12});
         
         this.updateFormulaBar();
@@ -974,7 +985,7 @@ class Game {
 
         } else {
             this.addEffect({text: `MISS (${Math.round(result)})`, color: '#888', size: 30});
-            // MISS時はバブル維持でリセットのみ
+            // MISS時はバブル維持 (Ver 1.7仕様)
             this.entities.forEach(e => { e.selected = false; e.order = null; });
         }
 
@@ -991,10 +1002,8 @@ class Game {
     }
 
     update(dt) {
-        // レーダー走査線の回転
         this.scanAngle += dt * 2;
 
-        // 登場アニメーション
         this.entities.forEach(ent => {
             if (ent.scale < 1) ent.scale += dt * 5;
             if (ent.scale > 1) ent.scale = 1;
@@ -1031,7 +1040,7 @@ class Game {
 
         document.getElementById('result-final').innerText = finalScore;
         document.getElementById('result-base-score').innerText = this.score;
-        document.getElementById('result-hint-penalty').innerText = `-${hPenalty}`;
+        document.getElementById('result-hint-penalty').innerText = `-${hPenalty} (${this.hintCount} uses)`;
         
         const container = document.getElementById('rank-list-container');
         container.innerHTML = ''; 
@@ -1041,6 +1050,7 @@ class Game {
         RANKS.forEach(rank => {
             const div = document.createElement('div');
             div.className = 'rank-item';
+            
             let isMyRank = false;
             if (!playerRankFound && finalScore >= rank.min) {
                 isMyRank = true;
@@ -1056,15 +1066,12 @@ class Game {
         });
     }
 
-    // --- 描画周り ---
     draw() {
         this.ctx.fillStyle = '#050510';
         this.ctx.fillRect(0, 0, this.width, this.height);
 
-        // 背景グリッド描画
         this.drawGrid();
 
-        // レーダー
         const isFever = (this.state === 'fever');
         const radarColor = isFever ? 'rgba(255, 65, 54, 0.3)' : 'rgba(0, 255, 255, 0.2)';
         
@@ -1074,7 +1081,6 @@ class Game {
         this.ctx.arc(this.centerX, this.centerY, this.radarRadius, 0, Math.PI*2);
         this.ctx.stroke();
         
-        // 走査線 (Hi-MAT演出)
         this.ctx.save();
         this.ctx.translate(this.centerX, this.centerY);
         this.ctx.rotate(this.scanAngle);
@@ -1088,33 +1094,25 @@ class Game {
         this.ctx.fill();
         this.ctx.restore();
 
-        // 軌跡 (1秒で消える演出)
         if (this.formulaStack.length > 0) {
             const now = Date.now();
-            
             for (let i = 0; i < this.formulaStack.length - 1; i++) {
                 const curr = this.formulaStack[i];
                 const next = this.formulaStack[i+1];
-                
-                // 次の要素が選択された時間からの経過時間
                 const age = now - next.time; 
                 
-                if (age < 1000) { // 1秒以内なら描画
+                if (age < 1000) { 
                     const alpha = 1 - (age / 1000);
-                    
                     this.ctx.strokeStyle = `rgba(0, 255, 255, ${alpha})`;
                     this.ctx.lineWidth = 3;
                     this.ctx.shadowBlur = 10;
                     this.ctx.shadowColor = '#00FFFF';
-                    
                     this.ctx.beginPath();
                     this.ctx.moveTo(curr.entity.x, curr.entity.y);
                     this.ctx.lineTo(next.entity.x, next.entity.y);
                     this.ctx.stroke();
-                    
                     this.ctx.shadowBlur = 0;
                 } else {
-                    // うっすら残す（データリンク）
                     this.ctx.strokeStyle = `rgba(0, 255, 255, 0.1)`;
                     this.ctx.lineWidth = 1;
                     this.ctx.beginPath();
@@ -1125,11 +1123,9 @@ class Game {
             }
         }
 
-        // エンティティ
         this.entities.forEach(ent => {
             const size = ent.r * ent.scale;
             
-            // 本体
             if (ent.isFever) {
                 this.ctx.fillStyle = '#FF4136';
             } else if (ent.type === 'num') {
@@ -1142,17 +1138,13 @@ class Game {
             this.ctx.arc(ent.x, ent.y, size, 0, Math.PI*2);
             this.ctx.fill();
             
-            // ツヤ
             this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
             this.ctx.beginPath();
             this.ctx.ellipse(ent.x - size * 0.3, ent.y - size * 0.3, size * 0.2, size * 0.1, Math.PI / 4, 0, Math.PI * 2);
             this.ctx.fill();
 
-            // ロックオン照準 (カッコいい枠)
             if (ent.selected) {
                 this.drawLockSight(ent.x, ent.y, size + 5);
-                
-                // 番号バッジ
                 if (ent.order) {
                     this.ctx.fillStyle = '#FF4136';
                     this.ctx.beginPath();
@@ -1172,7 +1164,6 @@ class Game {
                 this.ctx.stroke();
             }
 
-            // 文字
             this.ctx.fillStyle = '#000';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
@@ -1181,7 +1172,6 @@ class Game {
             this.ctx.fillText(label, ent.x, ent.y);
         });
 
-        // エフェクト
         this.effects.forEach(eff => {
             this.ctx.fillStyle = eff.color;
             this.ctx.font = `bold ${eff.size || 20}px Arial`;
@@ -1191,40 +1181,30 @@ class Game {
     }
 
     drawGrid() {
-        this.ctx.strokeStyle = 'rgba(0, 255, 255, 0.05)';
-        this.ctx.lineWidth = 1;
-        const step = 40;
-        // 簡易グリッド
-        /* CSSで背景画像として処理しているのでCanvas描画は省略可だが、動かすならここで */
+        // CSS background handles grid
     }
 
-    // ロックオン照準描画 (ガンダム風)
     drawLockSight(x, y, r) {
         this.ctx.strokeStyle = '#00FFFF';
         this.ctx.lineWidth = 2;
         this.ctx.shadowBlur = 5;
         this.ctx.shadowColor = '#00FFFF';
         
-        // 4隅のカッコを描く
-        const gap = Math.PI / 4; // 隙間
+        const gap = Math.PI / 4; 
         
         this.ctx.beginPath();
-        // 左上
         this.ctx.arc(x, y, r, Math.PI + gap, 1.5 * Math.PI - gap);
         this.ctx.stroke();
         
         this.ctx.beginPath();
-        // 右上
         this.ctx.arc(x, y, r, 1.5 * Math.PI + gap, 2 * Math.PI - gap);
         this.ctx.stroke();
         
         this.ctx.beginPath();
-        // 右下
         this.ctx.arc(x, y, r, 0 + gap, 0.5 * Math.PI - gap);
         this.ctx.stroke();
         
         this.ctx.beginPath();
-        // 左下
         this.ctx.arc(x, y, r, 0.5 * Math.PI + gap, Math.PI - gap);
         this.ctx.stroke();
 
