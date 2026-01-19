@@ -621,42 +621,91 @@ class Game {
         document.getElementById('hint-overlay').classList.remove('show');
     }
 
+    // --- 修正版：賢いヒント機能（3手読み） ---
     showHint() {
         if (this.state !== 'playing') return;
 
-        // スマートヒント: 画面上の数字から2手で解ける組み合わせを探す
-        // 単純に [Num] [Op] [Num] = Target になるものを探す
         const nums = this.entities.filter(e => e.type === 'num');
-        const ops = this.entities.filter(e => e.type === 'op');
+        // 演算子は固定で全種類試す
+        const operations = ['add', 'sub', 'mul', 'div'];
         
-        let hintText = "Try combining numbers!";
-        
-        // 総当たりで探す
+        let hintText = "Calculated...";
         let found = false;
-        for (let n1 of nums) {
-            for (let n2 of nums) {
-                if (n1 === n2) continue; // 同じバブルは使えない
-                if (n1.val + n2.val === this.targetNum) {
-                    hintText = `Try: ${n1.val} + ${n2.val}`; found = true; break;
+
+        // ヘルパー: 計算実行
+        const calc = (val1, op, val2) => {
+            if (op === 'add') return val1 + val2;
+            if (op === 'sub') return val1 - val2;
+            if (op === 'mul') return val1 * val2;
+            if (op === 'div') return (val2 !== 0) ? Math.floor(val1 / val2) : -9999;
+            return 0;
+        };
+
+        const getOpSymbol = (op) => OPS[op].op;
+
+        // 1. まず2個の組み合わせを探す (A ? B)
+        for (let i = 0; i < nums.length; i++) {
+            for (let j = 0; j < nums.length; j++) {
+                if (i === j) continue;
+                const n1 = nums[i].val;
+                const n2 = nums[j].val;
+
+                for (let op of operations) {
+                    if (calc(n1, op, n2) === this.targetNum) {
+                        hintText = `Try: ${n1} ${getOpSymbol(op)} ${n2}`;
+                        found = true; 
+                        break;
+                    }
                 }
-                if (n1.val - n2.val === this.targetNum) {
-                    hintText = `Try: ${n1.val} - ${n2.val}`; found = true; break;
-                }
-                if (n1.val * n2.val === this.targetNum) {
-                    hintText = `Try: ${n1.val} × ${n2.val}`; found = true; break;
-                }
-                if (n2.val !== 0 && Math.floor(n1.val / n2.val) === this.targetNum) {
-                    hintText = `Try: ${n1.val} ÷ ${n2.val}`; found = true; break;
-                }
+                if (found) break;
             }
             if (found) break;
         }
 
+        // 2. 見つからなければ3個の組み合わせを探す ((A ? B) ? C)
+        // ※計算量が増えるので、2個で見つかったらここはスキップ
         if (!found) {
-            // 見つからない場合は汎用ヒント
-            hintText = "Use more bubbles!";
+            for (let i = 0; i < nums.length; i++) {
+                for (let j = 0; j < nums.length; j++) {
+                    if (i === j) continue;
+                    for (let k = 0; k < nums.length; k++) {
+                        if (k === i || k === j) continue;
+
+                        const n1 = nums[i].val;
+                        const n2 = nums[j].val;
+                        const n3 = nums[k].val;
+
+                        // ((n1 op1 n2) op2 n3)
+                        for (let op1 of operations) {
+                            const res1 = calc(n1, op1, n2);
+                            for (let op2 of operations) {
+                                const finalRes = calc(res1, op2, n3);
+                                if (finalRes === this.targetNum) {
+                                    hintText = `Try: ${n1} ${getOpSymbol(op1)} ${n2} ${getOpSymbol(op2)} ${n3}`;
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (found) break;
+                        }
+                        if (found) break;
+                    }
+                    if (found) break;
+                }
+                if (found) break;
+            }
         }
 
+        if (!found) {
+            // それでもダメなら諦めて、適当に消して入れ替えを促す
+            hintText = "No match... Try clearing some!";
+        }
+
+        const overlay = document.getElementById('hint-overlay');
+        overlay.innerText = hintText;
+        overlay.classList.add('show');
+        this.hintVisible = true;
+    }
         const overlay = document.getElementById('hint-overlay');
         overlay.innerText = hintText;
         overlay.classList.add('show');
@@ -1033,3 +1082,4 @@ window.onload = () => {
 </script>
 </body>
 </html>
+
