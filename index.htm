@@ -99,9 +99,9 @@
         /* タイムバー */
         #time-bar-wrapper {
             width: 90%;
-            height: 8px;
+            height: 10px; /* 少し太くしました */
             background: #333;
-            border-radius: 4px;
+            border-radius: 5px;
             margin-bottom: 8px;
             border: 1px solid #555;
             position: relative;
@@ -111,7 +111,7 @@
             width: 100%;
             height: 100%;
             background: #0074D9;
-            transition: width 0.2s linear, background 0.5s;
+            transition: width 0.1s linear, background 0.3s;
         }
         
         #target-label { font-size: 12px; color: #00FFFF; letter-spacing: 3px; margin-top: 5px;}
@@ -448,6 +448,7 @@ class Game {
         this.clearCount = 0;
 
         this.feverTimer = 0;
+        this.feverMaxTime = 10; // フィーバーの最大時間
         this.feverType = null;
         this.hintVisible = false;
 
@@ -563,7 +564,7 @@ class Game {
 
     startFever() {
         this.state = 'fever';
-        this.feverTimer = 10;
+        this.feverTimer = this.feverMaxTime;
         document.body.classList.add('fever-mode');
         this.entities = [];
         this.formulaStack = [];
@@ -580,6 +581,7 @@ class Game {
             this.spawnEntity(true);
         }
         this.addEffect({type: 'text', text: 'FEVER START!!', color: '#FF4136', size: 40});
+        this.updateTimeBar(); // 即座に赤くする
     }
 
     endFever() {
@@ -592,6 +594,7 @@ class Game {
         this.replenishEntities(count);
         this.generateTarget();
         this.clearFormula();
+        this.updateTimeBar(); // 通常色に戻す
     }
 
     updateGauge() {
@@ -599,16 +602,26 @@ class Game {
         document.getElementById('fever-gauge').style.width = `${pct}%`;
     }
     
+    // 【修正】タイムバーの更新処理（フィーバー対応）
     updateTimeBar() {
-        const pct = Math.max(0, (this.timeLeft / this.maxTime) * 100);
         const bar = document.getElementById('time-bar');
-        bar.style.width = `${pct}%`;
-        if (pct < 20) bar.style.backgroundColor = '#FF4136'; 
-        else if (pct < 50) bar.style.backgroundColor = '#FFDC00'; 
-        else bar.style.backgroundColor = '#0074D9'; 
+        
+        if (this.state === 'fever') {
+            // フィーバー時：残りフィーバー時間 / 10秒
+            const pct = Math.max(0, (this.feverTimer / this.feverMaxTime) * 100);
+            bar.style.width = `${pct}%`;
+            bar.style.backgroundColor = '#FF4136'; // 赤
+        } else {
+            // 通常時
+            const pct = Math.max(0, (this.timeLeft / this.maxTime) * 100);
+            bar.style.width = `${pct}%`;
+            if (pct < 20) bar.style.backgroundColor = '#FF4136'; 
+            else if (pct < 50) bar.style.backgroundColor = '#FFDC00'; 
+            else bar.style.backgroundColor = '#0074D9'; // 青
+        }
     }
 
-    // --- ヒント機能（賢い3手読み） ---
+    // --- ヒント機能 ---
     toggleHint() {
         if (this.hintVisible) {
             this.hideHint();
@@ -631,7 +644,6 @@ class Game {
         let hintText = "Calculated...";
         let found = false;
 
-        // 計算ヘルパー (切り捨て対応)
         const calc = (val1, op, val2) => {
             if (op === 'add') return val1 + val2;
             if (op === 'sub') return val1 - val2;
@@ -642,7 +654,7 @@ class Game {
 
         const getOpSymbol = (op) => OPS[op].op;
 
-        // 1. まず2個の組み合わせを探す (A ? B)
+        // 2手読み
         for (let i = 0; i < nums.length; i++) {
             for (let j = 0; j < nums.length; j++) {
                 if (i === j) continue;
@@ -661,7 +673,7 @@ class Game {
             if (found) break;
         }
 
-        // 2. 見つからなければ3個の組み合わせを探す ((A ? B) ? C)
+        // 3手読み
         if (!found) {
             for (let i = 0; i < nums.length; i++) {
                 for (let j = 0; j < nums.length; j++) {
@@ -673,7 +685,6 @@ class Game {
                         const n2 = nums[j].val;
                         const n3 = nums[k].val;
 
-                        // ((n1 op1 n2) op2 n3)
                         for (let op1 of operations) {
                             const res1 = calc(n1, op1, n2);
                             for (let op2 of operations) {
@@ -758,7 +769,7 @@ class Game {
             this.score += 500;
             this.addEffect({text: '+500', x: ent.x, y: ent.y, color: '#FFDC00'});
             this.entities.splice(index, 1);
-            // フィーバー中は補充しない
+            // 補充なし
         } else {
             this.addEffect({text: 'MISS', x: ent.x, y: ent.y, color: '#888'});
         }
@@ -928,7 +939,9 @@ class Game {
             if (this.timeLeft <= 0) this.gameOver();
         } else if (this.state === 'fever') {
             this.feverTimer -= dt;
+            // 修正: フィーバー中もカウントダウン
             document.getElementById('timer-display').innerText = `FEVER: ${Math.ceil(this.feverTimer)}`;
+            this.updateTimeBar(); // バーも更新
             if (this.feverTimer <= 0) {
                 this.endFever();
             }
