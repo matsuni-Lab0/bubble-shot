@@ -86,7 +86,7 @@
         #shuffle-btn {
             right: 15px;
             background: rgba(46, 204, 64, 0.1);
-            border: 2px solid #2ECC40; /* 緑 */
+            border: 2px solid #2ECC40;
             color: #2ECC40;
             box-shadow: 0 0 10px rgba(46, 204, 64, 0.2);
             font-size: 24px;
@@ -114,7 +114,7 @@
 
         /* タイムバー */
         #time-bar-wrapper {
-            width: 70%; /* ボタンと被らないように少し短く */
+            width: 70%;
             height: 10px;
             background: #333;
             border-radius: 5px;
@@ -440,7 +440,7 @@
         <h1>BUBBLE SHOT</h1>
         <p style="color:#ccc; font-size:14px; line-height:1.6;">
             数字と記号のバブルをロックして<br>お題の数字を作り出せ！<br>
-            <span style="color:#FF4136; font-size:12px;">(単発10点 / コンボ高得点 / ヒントのみ減点)</span>
+            <span style="color:#FF4136; font-size:12px;">(単発10点 / コンボ高得点 / ヒント-500点)</span>
         </p>
         <button class="btn" onclick="game.start()">GAME START</button>
     </div>
@@ -696,7 +696,7 @@ class Game {
         this.addEffect({text: "SHUFFLE!", color: "#2ECC40", size: 30});
     }
 
-    // --- ヒント機能 ---
+    // --- ヒント機能 (修正版:在庫チェック付き) ---
     toggleHint() {
         if (this.hintVisible) {
             this.hideHint();
@@ -730,6 +730,16 @@ class Game {
         };
         const getOpSymbol = (op) => OPS[op].op;
 
+        // 演算子の在庫チェック関数
+        const checkOp = (op1, op2) => {
+            const opEnts = this.entities.filter(e => e.type === 'op');
+            const count1 = opEnts.filter(e => e.val === op1).length;
+            if (!op2) return count1 >= 1;
+            if (op1 === op2) return count1 >= 2;
+            const count2 = opEnts.filter(e => e.val === op2).length;
+            return count1 >= 1 && count2 >= 1;
+        };
+
         // 2手
         for (let i = 0; i < nums.length; i++) {
             for (let j = 0; j < nums.length; j++) {
@@ -738,8 +748,10 @@ class Game {
                 const n2 = nums[j].val;
                 for (let op of operations) {
                     if (calc(n1, op, n2) === this.targetNum) {
-                        hintText = `Try: ${n1} ${getOpSymbol(op)} ${n2}`;
-                        found = true; break;
+                        if (checkOp(op)) { // 在庫チェック
+                            hintText = `Try: ${n1} ${getOpSymbol(op)} ${n2}`;
+                            found = true; break;
+                        }
                     }
                 }
                 if (found) break;
@@ -762,8 +774,10 @@ class Game {
                             for (let op2 of operations) {
                                 const finalRes = calc(res1, op2, n3);
                                 if (finalRes === this.targetNum) {
-                                    hintText = `Try: ${n1} ${getOpSymbol(op1)} ${n2} ${getOpSymbol(op2)} ${n3}`;
-                                    found = true; break;
+                                    if (checkOp(op1, op2)) { // 在庫チェック
+                                        hintText = `Try: ${n1} ${getOpSymbol(op1)} ${n2} ${getOpSymbol(op2)} ${n3}`;
+                                        found = true; break;
+                                    }
                                 }
                             }
                             if (found) break;
@@ -1028,7 +1042,7 @@ class Game {
         this.state = 'gameover';
         document.getElementById('gameover-screen').classList.remove('hidden');
         
-        // 最終スコア計算
+        // 最終スコア計算 (ヒントのみ減点)
         const hPenalty = this.hintCount * 500;
         let finalScore = this.score - hPenalty;
         if (finalScore < 0) finalScore = 0;
