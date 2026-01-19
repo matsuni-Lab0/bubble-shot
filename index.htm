@@ -440,7 +440,7 @@
         <h1>BUBBLE SHOT</h1>
         <p style="color:#ccc; font-size:14px; line-height:1.6;">
             数字と記号のバブルをロックして<br>お題の数字を作り出せ！<br>
-            <span style="color:#FF4136; font-size:12px;">(ヒント -500点 / シャッフル -1000点)</span>
+            <span style="color:#FF4136; font-size:12px;">(単発10点 / コンボ高得点 / ヒントのみ減点)</span>
         </p>
         <button class="btn" onclick="game.start()">GAME START</button>
     </div>
@@ -458,10 +458,6 @@
             <div class="breakdown-row penalty-text">
                 <span>Hint Penalty:</span>
                 <span id="result-hint-penalty">0</span>
-            </div>
-            <div class="breakdown-row penalty-text">
-                <span>Shuffle Penalty:</span>
-                <span id="result-shuffle-penalty">0</span>
             </div>
         </div>
         
@@ -508,7 +504,6 @@ class Game {
         this.state = 'menu';
         this.score = 0;
         this.hintCount = 0;
-        this.shuffleCount = 0; // 追加
         this.maxTime = 120;
         this.timeLeft = this.maxTime;
         this.targetNum = 0;
@@ -558,7 +553,6 @@ class Game {
         this.state = 'playing';
         this.score = 0;
         this.hintCount = 0;
-        this.shuffleCount = 0;
         this.timeLeft = this.maxTime;
         this.clearCount = 0;
         this.updateGauge();
@@ -689,13 +683,9 @@ class Game {
         }
     }
 
-    // --- シャッフル機能 ---
+    // --- シャッフル機能 (減点なし) ---
     shuffle() {
         if (this.state !== 'playing') return;
-        
-        this.shuffleCount++;
-        // ペナルティ表示
-        this.addEffect({text: "-1000 pts", x: this.width - 60, y: 60, color: "#FF4136", size: 18});
         
         // 全消去＆補充
         this.entities = [];
@@ -1033,20 +1023,19 @@ class Game {
         }
     }
     
+    // --- ゲームオーバー・ランク表示 ---
     gameOver() {
         this.state = 'gameover';
         document.getElementById('gameover-screen').classList.remove('hidden');
         
         // 最終スコア計算
         const hPenalty = this.hintCount * 500;
-        const sPenalty = this.shuffleCount * 1000;
-        let finalScore = this.score - hPenalty - sPenalty;
+        let finalScore = this.score - hPenalty;
         if (finalScore < 0) finalScore = 0;
 
         document.getElementById('result-final').innerText = finalScore;
         document.getElementById('result-base-score').innerText = this.score;
         document.getElementById('result-hint-penalty').innerText = `-${hPenalty} (${this.hintCount}回)`;
-        document.getElementById('result-shuffle-penalty').innerText = `-${sPenalty} (${this.shuffleCount}回)`;
         
         const container = document.getElementById('rank-list-container');
         container.innerHTML = ''; 
