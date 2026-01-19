@@ -54,39 +54,55 @@
             position: relative;
         }
 
-        /* ヒントボタン & オーバーレイ */
-        #hint-btn {
+        /* 共通ボタン（丸形） */
+        .circle-btn {
             position: absolute;
             top: 15px;
-            left: 15px;
-            width: 40px;
-            height: 40px;
+            width: 45px;
+            height: 45px;
             border-radius: 50%;
-            background: rgba(0, 255, 255, 0.1);
-            border: 2px solid #00FFFF;
-            color: #00FFFF;
-            font-weight: bold;
-            font-size: 20px;
             display: flex;
             justify-content: center;
             align-items: center;
             pointer-events: auto;
             cursor: pointer;
             z-index: 20;
+            font-weight: bold;
+            font-size: 20px;
+            transition: transform 0.1s;
+        }
+        .circle-btn:active { transform: scale(0.9); }
+
+        /* ヒントボタン (左上) */
+        #hint-btn {
+            left: 15px;
+            background: rgba(0, 255, 255, 0.1);
+            border: 2px solid #00FFFF;
+            color: #00FFFF;
             box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
         }
-        #hint-btn:active { transform: scale(0.9); background: rgba(0, 255, 255, 0.3); }
 
+        /* シャッフルボタン (右上) */
+        #shuffle-btn {
+            right: 15px;
+            background: rgba(46, 204, 64, 0.1);
+            border: 2px solid #2ECC40; /* 緑 */
+            color: #2ECC40;
+            box-shadow: 0 0 10px rgba(46, 204, 64, 0.2);
+            font-size: 24px;
+        }
+
+        /* ヒント表示 */
         #hint-overlay {
             position: absolute;
-            top: 65px;
+            top: 70px;
             left: 15px;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.9);
             border: 1px solid #00FFFF;
-            padding: 10px 15px;
+            padding: 8px 12px;
             border-radius: 8px;
             color: #FFDC00;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
             pointer-events: none;
             z-index: 20;
@@ -98,7 +114,7 @@
 
         /* タイムバー */
         #time-bar-wrapper {
-            width: 90%;
+            width: 70%; /* ボタンと被らないように少し短く */
             height: 10px;
             background: #333;
             border-radius: 5px;
@@ -244,7 +260,7 @@
             color: #FFaaaa;
         }
 
-        /* --- 画面オーバーレイ (レイアウト修正) --- */
+        /* --- 画面オーバーレイ --- */
         #menu-screen, #gameover-screen {
             position: absolute;
             top: 0;
@@ -254,7 +270,7 @@
             background: rgba(5, 10, 20, 0.98);
             display: flex;
             flex-direction: column;
-            justify-content: flex-start; /* 上寄せに変更してスクロール領域確保 */
+            justify-content: flex-start;
             align-items: center;
             pointer-events: auto;
             z-index: 20;
@@ -263,9 +279,8 @@
             box-sizing: border-box;
             backdrop-filter: blur(10px);
             padding: 20px;
-            overflow-y: auto; /* 全体スクロール */
+            overflow-y: auto;
         }
-        /* メニュー画面は中央寄せのまま */
         #menu-screen {
             justify-content: center;
         }
@@ -301,18 +316,9 @@
             box-shadow: 0 0 30px rgba(255, 220, 0, 0.8);
         }
         
-        /* リザルト用スコア表示 */
-        #result-title {
-            color: #FF4136;
-            margin-bottom: 5px;
-        }
-        #result-final {
-            color: #fff;
-            font-size: 40px;
-            font-weight: bold;
-            margin: 0;
-            line-height: 1;
-        }
+        /* リザルト用 */
+        #result-title { color: #FF4136; margin-bottom: 5px; }
+        #result-final { color: #fff; font-size: 40px; font-weight: bold; margin: 0; line-height: 1; }
         
         /* スコア詳細 */
         #score-breakdown {
@@ -334,7 +340,7 @@
         }
         .penalty-text { color: #FF4136; }
 
-        /* ランク一覧スタイル (スクロールエリア) */
+        /* ランク一覧スタイル */
         #rank-list-container {
             width: 100%;
             max-width: 350px;
@@ -343,8 +349,8 @@
             border-radius: 10px;
             padding: 5px;
             margin-bottom: 10px;
-            flex-grow: 1; /* 残りスペースを使う */
-            overflow-y: auto; /* 内部スクロール */
+            flex-grow: 1;
+            overflow-y: auto;
             text-align: left;
             min-height: 150px;
         }
@@ -395,8 +401,10 @@
     
     <div id="ui-layer">
         <div id="top-area">
-            <div id="hint-btn" onclick="game.toggleHint()">?</div>
+            <div id="hint-btn" class="circle-btn" onclick="game.toggleHint()">?</div>
             <div id="hint-overlay">Hint...</div>
+
+            <div id="shuffle-btn" class="circle-btn" onclick="game.shuffle()">↻</div>
 
             <div id="time-bar-wrapper">
                 <div id="time-bar"></div>
@@ -432,7 +440,7 @@
         <h1>BUBBLE SHOT</h1>
         <p style="color:#ccc; font-size:14px; line-height:1.6;">
             数字と記号のバブルをロックして<br>お題の数字を作り出せ！<br>
-            <span style="color:#FF4136; font-size:12px;">(単発10点 / コンボ高得点 / ヒント-500点)</span>
+            <span style="color:#FF4136; font-size:12px;">(ヒント -500点 / シャッフル -1000点)</span>
         </p>
         <button class="btn" onclick="game.start()">GAME START</button>
     </div>
@@ -449,7 +457,11 @@
             </div>
             <div class="breakdown-row penalty-text">
                 <span>Hint Penalty:</span>
-                <span id="result-penalty">0</span>
+                <span id="result-hint-penalty">0</span>
+            </div>
+            <div class="breakdown-row penalty-text">
+                <span>Shuffle Penalty:</span>
+                <span id="result-shuffle-penalty">0</span>
             </div>
         </div>
         
@@ -475,7 +487,6 @@ const FEVER_TYPES = [
     { id: 'odd', label: '奇数を撃て！ (1, 3, 5...)' }
 ];
 
-// ランク定義 (スコアが高い順)
 const RANKS = [
     { min: 30000, name: "伝説のゴッドエビ" },
     { min: 20000, name: "オマール海老級" },
@@ -497,6 +508,7 @@ class Game {
         this.state = 'menu';
         this.score = 0;
         this.hintCount = 0;
+        this.shuffleCount = 0; // 追加
         this.maxTime = 120;
         this.timeLeft = this.maxTime;
         this.targetNum = 0;
@@ -546,6 +558,7 @@ class Game {
         this.state = 'playing';
         this.score = 0;
         this.hintCount = 0;
+        this.shuffleCount = 0;
         this.timeLeft = this.maxTime;
         this.clearCount = 0;
         this.updateGauge();
@@ -676,7 +689,24 @@ class Game {
         }
     }
 
-    // --- ヒント ---
+    // --- シャッフル機能 ---
+    shuffle() {
+        if (this.state !== 'playing') return;
+        
+        this.shuffleCount++;
+        // ペナルティ表示
+        this.addEffect({text: "-1000 pts", x: this.width - 60, y: 60, color: "#FF4136", size: 18});
+        
+        // 全消去＆補充
+        this.entities = [];
+        this.clearFormula();
+        const count = (this.width < 400) ? 14 : 20;
+        this.replenishEntities(count);
+        
+        this.addEffect({text: "SHUFFLE!", color: "#2ECC40", size: 30});
+    }
+
+    // --- ヒント機能 ---
     toggleHint() {
         if (this.hintVisible) {
             this.hideHint();
@@ -710,6 +740,7 @@ class Game {
         };
         const getOpSymbol = (op) => OPS[op].op;
 
+        // 2手
         for (let i = 0; i < nums.length; i++) {
             for (let j = 0; j < nums.length; j++) {
                 if (i === j) continue;
@@ -726,6 +757,7 @@ class Game {
             if (found) break;
         }
 
+        // 3手
         if (!found) {
             for (let i = 0; i < nums.length; i++) {
                 for (let j = 0; j < nums.length; j++) {
@@ -754,7 +786,7 @@ class Game {
             }
         }
 
-        if (!found) hintText = "No match... Try clearing some!";
+        if (!found) hintText = "No match... Try Shuffle!";
 
         const overlay = document.getElementById('hint-overlay');
         overlay.innerText = hintText;
@@ -963,6 +995,7 @@ class Game {
 
         } else {
             this.addEffect({text: `MISS (${Math.round(result)})`, color: '#888', size: 30});
+            // MISS時はバブル消さずにリセットするだけ（仕様変更）
             this.entities.forEach(e => { e.selected = false; e.order = null; });
         }
 
@@ -1000,19 +1033,20 @@ class Game {
         }
     }
     
-    // --- ゲームオーバー・ランク表示 ---
     gameOver() {
         this.state = 'gameover';
         document.getElementById('gameover-screen').classList.remove('hidden');
         
         // 最終スコア計算
-        const penalty = this.hintCount * 500;
-        let finalScore = this.score - penalty;
+        const hPenalty = this.hintCount * 500;
+        const sPenalty = this.shuffleCount * 1000;
+        let finalScore = this.score - hPenalty - sPenalty;
         if (finalScore < 0) finalScore = 0;
 
         document.getElementById('result-final').innerText = finalScore;
         document.getElementById('result-base-score').innerText = this.score;
-        document.getElementById('result-penalty').innerText = `-${penalty} (${this.hintCount}回)`;
+        document.getElementById('result-hint-penalty').innerText = `-${hPenalty} (${this.hintCount}回)`;
+        document.getElementById('result-shuffle-penalty').innerText = `-${sPenalty} (${this.shuffleCount}回)`;
         
         const container = document.getElementById('rank-list-container');
         container.innerHTML = ''; 
