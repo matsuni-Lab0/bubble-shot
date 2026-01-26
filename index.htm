@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="en"> <head>
+<html lang="ja">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Bubble Shot: Baker's Edition</title>
@@ -20,7 +21,6 @@
             height: 100dvh;
             overflow: hidden;
             background-color: #050510;
-            /* サイバーパンク×ベーカリーの融合 */
             background-image: 
                 linear-gradient(rgba(255, 165, 0, 0.05) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(255, 165, 0, 0.05) 1px, transparent 1px);
@@ -58,7 +58,6 @@
             position: relative;
         }
 
-        /* 共通ボタン（丸形） */
         .circle-btn {
             position: absolute;
             top: 15px;
@@ -78,7 +77,6 @@
         }
         .circle-btn:active { transform: scale(0.9); }
 
-        /* リセットボタン (左上 - 手動用) */
         #manual-shuffle-btn {
             left: 15px;
             background: rgba(255, 165, 0, 0.1);
@@ -88,18 +86,18 @@
             font-size: 18px;
         }
 
-        /* オートロックボタン (右下 - 課金アイテム想定) */
         #auto-lock-btn {
             position: absolute;
-            bottom: 100px; /* FIREボタンの上あたり */
+            bottom: 100px;
             right: 20px;
             width: 60px;
             height: 60px;
             border-radius: 50%;
-            background: rgba(255, 215, 0, 0.2); /* ゴールド */
+            background: rgba(255, 215, 0, 0.2);
             border: 2px solid #FFD700;
             color: #FFD700;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             font-size: 10px;
@@ -110,14 +108,16 @@
             pointer-events: auto;
             z-index: 30;
             animation: pulse 2s infinite;
+            line-height: 1.1;
         }
+        .ja-sub { font-size: 8px; font-weight: normal; opacity: 0.8; } /* 日本語サブテキスト */
+
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); }
             70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); }
             100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
         }
 
-        /* タイムバー */
         #time-bar-wrapper {
             width: 60%;
             height: 8px;
@@ -158,7 +158,6 @@
             text-shadow: 0 0 2px #000;
         }
 
-        /* フィーバーゲージ */
         #fever-label { font-size: 10px; color: #888; margin-top: 5px; letter-spacing: 2px;}
         #fever-gauge-container {
             width: 200px;
@@ -190,12 +189,15 @@
 
         #guide-msg {
             color: #00FFFF;
-            font-size: 12px;
+            font-size: 14px;
             margin-bottom: 5px;
-            min-height: 20px;
+            min-height: 35px; /* 2行分確保 */
             text-shadow: 0 0 5px #00FFFF;
             letter-spacing: 1px;
+            text-align: center;
+            line-height: 1.3;
         }
+        #guide-msg .sub { font-size: 10px; color: #aaa; display: block; margin-top: 2px;}
 
         #formula-bar {
             min-height: 30px;
@@ -229,7 +231,6 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            /* 六角形風クリップ */
             clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
             transition: all 0.2s;
             cursor: pointer;
@@ -313,10 +314,17 @@
             color: #000;
             box-shadow: 0 0 30px #FFDC00;
         }
-        
-        /* リザルト用 */
-        #result-title { color: #FF4136; text-shadow: 0 0 20px #FF4136; margin-bottom: 5px; }
-        #result-final { color: #fff; font-size: 48px; font-weight: bold; margin: 0; text-shadow: 0 0 10px white;}
+
+        .rule-box {
+            font-size: 14px;
+            color: #ccc;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            text-align: left;
+            display: inline-block;
+        }
+        .rule-box .en { color: #fff; font-weight: bold; display: block; margin-bottom: 2px;}
+        .rule-box .ja { color: #888; font-size: 11px; display: block; margin-bottom: 10px;}
         
         /* ランク一覧スタイル */
         #rank-list-container {
@@ -333,8 +341,6 @@
             align-items: center;
             padding: 8px 5px;
             border-bottom: 1px solid #222;
-            font-size: 13px;
-            color: #666;
             font-family: monospace;
         }
         .rank-item.active {
@@ -343,9 +349,14 @@
             font-weight: bold;
             text-shadow: 0 0 5px #FFDC00;
         }
-        .rank-score { width: 60px; text-align: right; }
-        .rank-name { flex-grow: 1; padding-left: 10px; }
-        .rank-arrow { width: 60px; color: #FF4136; text-align: right; font-weight:bold; animation: blink 0.5s infinite alternate; }
+        .rank-name-col { flex-grow: 1; padding-left: 10px; display: flex; flex-direction: column;}
+        .rank-name-en { font-size: 14px; color: #ccc; }
+        .rank-name-ja { font-size: 10px; color: #666; }
+        .active .rank-name-en { color: #FFDC00; }
+        .active .rank-name-ja { color: #AA8800; }
+        
+        .rank-score { width: 60px; text-align: right; font-size: 14px; color: #888; }
+        .rank-arrow { width: 40px; color: #FF4136; text-align: right; font-weight:bold; font-size: 12px; animation: blink 0.5s infinite alternate; }
         @keyframes blink { from { opacity: 1; } to { opacity: 0.3; } }
 
         .hidden { display: none !important; }
@@ -382,10 +393,14 @@
         
         <div id="auto-lock-btn" onclick="game.autoLock()">
             AUTO<br>LOCK
+            <span class="ja-sub">自動</span>
         </div>
 
         <div id="bottom-area">
-            <div id="guide-msg">LOCK: [NUM]</div>
+            <div id="guide-msg">
+                LOCK: [NUM]
+                <span class="sub">数字をロックせよ</span>
+            </div>
             <div id="formula-bar">READY...</div>
             
             <div id="btn-group">
@@ -401,11 +416,18 @@
             SYSTEM: ONLINE<br>
             MODE: FULL YEAST BURST
         </p>
-        <p style="color:#ccc; font-size:14px; line-height:1.8;">
-            Lock on targets to match the number.<br>
-            Use <span style="color:#FFD700">AUTO LOCK</span> for instant aim.<br>
-            <span style="color:#888; font-size:12px;">(Integer Division Only / Combo High Score)</span>
-        </p>
+        
+        <div class="rule-box">
+            <span class="en">1. Lock numbers to match the TARGET.</span>
+            <span class="ja">ターゲットと同じ数字になるようロックオン。</span>
+            
+            <span class="en">2. Use SYMBOLS (+ - × ÷) between numbers.</span>
+            <span class="ja">数字と数字の間に記号（＋－×÷）を挟む。</span>
+
+            <span class="en">3. "AUTO LOCK" solves it instantly!</span>
+            <span class="ja">困ったら「AUTO LOCK」で一撃必殺！</span>
+        </div>
+
         <button class="btn" onclick="game.start()">BAKE START</button>
     </div>
 
@@ -430,22 +452,22 @@ const OPS = {
     div: { label: '÷', op: '/' }
 };
 
+// ★日英対応データ
 const FEVER_TYPES = [
-    { id: 'asc', label: 'ASCENDING (Low->High)' },
-    { id: 'desc', label: 'DESCENDING (High->Low)' },
-    { id: 'even', label: 'EVEN NUMBERS' },
-    { id: 'odd', label: 'ODD NUMBERS' }
+    { id: 'asc', labelEn: 'ASCENDING (Low->High)', labelJa: '昇順で撃て (小 → 大)' },
+    { id: 'desc', labelEn: 'DESCENDING (High->Low)', labelJa: '降順で撃て (大 → 小)' },
+    { id: 'even', labelEn: 'EVEN NUMBERS', labelJa: '偶数を撃て' },
+    { id: 'odd', labelEn: 'ODD NUMBERS', labelJa: '奇数を撃て' }
 ];
 
-// ★パン用語ランク（IP回避）
 const RANKS = [
-    { min: 30000, name: "DIVINE BAKER" },     // パンの神
-    { min: 20000, name: "YEAST AWAKENED" },   // イースト覚醒 (NEWTYPE)
-    { min: 10000, name: "MASTER CHEF" },
-    { min: 6000, name: "VETERAN BAKER" },
-    { min: 3000, name: "APPRENTICE" },
-    { min: 1000, name: "PART-TIMER" },
-    { min: 0,     name: "CUSTOMER" }
+    { min: 30000, nameEn: "DIVINE BAKER",   nameJa: "パンの神" },
+    { min: 20000, nameEn: "YEAST AWAKENED", nameJa: "イースト菌覚醒" },
+    { min: 10000, nameEn: "MASTER CHEF",    nameJa: "熟練シェフ" },
+    { min: 6000, nameEn: "VETERAN BAKER",   nameJa: "ベテランパン屋" },
+    { min: 3000, nameEn: "APPRENTICE",      nameJa: "見習い" },
+    { min: 1000, nameEn: "PART-TIMER",      nameJa: "アルバイト" },
+    { min: 0,     nameEn: "CUSTOMER",        nameJa: "お客さん" }
 ];
 
 class Game {
@@ -528,7 +550,6 @@ class Game {
         document.getElementById('menu-screen').classList.add('hidden');
         document.getElementById('gameover-screen').classList.add('hidden');
         
-        // 最初のチェック
         this.checkDeadlock();
     }
 
@@ -586,52 +607,42 @@ class Game {
         this.entities.push(ent);
     }
 
-    // --- 計算ロジック（割り算は割り切れる時のみ） ---
     calc(val1, op, val2) {
         if (op === 'add') return val1 + val2;
         if (op === 'sub') return val1 - val2;
         if (op === 'mul') return val1 * val2;
         if (op === 'div') {
-            // ★Just Division Rule
             if (val2 === 0) return null;
-            if (val1 % val2 !== 0) return null; // 割り切れないなら無効
+            if (val1 % val2 !== 0) return null;
             return val1 / val2;
         }
         return 0;
     }
 
-    // --- 手詰まりチェック＆自動リセット ---
     checkDeadlock() {
         if (this.state !== 'playing') return;
-        
-        // 解決策があるか探す
         const sol = this.findSolution();
         
         if (!sol) {
-            // 解なし -> 自動リセット
             this.addEffect({text: "DEADLOCK... RESHUFFLE", color: "#FF4136", size: 24});
             setTimeout(() => {
                 this.entities = [];
                 this.clearFormula();
                 const count = (this.width < 400) ? 14 : 20;
                 this.replenishEntities(count);
-                // 再帰チェックは無限ループ防止のため行わないか、カウンタを入れる
             }, 1000);
         }
     }
 
-    // --- 解決策探索（AIロジック） ---
     findSolution() {
         const nums = this.entities.filter(e => e.type === 'num' && !e.selected);
         const ops = this.entities.filter(e => e.type === 'op' && !e.selected);
         const operations = ['add', 'sub', 'mul', 'div'];
 
-        // 単体チェック
         for (let n of nums) {
             if (n.val === this.targetNum) return [n];
         }
 
-        // 3点チェック (Num Op Num)
         for (let i = 0; i < nums.length; i++) {
             for (let j = 0; j < nums.length; j++) {
                 if (i === j) continue;
@@ -639,48 +650,40 @@ class Game {
                 const n2 = nums[j].val;
                 
                 for (let opKey of operations) {
-                    // opEntityがあるか？
                     const hasOp = ops.some(o => o.val === opKey);
                     if (!hasOp) continue;
                     
                     const res = this.calc(n1, opKey, n2);
                     if (res !== null && res === this.targetNum) {
-                        // 実際のEntityを特定して返す
                         const opEnt = ops.find(o => o.val === opKey);
                         return [nums[i], opEnt, nums[j]];
                     }
                 }
             }
         }
-        // 5点チェック (Num Op Num Op Num) は重いので簡易版では省略するか、必要なら実装
         return null;
     }
 
-    // --- 俺TUEEE機能：オートロック（課金想定） ---
     autoLock() {
         if (this.state !== 'playing') return;
         this.clearFormula();
 
         const solution = this.findSolution();
         if (solution) {
-            // 演出：高速ロックオン
             let delay = 0;
             solution.forEach(ent => {
                 setTimeout(() => {
                     this.trySelectNormal(ent);
-                    // SEを鳴らすならここ
                 }, delay);
                 delay += 100;
             });
             this.addEffect({text: "AUTO LOCK!!", color: "#FFD700", size: 30});
         } else {
             this.addEffect({text: "SCANNING...", color: "#888", size: 20});
-            // 解なしならリシャッフルを促すか、自動発動
             this.manualShuffle(); 
         }
     }
 
-    // 手動シャッフル
     manualShuffle() {
         if (this.state !== 'playing') return;
         this.entities = [];
@@ -795,20 +798,21 @@ class Game {
         bar.style.color = "#00FFFF";
     }
 
+    // ★日英表示更新
     updateGuide() {
         const msg = document.getElementById('guide-msg');
         if (this.state === 'fever') return;
 
         if (this.formulaStack.length === 0) {
-            msg.innerText = "LOCK: [NUMBER]";
+            msg.innerHTML = `LOCK: [NUMBER]<span class="sub">数字をロックせよ</span>`;
             msg.style.color = "#FFDC00";
         } else {
             const last = this.formulaStack[this.formulaStack.length-1].entity;
             if (last.type === 'num') {
-                msg.innerText = "LOCK: [SYMBOL]";
+                msg.innerHTML = `LOCK: [SYMBOL]<span class="sub">記号をロックせよ</span>`;
                 msg.style.color = "#2ECC40";
             } else {
-                msg.innerText = "LOCK: [NUMBER]";
+                msg.innerHTML = `LOCK: [NUMBER]<span class="sub">数字をロックせよ</span>`;
                 msg.style.color = "#FFDC00";
             }
         }
@@ -832,7 +836,7 @@ class Game {
 
         let result = this.formulaStack[0].entity.val;
         let scoreBonus = 0;
-        let valid = true; // 計算が無効になった場合用
+        let valid = true; 
         
         for (let i = 1; i < this.formulaStack.length; i += 2) {
             const op = this.formulaStack[i].entity.val;
@@ -847,7 +851,7 @@ class Game {
             result = res;
             
             if (op === 'mul') scoreBonus += 300;
-            if (op === 'div') scoreBonus += 1000; // 割り算ボーナス大
+            if (op === 'div') scoreBonus += 1000; 
         }
 
         if (valid && result === this.targetNum) {
@@ -877,7 +881,7 @@ class Game {
                 this.entities = this.entities.filter(e => !e.selected);
                 const count = (this.width < 400) ? 14 : 20;
                 this.replenishEntities(count);
-                this.checkDeadlock(); // 補充後に手詰まりチェック
+                this.checkDeadlock(); 
             }
 
         } else {
@@ -908,8 +912,12 @@ class Game {
         
         document.getElementById('target-display').innerText = "FEVER!!";
         document.getElementById('target-label').innerText = "MODE";
-        document.getElementById('guide-msg').innerText = this.feverType.label;
-        document.getElementById('guide-msg').style.color = "#FF4136";
+        
+        // ★日英併記
+        const guideMsg = document.getElementById('guide-msg');
+        guideMsg.innerHTML = `${this.feverType.labelEn}<span class="sub">${this.feverType.labelJa}</span>`;
+        guideMsg.style.color = "#FF4136";
+        
         document.getElementById('formula-bar').innerText = "DESTROY TARGETS!";
         
         for(let i=0; i<20; i++) {
@@ -1004,8 +1012,12 @@ class Game {
                 playerRankFound = true; 
                 div.classList.add('active');
             }
+            // ★日英併記のランク表示
             div.innerHTML = `
-                <div class="rank-name">${rank.name}</div>
+                <div class="rank-name-col">
+                    <span class="rank-name-en">${rank.nameEn}</span>
+                    <span class="rank-name-ja">${rank.nameJa}</span>
+                </div>
                 <div class="rank-score">${rank.min}</div>
                 <div class="rank-arrow">${isMyRank ? '◀ YOU' : ''}</div>
             `;
@@ -1032,8 +1044,6 @@ class Game {
         this.ctx.fillStyle = '#050510';
         this.ctx.fillRect(0, 0, this.width, this.height);
 
-        // Grid (handled by CSS)
-        
         const isFever = (this.state === 'fever');
         const radarColor = isFever ? 'rgba(255, 65, 54, 0.3)' : 'rgba(0, 255, 255, 0.2)';
         
@@ -1094,7 +1104,6 @@ class Game {
             } else if (ent.type === 'num') {
                 this.ctx.fillStyle = ent.selected ? '#FFDC00' : '#EEE';
             } else {
-                // 記号は青系に
                 this.ctx.fillStyle = ent.selected ? '#00FFFF' : '#0074D9';
             }
             
