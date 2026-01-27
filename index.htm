@@ -46,6 +46,13 @@
             color: #FFA500; box-shadow: 0 0 10px rgba(255, 165, 0, 0.2); font-size: 18px;
         }
 
+        /* 難易度表示 */
+        #difficulty-display {
+            position: absolute; top: 25px; right: 15px;
+            font-size: 12px; font-weight: bold; color: #888; letter-spacing: 1px;
+            border: 1px solid #444; padding: 2px 6px; border-radius: 4px;
+        }
+
         /* オートロックボタン */
         #auto-lock-btn {
             position: absolute; bottom: 100px; right: 20px;
@@ -143,15 +150,27 @@
         }
         .btn:hover { background: #FFDC00; color: #000; box-shadow: 0 0 30px #FFDC00; }
 
-        /* 誘導ボタン用スタイル */
+        /* 難易度選択ボタン */
+        .diff-container {
+            display: flex; flex-direction: column; gap: 15px; width: 100%; align-items: center; margin-bottom: 20px;
+        }
+        .btn-diff {
+            width: 80%; padding: 12px; font-size: 16px; margin: 0;
+            border-color: #00FFFF; color: #00FFFF; box-shadow: 0 0 5px #00FFFF;
+        }
+        .btn-diff:hover { background: #00FFFF; color: #000; }
+        
+        .btn-easy { border-color: #2ECC40; color: #2ECC40; box-shadow: 0 0 5px #2ECC40; }
+        .btn-easy:hover { background: #2ECC40; }
+        .btn-normal { border-color: #0074D9; color: #0074D9; box-shadow: 0 0 5px #0074D9; }
+        .btn-normal:hover { background: #0074D9; }
+        .btn-hard { border-color: #FF4136; color: #FF4136; box-shadow: 0 0 5px #FF4136; }
+        .btn-hard:hover { background: #FF4136; }
+
         .btn-link {
-            border-color: #2ECC40; color: #2ECC40; box-shadow: 0 0 10px #2ECC40, inset 0 0 10px #2ECC40;
-            font-size: 14px; padding: 12px 20px;
+            border-color: #AAAAAA; color: #AAAAAA; box-shadow: none; border-style: dashed; font-size: 12px;
         }
-        .btn-link:hover { background: #2ECC40; color: #000; box-shadow: 0 0 30px #2ECC40; }
-        .btn-roblox {
-            border-color: #AAAAAA; color: #AAAAAA; box-shadow: none; border-style: dashed;
-        }
+        .btn-link:hover { background: #555; color: #fff; }
 
         .rule-box {
             font-size: 14px; color: #ccc; line-height: 1.6; margin-bottom: 20px; text-align: left; display: inline-block;
@@ -189,7 +208,7 @@
     <div id="ui-layer">
         <div id="top-area">
             <div id="manual-shuffle-btn" class="circle-btn" onclick="game.manualShuffle()">↻</div>
-            <div id="time-bar-wrapper"><div id="time-bar"></div></div>
+            <div id="difficulty-display">Lv.?</div> <div id="time-bar-wrapper"><div id="time-bar"></div></div>
             <div id="target-label">TARGET</div>
             <div id="target-display">??</div>
             <div id="status-bar">
@@ -228,22 +247,32 @@
         </p>
         
         <div class="rule-box">
-            <span class="en">1. Lock numbers to match the TARGET.</span>
-            <span class="ja">ターゲットと同じ数字になるようロックオン。</span>
-            <span class="en">2. Use SYMBOLS (+ - × ÷) between numbers.</span>
-            <span class="ja">数字と数字の間に記号（＋－×÷）を挟む。</span>
-            <span class="en">3. "AUTO LOCK" solves it instantly!</span>
-            <span class="ja">困ったら「AUTO LOCK」で一撃必殺！(2D版無料)</span>
+            <span class="en">1. Select Difficulty & Start.</span>
+            <span class="ja">難易度を選んでスタート。</span>
+            <span class="en">2. Lock numbers to match TARGET.</span>
+            <span class="ja">ターゲットと同じ数字を作る。</span>
+            <span class="en">3. "AUTO LOCK" for instant win!</span>
+            <span class="ja">「AUTO LOCK」で一撃必殺！</span>
         </div>
 
-        <button class="btn" onclick="game.start()">BAKE START</button>
-        
-        <div style="margin-top: 30px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-            <button class="btn btn-link" onclick="openLink('line')">
-                LINE STICKERS<br><span style="font-size:10px">LINEスタンプを見る</span>
+        <div class="diff-container">
+            <button class="btn btn-diff btn-easy" onclick="game.start('easy')">
+                EASY (0-9)<br><span style="font-size:10px">初級：1桁のみ</span>
             </button>
-            <button class="btn btn-roblox" onclick="openLink('roblox')">
-                COMING SOON to ROBLOX<br><span style="font-size:10px">3D版 ロブロックスで準備中</span>
+            <button class="btn btn-diff btn-normal" onclick="game.start('normal')">
+                NORMAL (0-19)<br><span style="font-size:10px">中級：標準</span>
+            </button>
+            <button class="btn btn-diff btn-hard" onclick="game.start('hard')">
+                HARD (0-30)<br><span style="font-size:10px">上級：高難度</span>
+            </button>
+        </div>
+        
+        <div style="margin-top: 10px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+            <button class="btn btn-link" onclick="openLink('line')">
+                LINE STICKERS (Check Characters)
+            </button>
+            <button class="btn btn-link" onclick="openLink('roblox')">
+                COMING SOON to ROBLOX
             </button>
         </div>
     </div>
@@ -254,11 +283,11 @@
         
         <div id="rank-list-container"></div>
 
-        <button class="btn" onclick="location.reload()">RE-BAKE</button>
+        <button class="btn" onclick="location.reload()">Return to Menu</button>
         
         <div style="margin-top: 20px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px;">
             <button class="btn btn-link" onclick="openLink('line')">
-                Check Characters?<br><span style="font-size:10px">キャラが気になったらスタンプへ</span>
+                See More Characters? (LINE)
             </button>
         </div>
     </div>
@@ -327,6 +356,11 @@ class Game {
         this.centerY = 0;
         this.lastTime = 0;
         this.scanAngle = 0;
+        
+        // ★難易度設定 (デフォルト)
+        this.maxNum = 30; 
+        this.difficultyLabel = "Lv.3";
+
         this.canvas.addEventListener('pointerdown', (e) => this.handleClick(e));
         this.loop = this.loop.bind(this);
         requestAnimationFrame(this.loop);
@@ -346,13 +380,26 @@ class Game {
         this.centerX = this.width / 2;
         const maxRadius = Math.min(this.width, (this.height - topSpace - bottomSpace)) / 2;
         this.radarRadius = Math.max(0, maxRadius - 10);
-        // ★修正：リサイズ時にエンティティが消えないように調整
         if (this.state === 'playing' && this.entities.length === 0) {
              this.replenishEntities();
         }
     }
 
-    start() {
+    // ★モード付きスタート
+    start(mode) {
+        // 難易度設定
+        if (mode === 'easy') {
+            this.maxNum = 9;
+            this.difficultyLabel = "Lv.1 EASY";
+        } else if (mode === 'normal') {
+            this.maxNum = 19;
+            this.difficultyLabel = "Lv.2 NRM";
+        } else {
+            this.maxNum = 30;
+            this.difficultyLabel = "Lv.3 HARD";
+        }
+        document.getElementById('difficulty-display').innerText = this.difficultyLabel;
+
         this.resize();
         this.state = 'playing';
         this.score = 0;
@@ -376,17 +423,16 @@ class Game {
     }
 
     generateTarget() {
-        this.targetNum = Math.floor(Math.random() * 31);
+        // ★難易度に応じたターゲット生成
+        this.targetNum = Math.floor(Math.random() * (this.maxNum + 1));
         document.getElementById('target-display').innerText = this.targetNum;
         document.getElementById('target-label').innerText = "TARGET";
         this.addEffect({type: 'text', text: 'TARGET UPDATED', color: '#FFDC00', size: 20});
     }
 
-    // ★改良：画面サイズに応じて個数を調整
     replenishEntities() {
-        // スマホ(小)なら小さくたくさん、PCなら適度なサイズ
         const area = this.width * this.height;
-        let targetCount = 20; // Default
+        let targetCount = 20; 
         if (this.width < 400) targetCount = 16; 
         else if (this.width > 800) targetCount = 25;
 
@@ -398,9 +444,8 @@ class Game {
     }
 
     spawnEntity(isFever) {
-        // ★改良：画面サイズに応じた半径計算
-        const baseR = Math.min(this.width, this.height) / 13; // 画面の1/13サイズ
-        const r = Math.max(18, Math.min(28, baseR)); // 最小18px, 最大28pxに制限
+        const baseR = Math.min(this.width, this.height) / 13; 
+        const r = Math.max(18, Math.min(28, baseR)); 
 
         let x, y, safe = false, attempts = 0;
         const maxAttempts = 150; 
@@ -413,7 +458,7 @@ class Game {
             safe = true;
             for (let ent of this.entities) {
                 const d = Math.hypot(ent.x - x, ent.y - y);
-                if (d < r * 2.1) { safe = false; break; } // 少し重なり判定を緩和(2.2->2.1)
+                if (d < r * 2.1) { safe = false; break; }
             }
         }
         if (!safe) return;
@@ -422,7 +467,8 @@ class Game {
             val: 0, x: x, y: y, r: r, selected: false, isFever: !!isFever, scale: 0
         };
         if (ent.type === 'num') {
-            ent.val = Math.floor(Math.random() * 20);
+            // ★難易度に応じた数字生成
+            ent.val = Math.floor(Math.random() * (this.maxNum + 1));
         } else {
             const keys = Object.keys(OPS);
             ent.val = keys[Math.floor(Math.random() * keys.length)];
@@ -444,19 +490,17 @@ class Game {
 
     checkDeadlock() {
         if (this.state !== 'playing') return;
-        const sol = this.findSolutionDeep(); // ★AI強化版を使用
+        const sol = this.findSolutionDeep(); 
         if (!sol) {
             this.addEffect({text: "DEADLOCK... RESHUFFLE", color: "#FF4136", size: 24});
             setTimeout(() => {
                 this.entities = [];
                 this.clearFormula();
                 this.replenishEntities();
-                // リシャッフル後にもう一度チェックはしない（無限ループ防止）
             }, 800);
         }
     }
 
-    // ★改良：3手読み (Num Op Num Op Num) 対応
     findSolutionDeep() {
         const nums = this.entities.filter(e => e.type === 'num' && !e.selected);
         const ops = this.entities.filter(e => e.type === 'op' && !e.selected);
@@ -484,9 +528,7 @@ class Game {
             }
         }
 
-        // 3. 5点 (N O N O N) ★ここを追加
-        // 計算量を抑えるため、制限時間付き探索や、早期リターンを行う
-        // ここでは簡易的に実装
+        // 3. 5点 (N O N O N)
         for (let i = 0; i < nums.length; i++) {
             for (let j = 0; j < nums.length; j++) {
                 if (i === j) continue;
@@ -505,9 +547,6 @@ class Game {
                         if (res1 === null) continue;
 
                         for (let op2Key of operations) {
-                             // op1と同じ記号を使う場合、2つ以上あるかチェックが必要だが
-                             // 簡易版として、別のエンティティとみなして検索
-                             // (厳密には ops配列から op1Ent を除外して探すべき)
                              const op2Ent = ops.find(o => o.val === op2Key && o !== op1Ent);
                              if (!op2Ent) continue;
 
@@ -528,7 +567,6 @@ class Game {
         if (this.state !== 'playing') return;
         this.clearFormula();
         
-        // ★AI強化版呼び出し
         const solution = this.findSolutionDeep();
         
         if (solution) {
@@ -537,11 +575,10 @@ class Game {
                 setTimeout(() => {
                     this.trySelectNormal(ent);
                 }, delay);
-                delay += 80; // 少し高速化
+                delay += 80; 
             });
             this.addEffect({text: "AUTO LOCK!!", color: "#FFD700", size: 30});
         } else {
-            // ★改良：解がない場合は明示してリシャッフル
             this.addEffect({text: "NO SOLUTION...", color: "#FF4136", size: 20});
             setTimeout(() => this.manualShuffle(), 500);
         }
@@ -553,7 +590,6 @@ class Game {
         this.clearFormula();
         this.replenishEntities();
         this.addEffect({text: "RESHUFFLE!", color: "#FFA500", size: 24});
-        // シャッフル後、少し待ってからデッドロックチェック
         setTimeout(() => this.checkDeadlock(), 500);
     }
 
