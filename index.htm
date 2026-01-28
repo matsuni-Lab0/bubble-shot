@@ -14,7 +14,6 @@
         #game-container {
             position: relative; width: 100vw; height: 100dvh; overflow: hidden;
             background-color: #050510;
-            /* 背景パターンはCanvasで描くのでCSSからは削除 */
         }
         canvas { display: block; width: 100%; height: 100%; }
         
@@ -30,17 +29,16 @@
             z-index: 10; padding-top: 10px; box-sizing: border-box; position: relative;
         }
 
-        /* 司令官ウィンドウ (左上) */
+        /* 司令官ウィンドウ */
         #commander-window {
             position: absolute; top: 10px; left: 10px;
             width: 70px; height: 70px;
-            background: rgba(0, 20, 40, 0.6); /* 少し透明度を上げる */
+            background: rgba(0, 20, 40, 0.6);
             border: 2px solid #00FFFF; border-radius: 10px;
             clip-path: polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%);
             pointer-events: auto; display: flex; justify-content: center; align-items: center;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2); /* 発光感を強める */
-            z-index: 25;
-            backdrop-filter: blur(2px);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+            z-index: 25; backdrop-filter: blur(2px);
         }
         #comm-canvas { width: 100%; height: 100%; }
         #comm-label {
@@ -48,7 +46,7 @@
             font-size: 8px; color: #00FFFF; font-family: monospace; opacity: 0.8;
         }
 
-        /* マニュアルシャッフルボタン */
+        /* シャッフルボタン */
         #manual-shuffle-btn {
             position: absolute; top: 15px; left: 90px;
             width: 40px; height: 40px; border-radius: 50%;
@@ -270,7 +268,6 @@
         <p style="color:#00FFFF; font-size:12px; margin-bottom: 20px; font-family: monospace;">
             SYSTEM: ONLINE<br>MODE: FULL YEAST BURST
         </p>
-        
         <div class="rule-box">
             <span class="en">1. Select Difficulty & Start.</span>
             <span class="ja">難易度を選んでスタート。</span>
@@ -279,7 +276,6 @@
             <span class="en">3. "AUTO LOCK" for instant win!</span>
             <span class="ja">「AUTO LOCK」で一撃必殺！</span>
         </div>
-
         <div class="diff-container">
             <button class="btn btn-diff btn-easy" onclick="game.start('easy')">
                 EASY (0-9)<br><span style="font-size:10px">初級：1桁のみ</span>
@@ -291,14 +287,9 @@
                 HARD (0-30)<br><span style="font-size:10px">上級：高難度</span>
             </button>
         </div>
-        
         <div style="margin-top: 10px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-            <button class="btn btn-link" onclick="openLink('line')">
-                LINE STICKERS (Check Characters)
-            </button>
-            <button class="btn btn-link" onclick="openLink('roblox')">
-                COMING SOON to ROBLOX
-            </button>
+            <button class="btn btn-link" onclick="openLink('line')">LINE STICKERS (Check Characters)</button>
+            <button class="btn btn-link" onclick="openLink('roblox')">COMING SOON to ROBLOX</button>
         </div>
     </div>
 
@@ -306,39 +297,24 @@
         <canvas id="mascot-canvas-over" width="100" height="100"></canvas>
         <h1 id="result-title">MISSION OVER</h1>
         <p id="result-final">0</p>
-        
         <div id="rank-list-container"></div>
-
         <button class="btn" onclick="location.reload()">Return to Menu</button>
-        
         <div style="margin-top: 20px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-            <button class="btn btn-link" onclick="openLink('line')">
-                See More Characters? (LINE)
-            </button>
+            <button class="btn btn-link" onclick="openLink('line')">See More Characters? (LINE)</button>
         </div>
     </div>
 </div>
 
 <script>
-const URL_CONFIG = {
-    line: "",    
-    roblox: ""   
-};
-
+const URL_CONFIG = { line: "", roblox: "" };
 function openLink(type) {
     const url = URL_CONFIG[type];
-    if (url && url.length > 0) {
-        window.open(url, '_blank');
-    } else {
-        alert("Coming Soon! \n準備中です。公開をお楽しみに！");
-    }
+    if (url && url.length > 0) { window.open(url, '_blank'); } else { alert("Coming Soon! \n準備中です。公開をお楽しみに！"); }
 }
 
 const OPS = {
-    add: { label: '+', op: '+' },
-    sub: { label: '-', op: '-' },
-    mul: { label: '×', op: '*' },
-    div: { label: '÷', op: '/' }
+    add: { label: '+', op: '+' }, sub: { label: '-', op: '-' },
+    mul: { label: '×', op: '*' }, div: { label: '÷', op: '/' }
 };
 
 const FEVER_TYPES = [
@@ -362,7 +338,6 @@ class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
-        
         this.commCanvas = document.getElementById('comm-canvas');
         this.commCtx = this.commCanvas.getContext('2d');
         this.commState = 'normal';
@@ -370,26 +345,13 @@ class Game {
         setTimeout(() => this.resize(), 100);
         window.addEventListener('resize', () => this.resize());
         this.state = 'menu';
-        this.score = 0;
-        this.maxTime = 90; 
-        this.timeLeft = this.maxTime;
-        this.targetNum = 0;
-        this.entities = [];
-        this.formulaStack = [];
-        this.clearCount = 0;
-        this.feverTimer = 0;
-        this.feverMaxTime = 10;
-        this.feverType = null;
-        this.effects = [];
-        this.radarRadius = 0;
-        this.centerX = 0;
-        this.centerY = 0;
-        this.lastTime = 0;
-        this.scanAngle = 0;
-        this.bgScroll = 0; // 背景スクロール用
-        
-        this.maxNum = 30; 
-        this.difficultyLabel = "Lv.3";
+        this.score = 0; this.maxTime = 90; this.timeLeft = this.maxTime;
+        this.targetNum = 0; this.entities = []; this.formulaStack = [];
+        this.clearCount = 0; this.feverTimer = 0; this.feverMaxTime = 10;
+        this.feverType = null; this.effects = [];
+        this.radarRadius = 0; this.centerX = 0; this.centerY = 0;
+        this.lastTime = 0; this.scanAngle = 0; this.bgScroll = 0;
+        this.maxNum = 30; this.difficultyLabel = "Lv.3";
 
         this.drawStaticMascot('mascot-canvas-menu', 'normal');
         this.drawStaticMascot('mascot-canvas-over', 'panic');
@@ -402,53 +364,32 @@ class Game {
 
     resize() {
         const dpr = window.devicePixelRatio || 1;
-        this.width = window.innerWidth;
-        this.height = window.innerHeight;
-        this.canvas.width = this.width * dpr;
-        this.canvas.height = this.height * dpr;
-        this.canvas.style.width = this.width + 'px';
-        this.canvas.style.height = this.height + 'px';
+        this.width = window.innerWidth; this.height = window.innerHeight;
+        this.canvas.width = this.width * dpr; this.canvas.height = this.height * dpr;
+        this.canvas.style.width = this.width + 'px'; this.canvas.style.height = this.height + 'px';
         this.ctx.scale(dpr, dpr);
         const topSpace = 180; const bottomSpace = 180; 
         this.centerY = topSpace + (this.height - topSpace - bottomSpace) / 2;
         this.centerX = this.width / 2;
         const maxRadius = Math.min(this.width, (this.height - topSpace - bottomSpace)) / 2;
         this.radarRadius = Math.max(0, maxRadius - 10);
-        if (this.state === 'playing' && this.entities.length === 0) {
-             this.replenishEntities();
-        }
+        if (this.state === 'playing' && this.entities.length === 0) { this.replenishEntities(); }
     }
 
     start(mode) {
-        if (mode === 'easy') {
-            this.maxNum = 9;
-            this.difficultyLabel = "Lv.1 EASY";
-        } else if (mode === 'normal') {
-            this.maxNum = 19;
-            this.difficultyLabel = "Lv.2 NRM";
-        } else {
-            this.maxNum = 30;
-            this.difficultyLabel = "Lv.3 HARD";
-        }
+        if (mode === 'easy') { this.maxNum = 9; this.difficultyLabel = "Lv.1 EASY"; }
+        else if (mode === 'normal') { this.maxNum = 19; this.difficultyLabel = "Lv.2 NRM"; }
+        else { this.maxNum = 30; this.difficultyLabel = "Lv.3 HARD"; }
         document.getElementById('difficulty-display').innerText = this.difficultyLabel;
 
-        this.resize();
-        this.state = 'playing';
-        this.score = 0;
-        this.timeLeft = this.maxTime;
-        this.clearCount = 0;
-        this.updateGauge();
-        this.updateTimeBar();
-        this.formulaStack = [];
-        this.entities = [];
-        this.effects = [];
+        this.resize(); this.state = 'playing'; this.score = 0; this.timeLeft = this.maxTime;
+        this.clearCount = 0; this.updateGauge(); this.updateTimeBar();
+        this.formulaStack = []; this.entities = []; this.effects = [];
         
         this.updateCommander('normal');
         this.replenishEntities();
-
         this.generateTarget();
-        this.updateUI();
-        this.clearFormula();
+        this.updateUI(); this.clearFormula();
         document.body.classList.remove('fever-mode');
         document.getElementById('menu-screen').classList.add('hidden');
         document.getElementById('gameover-screen').classList.add('hidden');
@@ -465,20 +406,15 @@ class Game {
     replenishEntities() {
         const area = this.width * this.height;
         let targetCount = 20; 
-        if (this.width < 400) targetCount = 22; 
-        else if (this.width > 800) targetCount = 35;
-
+        if (this.width < 400) targetCount = 22; else if (this.width > 800) targetCount = 35;
         let currentCount = this.entities.length;
         let needed = targetCount - currentCount;
-        for (let i = 0; i < needed; i++) {
-            this.spawnEntity(false);
-        }
+        for (let i = 0; i < needed; i++) { this.spawnEntity(false); }
     }
 
     spawnEntity(isFever) {
         const baseR = Math.min(this.width, this.height) / 16; 
         const r = Math.max(16, Math.min(24, baseR)); 
-
         let x, y, safe = false, attempts = 0;
         const maxAttempts = 100; 
         while (!safe && attempts < maxAttempts) {
@@ -494,7 +430,6 @@ class Game {
             }
         }
         if (!safe) return; 
-        
         const ent = { 
             type: isFever ? 'num' : (Math.random() < 0.5 ? 'num' : 'op'),
             val: 0, x: x, y: y, r: r, selected: false, isFever: !!isFever, scale: 0
@@ -527,10 +462,8 @@ class Game {
             this.addEffect({text: "DEADLOCK... RESHUFFLE", color: "#FF4136", size: 24});
             this.updateCommander('panic');
             setTimeout(() => {
-                this.entities = [];
-                this.clearFormula();
-                this.replenishEntities();
-                this.updateCommander('normal');
+                this.entities = []; this.clearFormula();
+                this.replenishEntities(); this.updateCommander('normal');
             }, 800);
         }
     }
@@ -540,15 +473,36 @@ class Game {
         const ops = this.entities.filter(e => e.type === 'op' && !e.selected);
         const operations = ['add', 'sub', 'mul', 'div'];
 
-        for (let n of nums) {
-            if (n.val === this.targetNum) return [n];
-        }
-
+        // ★AI強化：長い式（5点）を優先探索
         for (let i = 0; i < nums.length; i++) {
             for (let j = 0; j < nums.length; j++) {
                 if (i === j) continue;
-                const n1 = nums[i].val;
-                const n2 = nums[j].val;
+                for (let k = 0; k < nums.length; k++) {
+                    if (k === i || k === j) continue;
+                    const n1 = nums[i].val; const n2 = nums[j].val; const n3 = nums[k].val;
+                    for (let op1Key of operations) {
+                        const op1Ent = ops.find(o => o.val === op1Key);
+                        if (!op1Ent) continue;
+                        const res1 = this.calc(n1, op1Key, n2);
+                        if (res1 === null) continue;
+                        for (let op2Key of operations) {
+                             const op2Ent = ops.find(o => o.val === op2Key && o !== op1Ent);
+                             if (!op2Ent) continue;
+                             const res2 = this.calc(res1, op2Key, n3);
+                             if (res2 !== null && res2 === this.targetNum) {
+                                 return [nums[i], op1Ent, nums[j], op2Ent, nums[k]]; // 5点優先
+                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 次に3点 (N O N)
+        for (let i = 0; i < nums.length; i++) {
+            for (let j = 0; j < nums.length; j++) {
+                if (i === j) continue;
+                const n1 = nums[i].val; const n2 = nums[j].val;
                 for (let opKey of operations) {
                     const opEnt = ops.find(o => o.val === opKey);
                     if (!opEnt) continue;
@@ -559,6 +513,12 @@ class Game {
                 }
             }
         }
+
+        // 最後に単体（1点）
+        for (let n of nums) {
+            if (n.val === this.targetNum) return [n];
+        }
+
         return null; 
     }
 
@@ -572,9 +532,7 @@ class Game {
             this.updateCommander('happy'); 
             let delay = 0;
             solution.forEach(ent => {
-                setTimeout(() => {
-                    this.trySelectNormal(ent);
-                }, delay);
+                setTimeout(() => { this.trySelectNormal(ent); }, delay);
                 delay += 80; 
             });
             this.addEffect({text: "AUTO LOCK!!", color: "#FFD700", size: 30});
@@ -587,8 +545,7 @@ class Game {
 
     manualShuffle() {
         if (this.state !== 'playing') return;
-        this.entities = [];
-        this.clearFormula();
+        this.entities = []; this.clearFormula();
         this.replenishEntities();
         this.addEffect({text: "RESHUFFLE!", color: "#FFA500", size: 24});
         setTimeout(() => this.checkDeadlock(), 500);
@@ -602,11 +559,8 @@ class Game {
             const ent = this.entities[i];
             const dist = Math.hypot(ent.x - clickX, ent.y - clickY);
             if (dist < ent.r + 15) {
-                if (this.state === 'playing') {
-                    this.trySelectNormal(ent);
-                } else if (this.state === 'fever') {
-                    this.trySelectFever(ent, i);
-                }
+                if (this.state === 'playing') { this.trySelectNormal(ent); }
+                else if (this.state === 'fever') { this.trySelectFever(ent, i); }
                 return;
             }
         }
@@ -663,9 +617,7 @@ class Game {
 
     updateFormulaBar() {
         const bar = document.getElementById('formula-bar');
-        if (this.formulaStack.length === 0) {
-            bar.innerText = "STANDBY..."; bar.style.color = "#666"; return;
-        }
+        if (this.formulaStack.length === 0) { bar.innerText = "STANDBY..."; bar.style.color = "#666"; return; }
         let displayStr = "";
         if (this.formulaStack.length >= 1) { displayStr = `${this.formulaStack[0].entity.val}`; }
         for (let i = 1; i < this.formulaStack.length; i += 2) {
@@ -733,9 +685,7 @@ class Game {
             this.updateGauge();
             this.updateCommander('happy');
             
-            if (this.clearCount >= 3) { 
-                this.startFever(); 
-            } else {
+            if (this.clearCount >= 3) { this.startFever(); } else {
                 this.generateTarget();
                 this.entities = this.entities.filter(e => !e.selected);
                 this.replenishEntities();
@@ -774,9 +724,7 @@ class Game {
         guideMsg.innerHTML = `${this.feverType.labelEn}<span class="sub">${this.feverType.labelJa}</span>`;
         guideMsg.style.color = "#FF4136";
         document.getElementById('formula-bar').innerText = "DESTROY TARGETS!";
-        
         this.updateCommander('fever');
-
         for(let i=0; i<30; i++) { this.spawnEntity(true); }
         this.addEffect({type: 'text', text: 'FEVER START!!', color: '#FF4136', size: 30});
         this.updateTimeBar();
@@ -812,18 +760,13 @@ class Game {
             if (pct < 20) {
                 bar.style.backgroundColor = '#FF4136';
                 if(this.state === 'playing') this.updateCommander('panic');
-            } else if (pct < 50) {
-                bar.style.backgroundColor = '#FFDC00'; 
-            } else { 
-                bar.style.backgroundColor = '#0074D9'; 
-            }
+            } else if (pct < 50) { bar.style.backgroundColor = '#FFDC00'; } else { bar.style.backgroundColor = '#0074D9'; }
         }
     }
 
     update(dt) {
-        this.scanAngle += dt * 1.5; // レーダーの回転速度
-        this.bgScroll += dt * 20; // 背景スクロール速度
-        
+        this.scanAngle += dt * 1.5; 
+        this.bgScroll += dt * 20; 
         this.entities.forEach(ent => {
             if (ent.scale < 1) ent.scale += dt * 5;
             if (ent.scale > 1) ent.scale = 1;
@@ -880,56 +823,41 @@ class Game {
         });
     }
 
-    // ★新機能：SFレーダー背景描画
     drawSciFiRadarBackground(ctx, x, y, r) {
         const isFever = (this.state === 'fever');
         const baseColor = isFever ? '255, 65, 54' : '0, 255, 255';
-
-        // 背景グリッド
-        ctx.save();
-        ctx.translate(x, y);
+        ctx.save(); ctx.translate(x, y);
         ctx.strokeStyle = `rgba(${baseColor}, 0.1)`; ctx.lineWidth = 1;
-        const gridSize = 40;
-        const offset = this.bgScroll % gridSize;
+        const gridSize = 40; const offset = this.bgScroll % gridSize;
         for(let i = -r; i < r; i+=gridSize) {
             ctx.beginPath(); ctx.moveTo(i - offset, -r); ctx.lineTo(i - offset, r); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(-r, i + offset); ctx.lineTo(r, i + offset); ctx.stroke();
         }
         ctx.restore();
-
-        // 同心円
         ctx.strokeStyle = `rgba(${baseColor}, 0.3)`; ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.arc(x, y, r * 0.3, 0, Math.PI*2); ctx.stroke();
         ctx.beginPath(); ctx.arc(x, y, r * 0.6, 0, Math.PI*2); ctx.stroke();
         ctx.lineWidth = 3; ctx.shadowBlur = 10; ctx.shadowColor = `rgb(${baseColor})`;
         ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.stroke(); ctx.shadowBlur = 0;
-
-        // 十字線（薄く）
         ctx.strokeStyle = `rgba(${baseColor}, 0.2)`; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(x-r, y); ctx.lineTo(x+r, y); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(x, y-r); ctx.lineTo(x, y+r); ctx.stroke();
-
-        // 回転スキャン
         ctx.save(); ctx.translate(x, y); ctx.rotate(this.scanAngle);
         const grad = ctx.createLinearGradient(0, 0, r, 0);
         grad.addColorStop(0, `rgba(${baseColor}, 0)`);
         grad.addColorStop(1, `rgba(${baseColor}, 0.15)`);
         ctx.fillStyle = grad; ctx.beginPath(); ctx.moveTo(0, 0);
         ctx.arc(0, 0, r, -0.3, 0.3); ctx.fill(); 
-        // スキャンラインの先端
         ctx.strokeStyle = `rgba(${baseColor}, 0.8)`; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(r*Math.cos(0.3), r*Math.sin(0.3)); ctx.lineTo(0,0); ctx.stroke();
         ctx.restore();
     }
 
     draw() {
-        // 1. 背景塗りつぶし
         this.ctx.fillStyle = '#050510'; this.ctx.fillRect(0, 0, this.width, this.height);
-
-        // 2. ★SFレーダー背景を描画（エンティティより後ろ！）
         this.drawSciFiRadarBackground(this.ctx, this.centerX, this.centerY, this.radarRadius);
 
-        // 3. リンク線
+        // ★変更点：軌跡の色をネオンピンク（マゼンタ）に
         if (this.formulaStack.length > 0) {
             const now = Date.now();
             for (let i = 0; i < this.formulaStack.length - 1; i++) {
@@ -937,12 +865,12 @@ class Game {
                 const age = now - next.time; 
                 if (age < 1000) { 
                     const alpha = 1 - (age / 1000);
-                    this.ctx.strokeStyle = `rgba(0, 255, 255, ${alpha})`;
-                    this.ctx.lineWidth = 3; this.ctx.shadowBlur = 10; this.ctx.shadowColor = '#00FFFF';
+                    this.ctx.strokeStyle = `rgba(255, 0, 255, ${alpha})`; // Pink
+                    this.ctx.lineWidth = 3; this.ctx.shadowBlur = 15; this.ctx.shadowColor = '#FF00FF';
                     this.ctx.beginPath(); this.ctx.moveTo(curr.entity.x, curr.entity.y);
                     this.ctx.lineTo(next.entity.x, next.entity.y); this.ctx.stroke(); this.ctx.shadowBlur = 0;
                 } else {
-                    this.ctx.strokeStyle = `rgba(0, 255, 255, 0.1)`;
+                    this.ctx.strokeStyle = `rgba(255, 0, 255, 0.2)`;
                     this.ctx.lineWidth = 1;
                     this.ctx.beginPath(); this.ctx.moveTo(curr.entity.x, curr.entity.y);
                     this.ctx.lineTo(next.entity.x, next.entity.y); this.ctx.stroke();
@@ -950,21 +878,16 @@ class Game {
             }
         }
 
-        // 4. エンティティ（バブル）描画（レーダーより手前！）
         this.entities.forEach(ent => {
             const size = ent.r * ent.scale;
             if (ent.isFever) { this.ctx.fillStyle = '#FF4136'; } else if (ent.type === 'num') {
                 this.ctx.fillStyle = ent.selected ? '#FFDC00' : '#EEE';
             } else { this.ctx.fillStyle = ent.selected ? '#00FFFF' : '#0074D9'; }
             
-            // バブル本体
             this.ctx.beginPath(); this.ctx.arc(ent.x, ent.y, size, 0, Math.PI*2); this.ctx.fill();
-            
-            // 光沢
             this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
             this.ctx.beginPath(); this.ctx.ellipse(ent.x - size * 0.3, ent.y - size * 0.3, size * 0.2, size * 0.1, Math.PI / 4, 0, Math.PI * 2); this.ctx.fill();
 
-            // 選択時のロックオン表示（これはバブルの装飾なのでここでOK）
             if (ent.selected) {
                 this.drawLockSight(ent.x, ent.y, size + 5);
                 if (ent.order) {
@@ -976,24 +899,18 @@ class Game {
                 this.ctx.strokeStyle = '#FF0000'; this.ctx.lineWidth = 2; this.ctx.beginPath();
                 this.ctx.arc(ent.x, ent.y, size, 0, Math.PI*2); this.ctx.stroke();
             }
-            // 文字
             this.ctx.fillStyle = '#000'; this.ctx.textAlign = 'center'; this.ctx.textBaseline = 'middle';
             this.ctx.font = size > 20 ? 'bold 22px Arial' : 'bold 16px Arial';
             let label = ent.type === 'num' ? ent.val : OPS[ent.val].label;
             this.ctx.fillText(label, ent.x, ent.y);
         });
 
-        // 5. エフェクト描画（最前面）
         this.effects.forEach(eff => {
             this.ctx.fillStyle = eff.color; this.ctx.font = `bold ${eff.size || 20}px Arial`;
             this.ctx.textAlign = 'center'; this.ctx.fillText(eff.text, eff.x, eff.y);
         });
-
-        // ★削除：中央の十字レティクルはもう描画しない
-        // this.drawReticle(this.centerX, this.centerY); 
     }
     
-    // 静的キャンバスに描画 (メニュー等)
     drawStaticMascot(canvasId, mood) {
         const c = document.getElementById(canvasId);
         if(!c) return;
@@ -1002,25 +919,20 @@ class Game {
         this.drawEbiGratinFace(cx, 50, 50, 40, mood);
     }
 
-    // 司令官更新
     updateCommander(mood) {
         this.commState = mood;
         this.commCtx.clearRect(0,0,70,70);
         this.drawEbiGratinFace(this.commCtx, 35, 35, 25, mood);
     }
 
-    // 共通：顔描画関数
     drawEbiGratinFace(ctx, x, y, size, mood) {
         ctx.fillStyle = '#FFDB58'; 
         if(mood==='fever') ctx.fillStyle = '#FF4136'; 
         if(mood==='panic') ctx.fillStyle = '#A0A0FF'; 
-        
         ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI * 2); ctx.fill();
-        
         ctx.fillStyle = '#8B4513';
         ctx.beginPath(); ctx.ellipse(x - size*0.4, y - size*0.5, size*0.2, size*0.1, 0, 0, Math.PI*2); ctx.fill();
         ctx.beginPath(); ctx.ellipse(x + size*0.3, y - size*0.4, size*0.25, size*0.15, 0, 0, Math.PI*2); ctx.fill();
-
         ctx.fillStyle = '#000'; ctx.beginPath();
         if (mood === 'happy') {
             ctx.arc(x - size*0.3, y, size*0.15, Math.PI, 0); ctx.stroke(); ctx.beginPath();
@@ -1029,7 +941,6 @@ class Game {
             ctx.arc(x - size*0.3, y + size*0.1, size*0.1, 0, Math.PI * 2);
             ctx.arc(x + size*0.3, y + size*0.1, size*0.1, 0, Math.PI * 2); ctx.fill();
         }
-
         ctx.beginPath(); ctx.lineWidth = 2;
         if (mood === 'happy' || mood === 'fever') {
             ctx.arc(x, y + size*0.1, size*0.3, 0, Math.PI); ctx.fill();
@@ -1041,7 +952,7 @@ class Game {
     }
 
     drawLockSight(x, y, r) {
-        this.ctx.strokeStyle = '#00FFFF'; this.ctx.lineWidth = 2; this.ctx.shadowBlur = 5; this.ctx.shadowColor = '#00FFFF';
+        this.ctx.strokeStyle = '#FF00FF'; this.ctx.lineWidth = 2; this.ctx.shadowBlur = 10; this.ctx.shadowColor = '#FF00FF'; // Pink
         const gap = Math.PI / 4; 
         this.ctx.beginPath(); this.ctx.arc(x, y, r, Math.PI + gap, 1.5 * Math.PI - gap); this.ctx.stroke();
         this.ctx.beginPath(); this.ctx.arc(x, y, r, 1.5 * Math.PI + gap, 2 * Math.PI - gap); this.ctx.stroke();
