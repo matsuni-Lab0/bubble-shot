@@ -14,10 +14,7 @@
         #game-container {
             position: relative; width: 100vw; height: 100dvh; overflow: hidden;
             background-color: #050510;
-            background-image: 
-                linear-gradient(rgba(255, 165, 0, 0.05) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 165, 0, 0.05) 1px, transparent 1px);
-            background-size: 40px 40px;
+            /* 背景パターンはCanvasで描くのでCSSからは削除 */
         }
         canvas { display: block; width: 100%; height: 100%; }
         
@@ -33,19 +30,17 @@
             z-index: 10; padding-top: 10px; box-sizing: border-box; position: relative;
         }
 
-        /* ★司令官ウィンドウ (左上) */
+        /* 司令官ウィンドウ (左上) */
         #commander-window {
             position: absolute; top: 10px; left: 10px;
             width: 70px; height: 70px;
-            background: rgba(0, 20, 40, 0.8);
-            border: 2px solid #00FFFF;
-            border-radius: 10px;
-            /* 六角形っぽくするクリップ（オプション） */
+            background: rgba(0, 20, 40, 0.6); /* 少し透明度を上げる */
+            border: 2px solid #00FFFF; border-radius: 10px;
             clip-path: polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%);
-            pointer-events: auto; /* タップで反応させても面白い */
-            display: flex; justify-content: center; align-items: center;
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+            pointer-events: auto; display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2); /* 発光感を強める */
             z-index: 25;
+            backdrop-filter: blur(2px);
         }
         #comm-canvas { width: 100%; height: 100%; }
         #comm-label {
@@ -53,9 +48,9 @@
             font-size: 8px; color: #00FFFF; font-family: monospace; opacity: 0.8;
         }
 
-        /* マニュアルシャッフルボタン（位置調整） */
+        /* マニュアルシャッフルボタン */
         #manual-shuffle-btn {
-            position: absolute; top: 15px; left: 90px; /* ウィンドウの右横へ */
+            position: absolute; top: 15px; left: 90px;
             width: 40px; height: 40px; border-radius: 50%;
             background: rgba(255, 165, 0, 0.1); border: 2px solid #FFA500;
             color: #FFA500; box-shadow: 0 0 10px rgba(255, 165, 0, 0.2); font-size: 18px;
@@ -95,8 +90,7 @@
 
         #time-bar-wrapper {
             width: 50%; height: 6px; background: #222; border-radius: 4px;
-            margin-top: 10px; /* 少し下げる */
-            border: 1px solid #555; position: relative; overflow: hidden;
+            margin-top: 10px; border: 1px solid #555; position: relative; overflow: hidden;
         }
         #time-bar { width: 100%; height: 100%; background: #0074D9; transition: width 0.1s linear, background 0.3s; box-shadow: 0 0 10px currentColor; }
         
@@ -217,7 +211,6 @@
         @keyframes blink { from { opacity: 1; } to { opacity: 0.3; } }
         .hidden { display: none !important; }
 
-        /* キャラクター表示用 */
         #mascot-canvas-menu, #mascot-canvas-over {
             width: 100px; height: 100px; margin-bottom: 10px;
         }
@@ -237,7 +230,6 @@
             </div>
 
             <div id="manual-shuffle-btn" onclick="game.manualShuffle()">↻</div>
-            
             <div id="difficulty-display">Lv.?</div>
 
             <div id="time-bar-wrapper"><div id="time-bar"></div></div>
@@ -371,10 +363,9 @@ class Game {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         
-        // 司令官キャンバス
         this.commCanvas = document.getElementById('comm-canvas');
         this.commCtx = this.commCanvas.getContext('2d');
-        this.commState = 'normal'; // normal, happy, panic, fever
+        this.commState = 'normal';
 
         setTimeout(() => this.resize(), 100);
         window.addEventListener('resize', () => this.resize());
@@ -395,11 +386,11 @@ class Game {
         this.centerY = 0;
         this.lastTime = 0;
         this.scanAngle = 0;
+        this.bgScroll = 0; // 背景スクロール用
         
         this.maxNum = 30; 
         this.difficultyLabel = "Lv.3";
 
-        // マスコット描画 (メニュー＆ゲームオーバー)
         this.drawStaticMascot('mascot-canvas-menu', 'normal');
         this.drawStaticMascot('mascot-canvas-over', 'panic');
         this.updateCommander('normal');
@@ -471,11 +462,10 @@ class Game {
         this.addEffect({type: 'text', text: 'TARGET UPDATED', color: '#FFDC00', size: 20});
     }
 
-    // ★改良：密度アップ（ターゲット数を増やし、バブルサイズを小さく）
     replenishEntities() {
         const area = this.width * this.height;
-        let targetCount = 20; // 基本を増やす
-        if (this.width < 400) targetCount = 22; // スマホでより多く
+        let targetCount = 20; 
+        if (this.width < 400) targetCount = 22; 
         else if (this.width > 800) targetCount = 35;
 
         let currentCount = this.entities.length;
@@ -486,12 +476,11 @@ class Game {
     }
 
     spawnEntity(isFever) {
-        // ★改良：半径を小さくして詰め込む
-        const baseR = Math.min(this.width, this.height) / 16; // 13->16へ縮小
-        const r = Math.max(16, Math.min(24, baseR)); // 最小サイズも少し下げる
+        const baseR = Math.min(this.width, this.height) / 16; 
+        const r = Math.max(16, Math.min(24, baseR)); 
 
         let x, y, safe = false, attempts = 0;
-        const maxAttempts = 100; // 試行回数
+        const maxAttempts = 100; 
         while (!safe && attempts < maxAttempts) {
             attempts++;
             const angle = Math.random() * Math.PI * 2;
@@ -501,10 +490,10 @@ class Game {
             safe = true;
             for (let ent of this.entities) {
                 const d = Math.hypot(ent.x - x, ent.y - y);
-                if (d < r * 2.05) { safe = false; break; } // 接触判定をさらに緩和
+                if (d < r * 2.05) { safe = false; break; } 
             }
         }
-        if (!safe) return; // 配置できなくても諦める（無限ループ防止）
+        if (!safe) return; 
         
         const ent = { 
             type: isFever ? 'num' : (Math.random() < 0.5 ? 'num' : 'op'),
@@ -536,7 +525,7 @@ class Game {
         const sol = this.findSolutionDeep(); 
         if (!sol) {
             this.addEffect({text: "DEADLOCK... RESHUFFLE", color: "#FF4136", size: 24});
-            this.updateCommander('panic'); // ピンチ顔
+            this.updateCommander('panic');
             setTimeout(() => {
                 this.entities = [];
                 this.clearFormula();
@@ -570,18 +559,17 @@ class Game {
                 }
             }
         }
-        return null; // 5手読みは重いので、詰み防止には3手チェックで十分。なければリセットへ
+        return null; 
     }
 
     autoLock() {
         if (this.state !== 'playing') return;
         this.clearFormula();
         
-        // 簡易チェックだけでなく、解がないなら即リセット
         const solution = this.findSolutionDeep();
         
         if (solution) {
-            this.updateCommander('happy'); // 成功顔
+            this.updateCommander('happy'); 
             let delay = 0;
             solution.forEach(ent => {
                 setTimeout(() => {
@@ -743,7 +731,7 @@ class Game {
             this.addEffect({text: `HIT!! +${totalScore}`, color: '#FFDC00', size: 40});
             this.clearCount++;
             this.updateGauge();
-            this.updateCommander('happy'); // 成功顔
+            this.updateCommander('happy');
             
             if (this.clearCount >= 3) { 
                 this.startFever(); 
@@ -758,7 +746,7 @@ class Game {
             const disp = valid ? Math.round(result) : "INVALID";
             this.addEffect({text: `MISS (${disp})`, color: '#888', size: 30});
             this.entities.forEach(e => { e.selected = false; e.order = null; });
-            this.updateCommander('panic'); // 失敗顔
+            this.updateCommander('panic'); 
             setTimeout(() => this.updateCommander('normal'), 800);
         }
         this.formulaStack = [];
@@ -787,9 +775,9 @@ class Game {
         guideMsg.style.color = "#FF4136";
         document.getElementById('formula-bar').innerText = "DESTROY TARGETS!";
         
-        this.updateCommander('fever'); // フィーバー顔
+        this.updateCommander('fever');
 
-        for(let i=0; i<30; i++) { this.spawnEntity(true); } // フィーバーはもっと多く
+        for(let i=0; i<30; i++) { this.spawnEntity(true); }
         this.addEffect({type: 'text', text: 'FEVER START!!', color: '#FF4136', size: 30});
         this.updateTimeBar();
     }
@@ -823,7 +811,7 @@ class Game {
             bar.style.width = `${pct}%`;
             if (pct < 20) {
                 bar.style.backgroundColor = '#FF4136';
-                if(this.state === 'playing') this.updateCommander('panic'); // 時間切れ間近
+                if(this.state === 'playing') this.updateCommander('panic');
             } else if (pct < 50) {
                 bar.style.backgroundColor = '#FFDC00'; 
             } else { 
@@ -833,7 +821,9 @@ class Game {
     }
 
     update(dt) {
-        this.scanAngle += dt * 2;
+        this.scanAngle += dt * 1.5; // レーダーの回転速度
+        this.bgScroll += dt * 20; // 背景スクロール速度
+        
         this.entities.forEach(ent => {
             if (ent.scale < 1) ent.scale += dt * 5;
             if (ent.scale > 1) ent.scale = 1;
@@ -890,19 +880,56 @@ class Game {
         });
     }
 
-    draw() {
-        this.ctx.fillStyle = '#050510'; this.ctx.fillRect(0, 0, this.width, this.height);
+    // ★新機能：SFレーダー背景描画
+    drawSciFiRadarBackground(ctx, x, y, r) {
         const isFever = (this.state === 'fever');
-        const radarColor = isFever ? 'rgba(255, 65, 54, 0.3)' : 'rgba(0, 255, 255, 0.2)';
-        this.ctx.strokeStyle = radarColor; this.ctx.lineWidth = 2;
-        this.ctx.beginPath(); this.ctx.arc(this.centerX, this.centerY, this.radarRadius, 0, Math.PI*2); this.ctx.stroke();
-        this.ctx.save(); this.ctx.translate(this.centerX, this.centerY); this.ctx.rotate(this.scanAngle);
-        const grad = this.ctx.createLinearGradient(0, 0, this.radarRadius, 0);
-        grad.addColorStop(0, 'rgba(0, 255, 255, 0)');
-        grad.addColorStop(1, isFever ? 'rgba(255, 65, 54, 0.2)' : 'rgba(0, 255, 255, 0.1)');
-        this.ctx.fillStyle = grad; this.ctx.beginPath(); this.ctx.moveTo(0, 0);
-        this.ctx.arc(0, 0, this.radarRadius, -0.2, 0.2); this.ctx.fill(); this.ctx.restore();
+        const baseColor = isFever ? '255, 65, 54' : '0, 255, 255';
 
+        // 背景グリッド
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.strokeStyle = `rgba(${baseColor}, 0.1)`; ctx.lineWidth = 1;
+        const gridSize = 40;
+        const offset = this.bgScroll % gridSize;
+        for(let i = -r; i < r; i+=gridSize) {
+            ctx.beginPath(); ctx.moveTo(i - offset, -r); ctx.lineTo(i - offset, r); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-r, i + offset); ctx.lineTo(r, i + offset); ctx.stroke();
+        }
+        ctx.restore();
+
+        // 同心円
+        ctx.strokeStyle = `rgba(${baseColor}, 0.3)`; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(x, y, r * 0.3, 0, Math.PI*2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(x, y, r * 0.6, 0, Math.PI*2); ctx.stroke();
+        ctx.lineWidth = 3; ctx.shadowBlur = 10; ctx.shadowColor = `rgb(${baseColor})`;
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.stroke(); ctx.shadowBlur = 0;
+
+        // 十字線（薄く）
+        ctx.strokeStyle = `rgba(${baseColor}, 0.2)`; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x-r, y); ctx.lineTo(x+r, y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x, y-r); ctx.lineTo(x, y+r); ctx.stroke();
+
+        // 回転スキャン
+        ctx.save(); ctx.translate(x, y); ctx.rotate(this.scanAngle);
+        const grad = ctx.createLinearGradient(0, 0, r, 0);
+        grad.addColorStop(0, `rgba(${baseColor}, 0)`);
+        grad.addColorStop(1, `rgba(${baseColor}, 0.15)`);
+        ctx.fillStyle = grad; ctx.beginPath(); ctx.moveTo(0, 0);
+        ctx.arc(0, 0, r, -0.3, 0.3); ctx.fill(); 
+        // スキャンラインの先端
+        ctx.strokeStyle = `rgba(${baseColor}, 0.8)`; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(r*Math.cos(0.3), r*Math.sin(0.3)); ctx.lineTo(0,0); ctx.stroke();
+        ctx.restore();
+    }
+
+    draw() {
+        // 1. 背景塗りつぶし
+        this.ctx.fillStyle = '#050510'; this.ctx.fillRect(0, 0, this.width, this.height);
+
+        // 2. ★SFレーダー背景を描画（エンティティより後ろ！）
+        this.drawSciFiRadarBackground(this.ctx, this.centerX, this.centerY, this.radarRadius);
+
+        // 3. リンク線
         if (this.formulaStack.length > 0) {
             const now = Date.now();
             for (let i = 0; i < this.formulaStack.length - 1; i++) {
@@ -923,15 +950,21 @@ class Game {
             }
         }
 
+        // 4. エンティティ（バブル）描画（レーダーより手前！）
         this.entities.forEach(ent => {
             const size = ent.r * ent.scale;
             if (ent.isFever) { this.ctx.fillStyle = '#FF4136'; } else if (ent.type === 'num') {
                 this.ctx.fillStyle = ent.selected ? '#FFDC00' : '#EEE';
             } else { this.ctx.fillStyle = ent.selected ? '#00FFFF' : '#0074D9'; }
+            
+            // バブル本体
             this.ctx.beginPath(); this.ctx.arc(ent.x, ent.y, size, 0, Math.PI*2); this.ctx.fill();
+            
+            // 光沢
             this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
             this.ctx.beginPath(); this.ctx.ellipse(ent.x - size * 0.3, ent.y - size * 0.3, size * 0.2, size * 0.1, Math.PI / 4, 0, Math.PI * 2); this.ctx.fill();
 
+            // 選択時のロックオン表示（これはバブルの装飾なのでここでOK）
             if (ent.selected) {
                 this.drawLockSight(ent.x, ent.y, size + 5);
                 if (ent.order) {
@@ -943,27 +976,21 @@ class Game {
                 this.ctx.strokeStyle = '#FF0000'; this.ctx.lineWidth = 2; this.ctx.beginPath();
                 this.ctx.arc(ent.x, ent.y, size, 0, Math.PI*2); this.ctx.stroke();
             }
+            // 文字
             this.ctx.fillStyle = '#000'; this.ctx.textAlign = 'center'; this.ctx.textBaseline = 'middle';
             this.ctx.font = size > 20 ? 'bold 22px Arial' : 'bold 16px Arial';
             let label = ent.type === 'num' ? ent.val : OPS[ent.val].label;
             this.ctx.fillText(label, ent.x, ent.y);
         });
 
-        this.drawReticle(this.centerX, this.centerY);
-
+        // 5. エフェクト描画（最前面）
         this.effects.forEach(eff => {
             this.ctx.fillStyle = eff.color; this.ctx.font = `bold ${eff.size || 20}px Arial`;
             this.ctx.textAlign = 'center'; this.ctx.fillText(eff.text, eff.x, eff.y);
         });
-    }
 
-    drawReticle(x, y) {
-        const ctx = this.ctx;
-        ctx.strokeStyle = '#00FFFF'; ctx.lineWidth = 2; ctx.shadowBlur = 10; ctx.shadowColor = '#00FFFF';
-        ctx.beginPath(); ctx.arc(x, y, 15, 0, Math.PI * 2); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x - 25, y); ctx.lineTo(x + 25, y);
-        ctx.moveTo(x, y - 25); ctx.lineTo(x, y + 25); ctx.stroke();
-        ctx.shadowBlur = 0;
+        // ★削除：中央の十字レティクルはもう描画しない
+        // this.drawReticle(this.centerX, this.centerY); 
     }
     
     // 静的キャンバスに描画 (メニュー等)
@@ -984,53 +1011,32 @@ class Game {
 
     // 共通：顔描画関数
     drawEbiGratinFace(ctx, x, y, size, mood) {
-        // 顔のベース
         ctx.fillStyle = '#FFDB58'; 
-        if(mood==='fever') ctx.fillStyle = '#FF4136'; // 赤く燃える
-        if(mood==='panic') ctx.fillStyle = '#A0A0FF'; // 青ざめる
+        if(mood==='fever') ctx.fillStyle = '#FF4136'; 
+        if(mood==='panic') ctx.fillStyle = '#A0A0FF'; 
         
-        ctx.beginPath();
-        ctx.arc(x, y, size, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI * 2); ctx.fill();
         
-        // 焦げ目
         ctx.fillStyle = '#8B4513';
-        ctx.beginPath();
-        ctx.ellipse(x - size*0.4, y - size*0.5, size*0.2, size*0.1, 0, 0, Math.PI*2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.ellipse(x + size*0.3, y - size*0.4, size*0.25, size*0.15, 0, 0, Math.PI*2);
-        ctx.fill();
+        ctx.beginPath(); ctx.ellipse(x - size*0.4, y - size*0.5, size*0.2, size*0.1, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(x + size*0.3, y - size*0.4, size*0.25, size*0.15, 0, 0, Math.PI*2); ctx.fill();
 
-        // 目
-        ctx.fillStyle = '#000';
-        ctx.beginPath();
+        ctx.fillStyle = '#000'; ctx.beginPath();
         if (mood === 'happy') {
-            // ニッコリ目
-            ctx.arc(x - size*0.3, y, size*0.15, Math.PI, 0);
-            ctx.stroke(); ctx.beginPath();
-            ctx.arc(x + size*0.3, y, size*0.15, Math.PI, 0);
-            ctx.stroke();
+            ctx.arc(x - size*0.3, y, size*0.15, Math.PI, 0); ctx.stroke(); ctx.beginPath();
+            ctx.arc(x + size*0.3, y, size*0.15, Math.PI, 0); ctx.stroke();
         } else {
-            // 普通の目
             ctx.arc(x - size*0.3, y + size*0.1, size*0.1, 0, Math.PI * 2);
-            ctx.arc(x + size*0.3, y + size*0.1, size*0.1, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.arc(x + size*0.3, y + size*0.1, size*0.1, 0, Math.PI * 2); ctx.fill();
         }
 
-        // 口
-        ctx.beginPath();
-        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.lineWidth = 2;
         if (mood === 'happy' || mood === 'fever') {
-            ctx.arc(x, y + size*0.1, size*0.3, 0, Math.PI); // 開いた口
-            ctx.fill();
+            ctx.arc(x, y + size*0.1, size*0.3, 0, Math.PI); ctx.fill();
         } else if (mood === 'panic') {
-            ctx.moveTo(x-size*0.2, y+size*0.3);
-            ctx.lineTo(x+size*0.2, y+size*0.3); // 真一文字
-            ctx.stroke();
+            ctx.moveTo(x-size*0.2, y+size*0.3); ctx.lineTo(x+size*0.2, y+size*0.3); ctx.stroke();
         } else {
-            ctx.arc(x, y + size*0.1, size*0.3, 0.2*Math.PI, 0.8*Math.PI);
-            ctx.stroke();
+            ctx.arc(x, y + size*0.1, size*0.3, 0.2*Math.PI, 0.8*Math.PI); ctx.stroke();
         }
     }
 
