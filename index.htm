@@ -3,29 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Bubble Shot: Guaranteed - Undefined Blue</title>
+    <title>Bubble Shot: Auto-Lock - Undefined Blue</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #111; color: white; font-family: 'Helvetica Neue', Arial, sans-serif; touch-action: none; user-select: none; }
         #game-container { position: relative; width: 100vw; height: 100dvh; background-color: #050510; }
         canvas { display: block; width: 100%; height: 100%; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
+        
         #top-area { height: 220px; display: flex; flex-direction: column; align-items: center; background: linear-gradient(to bottom, rgba(0,0,0,0.9), rgba(0,0,0,0)); z-index: 10; padding-top: 10px; position: relative; }
         #commander-window { position: absolute; top: 10px; left: 10px; width: 70px; height: 70px; background: rgba(0, 20, 40, 0.6); border: 2px solid #00FFFF; border-radius: 10px; clip-path: polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%); display: flex; justify-content: center; align-items: center; }
         #comm-canvas { width: 100%; height: 100%; }
+        
         #mission-timer-wrapper { width: 200px; height: 4px; background: #222; margin-top: 5px; border-radius: 2px; overflow: hidden; border: 1px solid #444; }
         #mission-timer-bar { width: 100%; height: 100%; background: #FF4136; transition: width 0.1s linear; }
-        #mission-label { font-size: 10px; color: #00FFFF; letter-spacing: 4px; margin-top: 5px; opacity: 0.8;}
+        
         #mission-method-box { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
         .method-tag { font-size: 12px; color: #aaa; }
         #mission-op-display { font-size: 32px; font-weight: 900; color: #FF4136; text-shadow: 0 0 10px #FF4136; border: 2px solid #FF4136; padding: 0 15px; border-radius: 8px; background: rgba(255, 65, 54, 0.1); }
         #mission-target-display { font-size: 56px; font-weight: 900; color: #FFDC00; line-height: 1.0; text-shadow: 0 0 20px rgba(255, 220, 0, 0.8); font-family: 'Arial Black', sans-serif; }
-        #mission-sub { font-size: 14px; color: #00FFFF; font-weight: bold; margin-top: 8px; letter-spacing: 1px; }
+        
         #sync-gauge-container { width: 240px; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-top: 15px; border: 1px solid #444; }
         #sync-gauge { width: 0%; height: 100%; background: linear-gradient(90deg, #00FFFF, #FF00FF); transition: width 0.3s; }
+
         #bottom-area { height: 150px; display: flex; justify-content: center; align-items: center; padding-bottom: 20px; }
         #fire-btn { width: 160px; height: 60px; background: rgba(255, 65, 54, 0.1); border: 2px solid #555; color: #555; font-size: 24px; font-weight: 900; letter-spacing: 4px; display: flex; justify-content: center; align-items: center; clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%); pointer-events: auto; transition: 0.2s; cursor: pointer; }
         #fire-btn.ready { background: rgba(255, 65, 54, 0.8); border: none; color: white; box-shadow: 0 0 30px #FF4136; text-shadow: 0 0 10px white; }
-        #status-bar { color: #aaa; font-family: monospace; font-size: 14px; display: flex; gap: 30px; margin-top: 8px; }
+        
+        #auto-lock-btn { position: absolute; bottom: 120px; right: 20px; width: 65px; height: 65px; border-radius: 50%; border: 2px solid #FFD700; color: #FFD700; background: rgba(255, 215, 0, 0.1); display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 10px; font-weight: bold; pointer-events: auto; cursor: pointer; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); } }
+
         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 10, 15, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; pointer-events: auto; text-align: center; }
         .hidden { display: none !important; }
         .btn-start { padding: 15px 50px; font-size: 20px; background: transparent; border: 2px solid #FFDC00; color: #FFDC00; cursor: pointer; font-weight: bold; box-shadow: 0 0 15px #FFDC00; }
@@ -37,7 +43,7 @@
     <div id="ui-layer">
         <div id="top-area">
             <div id="commander-window"><canvas id="comm-canvas" width="70" height="70"></canvas></div>
-            <div id="mission-label">WEAPON & TARGET</div>
+            <div id="mission-label">FCS: ACTIVE</div>
             <div id="mission-timer-wrapper"><div id="mission-timer-bar"></div></div>
             <div id="mission-method-box">
                 <span class="method-tag">USE</span>
@@ -45,13 +51,9 @@
                 <span class="method-tag">TO MAKE</span>
                 <div id="mission-target-display">0</div>
             </div>
-            <div id="mission-sub">数値を計算せよ</div>
-            <div id="status-bar">
-                <span>SCORE: <span id="score">0</span></span>
-                <span>TIME: <span id="timer">90</span></span>
-            </div>
             <div id="sync-gauge-container"><div id="sync-gauge"></div></div>
         </div>
+        <div id="auto-lock-btn" onclick="game.autoLock()">AUTO<br>LOCK</div>
         <div id="bottom-area"><div id="fire-btn" onclick="game.fire()">SHOT</div></div>
     </div>
     <div id="menu-screen" class="overlay">
@@ -116,14 +118,10 @@ class Game {
             this.targetNum = Math.floor(Math.random() * 19) + 2;
             const opKeys = Object.keys(OPS);
             this.targetOp = opKeys[Math.floor(Math.random() * opKeys.length)];
-            
             document.getElementById('mission-op-display').innerText = OPS[this.targetOp].label;
             document.getElementById('mission-op-display').style.color = OPS[this.targetOp].color;
             document.getElementById('mission-op-display').style.borderColor = OPS[this.targetOp].color;
             document.getElementById('mission-target-display').innerText = this.targetNum;
-            document.getElementById('mission-sub').innerText = "数値を計算せよ";
-            
-            // ★重要：正解を保証するために、ミッション切り替え時に正解の数字と演算子を強制生成
             this.ensureSolutionExists();
         } else {
             this.isCalcMission = false;
@@ -131,7 +129,6 @@ class Game {
             document.getElementById('mission-op-display').innerText = (this.targetOp === 'even' ? '2n' : '2n+1');
             document.getElementById('mission-op-display').style.color = "#FFDC00";
             document.getElementById('mission-target-display').innerText = (this.targetOp === 'even' ? 'EVEN' : 'ODD');
-            document.getElementById('mission-sub').innerText = "条件に合う数字を撃て";
         }
         this.missionTimeLeft = 10.0;
         this.entities.forEach(e => { e.locked = false; e.order = 0; });
@@ -139,31 +136,21 @@ class Game {
         this.updateCommander('normal');
     }
 
-    // ★正解の存在を保証するロジック
     ensureSolutionExists() {
         if(!this.isCalcMission) return;
         let n1, n2;
-        const op = this.targetOp;
-        const target = this.targetNum;
-
-        // 演算子に基づいて適切なペアを作成
+        const op = this.targetOp; const target = this.targetNum;
         if(op === 'add') { n1 = Math.floor(Math.random() * (target - 1)) + 1; n2 = target - n1; }
         else if(op === 'sub') { n2 = Math.floor(Math.random() * 10) + 1; n1 = target + n2; }
         else if(op === 'mul') {
-            const divisors = [];
-            for(let i=1; i<=target; i++) { if(target % i === 0) divisors.push(i); }
+            const divisors = []; for(let i=1; i<=target; i++) { if(target % i === 0) divisors.push(i); }
             n1 = divisors[Math.floor(Math.random() * divisors.length)]; n2 = target / n1;
         } else if(op === 'div') { n2 = Math.floor(Math.random() * 5) + 1; n1 = target * n2; }
-
-        // 生成した正解セット（n1, op, n2）を強制的に投入
-        this.spawnEntityFixed(n1, 'num');
-        this.spawnEntityFixed(op, 'op');
-        this.spawnEntityFixed(n2, 'num');
+        this.spawnEntityFixed(n1, 'num'); this.spawnEntityFixed(op, 'op'); this.spawnEntityFixed(n2, 'num');
     }
 
     spawnEntityFixed(val, type) {
-        const r = 22;
-        let attempts = 0;
+        const r = 22; let attempts = 0;
         while(attempts < 200) {
             const angle = Math.random() * Math.PI * 2;
             const dist = Math.sqrt(Math.random()) * (this.radarRadius - r - 10);
@@ -171,19 +158,50 @@ class Game {
             const y = this.centerY + Math.sin(angle) * dist;
             let safe = true;
             for(let e of this.entities) { if(Math.hypot(e.x - x, e.y - y) < r * 2.6) { safe = false; break; } }
-            if(safe) {
-                this.entities.push({ x, y, r, val, type, scale: 0, locked: false, alive: true, order: 0 });
-                return;
-            }
+            if(safe) { this.entities.push({ x, y, r, val, type, scale: 0, locked: false, alive: true, order: 0 }); return; }
             attempts++;
         }
     }
 
-    replenish() { while (this.entities.length < 20) { this.spawnEntity(); } }
+    autoLock() {
+        if(this.state !== 'playing') return;
+        // 現在のロックを解除
+        this.entities.forEach(e => { e.locked = false; e.order = 0; });
+        
+        if(this.isCalcMission) {
+            // 正解を探す
+            for(let i=0; i<this.entities.length; i++) {
+                if(this.entities[i].type !== 'num') continue;
+                for(let j=0; j<this.entities.length; j++) {
+                    if(this.entities[j].val !== this.targetOp || this.entities[j].type !== 'op') continue;
+                    for(let k=0; k<this.entities.length; k++) {
+                        if(this.entities[k].type !== 'num' || i === k) continue;
+                        if(OPS[this.targetOp].calc(this.entities[i].val, this.entities[k].val) === this.targetNum) {
+                            // 発見！1→2→3の順でロック
+                            this.entities[i].locked = true; this.entities[i].order = 1;
+                            this.entities[j].locked = true; this.entities[j].order = 2;
+                            this.entities[k].locked = true; this.entities[k].order = 3;
+                            this.updateFireButton();
+                            this.addEffect("AUTO ACQUIRED", this.centerX, this.centerY, "#FFD700", 20);
+                            return;
+                        }
+                    }
+                }
+            }
+        } else {
+            // 偶数・奇数ミッション
+            const targets = this.entities.filter(e => (this.targetOp === 'even' ? e.val % 2 === 0 : e.val % 2 !== 0));
+            if(targets.length > 0) {
+                targets.forEach((t, idx) => { t.locked = true; t.order = idx + 1; });
+                this.updateFireButton();
+                this.addEffect("MULTI LOCK", this.centerX, this.centerY, "#FFD700", 20);
+            }
+        }
+    }
 
+    replenish() { while (this.entities.length < 20) { this.spawnEntity(); } }
     spawnEntity() {
-        const r = 22;
-        const type = (this.isCalcMission && Math.random() < 0.3) ? 'op' : 'num';
+        const r = 22; const type = (this.isCalcMission && Math.random() < 0.3) ? 'op' : 'num';
         let val = type === 'num' ? Math.floor(Math.random() * 25) + 1 : Object.keys(OPS)[Math.floor(Math.random() * 4)];
         this.spawnEntityFixed(val, type);
     }
@@ -200,8 +218,7 @@ class Game {
                     ent.locked = true; ent.order = lockedCount + 1;
                 } else {
                     ent.locked = false; ent.order = 0;
-                    let count = 1;
-                    this.entities.filter(e => e.locked).sort((a,b)=>a.order-b.order).forEach(e => e.order = count++);
+                    let count = 1; this.entities.filter(e => e.locked).sort((a,b)=>a.order-b.order).forEach(e => e.order = count++);
                 }
                 this.updateFireButton(); return;
             }
@@ -220,7 +237,6 @@ class Game {
         const locked = this.entities.filter(e => e.locked).sort((a,b) => a.order - b.order);
         if(locked.length === 0) return;
         let hitAll = true, totalGain = 0;
-
         if(this.isCalcMission) {
             const n1 = locked[0], op = locked[1], n2 = locked[2];
             const result = OPS[op.val].calc(n1.val, n2.val);
@@ -233,19 +249,15 @@ class Game {
             });
             if(hitAll) totalGain += Math.floor(this.missionTimeLeft * 50);
         }
-
         locked.forEach(ent => {
             this.lasers.push({ x1: this.shipPos.x, y1: this.shipPos.y, x2: ent.x, y2: ent.y, life: 0.2, color: hitAll ? '#00FFFF' : '#FF4136', ent: ent });
             ent.alive = false;
         });
-
         if(hitAll) {
             this.score += totalGain; this.syncRatio = Math.min(100, this.syncRatio + (this.isCalcMission ? 20 : locked.length * 5));
             this.addEffect(`HIT! +${totalGain}`, this.centerX, this.centerY - 40, "#00FFFF", 28);
             this.updateCommander('happy');
-        } else {
-            this.syncRatio = Math.max(0, this.syncRatio - 15); this.updateCommander('panic');
-        }
+        } else { this.syncRatio = Math.max(0, this.syncRatio - 15); this.updateCommander('panic'); }
         this.entities = this.entities.filter(e => e.alive); this.replenish(); this.updateFireButton();
         if(this.syncRatio >= 100) this.fullBurst(); else setTimeout(() => this.nextMission(), 400);
     }
@@ -268,8 +280,7 @@ class Game {
             this.timeLeft -= dt; this.missionTimeLeft -= dt;
             if(this.missionTimeLeft <= 0) this.nextMission();
             if(this.timeLeft <= 0) {
-                this.state = 'gameover';
-                document.getElementById('gameover-screen').classList.remove('hidden');
+                this.state = 'gameover'; document.getElementById('gameover-screen').classList.remove('hidden');
                 document.getElementById('final-score').innerText = this.score;
             }
             this.updateUI();
