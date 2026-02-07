@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Bubble Shot: Hi-MAT Shrimp</title>
+    <title>Bubble Shot: Shrimp Edition</title>
     <style>
-        /* --- CSS設定 (Shrimp Edition Base) --- */
+        /* --- CSS設定 --- */
         body {
             margin: 0; overflow: hidden; background-color: #111; color: white;
             font-family: 'Helvetica Neue', 'Arial', sans-serif;
@@ -46,7 +46,7 @@
             font-size: 8px; color: #00FFFF; font-family: monospace; opacity: 0.8;
         }
 
-        /* マニュアルリロード */
+        /* シャッフルボタン */
         #manual-shuffle-btn {
             position: absolute; top: 15px; left: 90px;
             width: 40px; height: 40px; border-radius: 50%;
@@ -64,22 +64,26 @@
             border: 1px solid #444; padding: 2px 6px; border-radius: 4px;
         }
 
-        /* オートロックボタン (MAP兵器) */
+        /* オートロックボタン */
         #auto-lock-btn {
             position: absolute; bottom: 100px; right: 20px;
             width: 60px; height: 60px; border-radius: 50%;
-            background: rgba(255, 0, 255, 0.2); border: 2px solid #FF00FF; color: #FF00FF;
+            background: rgba(255, 215, 0, 0.2); border: 2px solid #FFD700; color: #FFD700;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             font-size: 10px; font-weight: 900; text-align: center;
-            box-shadow: 0 0 15px #FF00FF; cursor: pointer; pointer-events: auto; z-index: 30;
+            box-shadow: 0 0 15px #FFD700; cursor: pointer; pointer-events: auto; z-index: 30;
             animation: pulse 2s infinite; line-height: 1.1;
         }
-        #auto-lock-btn.disabled { filter: grayscale(100%); opacity: 0.5; animation: none; pointer-events: none;} 
+        .ja-sub { font-size: 8px; font-weight: normal; opacity: 0.8; }
+        .trial-badge { 
+            position: absolute; top: -5px; right: -5px; background: #FF4136; color: #fff;
+            font-size: 8px; padding: 2px 4px; border-radius: 4px; font-weight: bold;
+        }
 
         @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(255, 0, 255, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(255, 0, 255, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 0, 255, 0); }
+            0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
         }
 
         #time-bar-wrapper {
@@ -88,19 +92,18 @@
         }
         #time-bar { width: 100%; height: 100%; background: #0074D9; transition: width 0.1s linear, background 0.3s; box-shadow: 0 0 10px currentColor; }
         
-        #mission-label { font-size: 10px; color: #00FFFF; letter-spacing: 4px; margin-top: 5px; opacity: 0.8;}
-        #mission-display {
-            font-size: 32px; font-weight: 900; color: #FFDC00; line-height: 1.0; margin: 0;
-            text-shadow: 0 0 20px rgba(255, 220, 0, 0.8); font-family: 'Arial Black', sans-serif; letter-spacing: -1px;
-            transition: transform 0.1s;
+        #target-label { font-size: 10px; color: #00FFFF; letter-spacing: 4px; margin-top: 5px; opacity: 0.8;}
+        #target-display {
+            font-size: 64px; font-weight: 900; color: #FFDC00; line-height: 1.0; margin: 0;
+            text-shadow: 0 0 20px rgba(255, 220, 0, 0.8); font-family: 'Arial Black', sans-serif; letter-spacing: -2px;
         }
-        .pulse-text { animation: textPulse 0.5s infinite alternate; }
-        @keyframes textPulse { from { transform: scale(1); } to { transform: scale(1.1); } }
-
         #status-bar {
             color: #aaa; font-family: monospace; font-size: 16px; display: flex; gap: 20px;
             font-weight: bold; margin-top: 5px; text-shadow: 0 0 2px #000;
         }
+        #fever-label { font-size: 10px; color: #888; margin-top: 5px; letter-spacing: 2px;}
+        #fever-gauge-container { width: 200px; height: 4px; background: #333; border-radius: 2px; overflow: hidden; margin-top: 2px; }
+        #fever-gauge { width: 0%; height: 100%; background: linear-gradient(90deg, #FFDC00, #FF4136); transition: width 0.3s; box-shadow: 0 0 5px #FF4136; }
 
         /* --- 下部エリア --- */
         #bottom-area {
@@ -111,27 +114,40 @@
         #guide-msg {
             color: #00FFFF; font-size: 14px; margin-bottom: 5px; min-height: 35px;
             text-shadow: 0 0 5px #00FFFF; letter-spacing: 1px; text-align: center; line-height: 1.3;
+            transition: all 0.3s; /* 文字サイズ変更用のアニメーション */
         }
-        #guide-msg .sub { font-size: 10px; color: #aaa; display: block; margin-top: 2px;}
+        #guide-msg .sub { font-size: 10px; color: #aaa; display: block; margin-top: 2px; transition: all 0.3s;}
+        
+        /* ★フィーバー時の文字サイズ強調クラス */
+        #guide-msg.fever-mode-text {
+            font-size: 24px; color: #FF4136; font-weight: 900; text-shadow: 0 0 10px #FF4136;
+        }
+        #guide-msg.fever-mode-text .sub {
+            font-size: 14px; color: #FFD700; font-weight: bold;
+        }
 
         #formula-bar {
-            min-height: 20px; margin-bottom: 10px; font-size: 18px; color: #FFF; font-family: monospace;
-            font-weight: bold; text-shadow: 0 0 5px #00FFFF; white-space: nowrap;
+            min-height: 30px; margin-bottom: 15px; font-size: 24px; color: #FFF; font-family: monospace;
+            font-weight: bold; text-shadow: 0 0 5px #00FFFF, 0 0 10px #00FFFF; white-space: nowrap;
+            max-width: 90%; overflow: hidden; text-overflow: ellipsis;
         }
         #btn-group { display: flex; gap: 20px; align-items: center; }
-        
         #fire-btn {
-            width: 160px; height: 70px; background: rgba(255, 0, 60, 0.1); border: 2px solid #555;
-            color: #555; font-size: 28px; font-weight: 900; letter-spacing: 4px; display: flex;
+            width: 150px; height: 60px; background: rgba(255, 65, 54, 0.1); border: 2px solid #555;
+            color: #555; font-size: 24px; font-weight: 900; letter-spacing: 4px; display: flex;
             justify-content: center; align-items: center; clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
-            transition: all 0.1s; cursor: pointer; pointer-events: none;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            transition: all 0.2s; cursor: pointer; pointer-events: none;
         }
         #fire-btn.ready {
-            background: rgba(255, 0, 60, 0.8); border: 2px solid #FF003C; color: white; box-shadow: 0 0 30px #FF003C;
-            pointer-events: auto; text-shadow: 0 0 10px white;
+            background: rgba(255, 65, 54, 0.8); border: none; color: white; box-shadow: 0 0 30px #FF4136;
+            pointer-events: auto; transform: scale(1.05); text-shadow: 0 0 10px white;
         }
-        #fire-btn:active { transform: scale(0.95); background: #fff; color: #FF003C; }
+        #fire-btn:active { transform: scale(0.95); background: #fff; color: #FF4136; }
+        #clear-btn {
+            width: 50px; height: 50px; border-radius: 50%; border: 1px solid #00FFFF; color: #00FFFF;
+            display: flex; justify-content: center; align-items: center; font-size: 10px; cursor: pointer;
+            background: rgba(0, 255, 255, 0.05); pointer-events: auto; box-shadow: 0 0 5px rgba(0, 255, 255, 0.2);
+        }
 
         /* --- 画面オーバーレイ --- */
         #menu-screen, #gameover-screen {
@@ -172,6 +188,11 @@
         .btn-hard { border-color: #FF4136; color: #FF4136; box-shadow: 0 0 5px #FF4136; }
         .btn-hard:hover { background: #FF4136; }
 
+        .btn-link {
+            border-color: #AAAAAA; color: #AAAAAA; box-shadow: none; border-style: dashed; font-size: 12px;
+        }
+        .btn-link:hover { background: #555; color: #fff; }
+
         .rule-box {
             font-size: 14px; color: #ccc; line-height: 1.6; margin-bottom: 20px; text-align: left; display: inline-block;
         }
@@ -198,7 +219,9 @@
         @keyframes blink { from { opacity: 1; } to { opacity: 0.3; } }
         .hidden { display: none !important; }
 
-        #mascot-canvas-menu, #mascot-canvas-over { width: 100px; height: 100px; margin-bottom: 10px; }
+        #mascot-canvas-menu, #mascot-canvas-over {
+            width: 100px; height: 100px; margin-bottom: 10px;
+        }
 
     </style>
 </head>
@@ -218,29 +241,32 @@
             <div id="difficulty-display">Lv.?</div>
 
             <div id="time-bar-wrapper"><div id="time-bar"></div></div>
-            <div id="mission-label">MISSION</div>
-            <div id="mission-display">READY</div>
+            <div id="target-label">TARGET</div>
+            <div id="target-display">??</div>
             <div id="status-bar">
                 <span id="score-display">SCORE: 0</span>
-                <span id="timer-display">TIME: 60</span>
+                <span id="timer-display">TIME: 90</span>
             </div>
+            <div id="fever-label">SYNC RATIO</div>
+            <div id="fever-gauge-container"><div id="fever-gauge"></div></div>
         </div>
         
         <div style="flex-grow: 1;"></div>
         
         <div id="auto-lock-btn" onclick="game.autoLock()">
-            <div class="trial-badge">MAP WPN</div>
+            <div class="trial-badge">FREE TRIAL</div>
             AUTO<br>LOCK
-            <span class="ja-sub">全自動射撃</span>
+            <span class="ja-sub">自動(お試し)</span>
         </div>
 
         <div id="bottom-area">
             <div id="guide-msg">
-                TAP TO LOCK
-                <span class="sub">ターゲットをタップせよ</span>
+                LOCK: [NUM]
+                <span class="sub">数字をロックせよ</span>
             </div>
-            <div id="formula-bar"></div>
+            <div id="formula-bar">READY...</div>
             <div id="btn-group">
+                <div id="clear-btn" onclick="game.clearFormula()">CLR</div>
                 <div id="fire-btn" onclick="game.fire()">FIRE</div>
             </div>
         </div>
@@ -248,28 +274,32 @@
 
     <div id="menu-screen">
         <canvas id="mascot-canvas-menu" width="100" height="100"></canvas>
-        <h1>Hi-MAT SHRIMP</h1>
+        <h1>BUBBLE SHOT</h1>
         <p style="color:#00FFFF; font-size:12px; margin-bottom: 20px; font-family: monospace;">
-            SYSTEM: ONLINE<br>MODE: REFLEX TARGETING
+            SYSTEM: ONLINE<br>MODE: FULL YEAST BURST
         </p>
         <div class="rule-box">
-            <span class="en">1. Check the MISSION (e.g., ODD).</span>
-            <span class="ja">ミッションを確認 (例: 奇数)。</span>
-            <span class="en">2. TAP bubbles to Multi-Lock.</span>
-            <span class="ja">タップして複数をロックオン。</span>
-            <span class="en">3. Press FIRE to Burst!</span>
-            <span class="ja">FIREボタンで一斉発射！</span>
+            <span class="en">1. Select Difficulty & Start.</span>
+            <span class="ja">難易度を選んでスタート。</span>
+            <span class="en">2. Lock numbers to match TARGET.</span>
+            <span class="ja">ターゲットと同じ数字を作る。</span>
+            <span class="en">3. "AUTO LOCK" for instant win!</span>
+            <span class="ja">「AUTO LOCK」で一撃必殺！</span>
         </div>
         <div class="diff-container">
             <button class="btn btn-diff btn-easy" onclick="game.start('easy')">
-                EASY (0-9) <span style="font-size:10px">初級</span>
+                EASY (0-9)<br><span style="font-size:10px">初級：1桁のみ</span>
             </button>
             <button class="btn btn-diff btn-normal" onclick="game.start('normal')">
-                NORMAL (0-19) <span style="font-size:10px">中級</span>
+                NORMAL (0-19)<br><span style="font-size:10px">中級：標準</span>
             </button>
             <button class="btn btn-diff btn-hard" onclick="game.start('hard')">
-                HARD (0-30) <span style="font-size:10px">上級</span>
+                HARD (0-30)<br><span style="font-size:10px">上級：高難度</span>
             </button>
+        </div>
+        <div style="margin-top: 10px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+            <button class="btn btn-link" onclick="openLink('line')">LINE STICKERS (Check Characters)</button>
+            <button class="btn btn-link" onclick="openLink('roblox')">COMING SOON to ROBLOX</button>
         </div>
     </div>
 
@@ -279,22 +309,32 @@
         <p id="result-final">0</p>
         <div id="rank-list-container"></div>
         <button class="btn" onclick="location.reload()">Return to Menu</button>
+        <div style="margin-top: 20px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+            <button class="btn btn-link" onclick="openLink('line')">See More Characters? (LINE)</button>
+        </div>
     </div>
 </div>
 
 <script>
+const URL_CONFIG = { line: "", roblox: "" };
+function openLink(type) {
+    const url = URL_CONFIG[type];
+    if (url && url.length > 0) { window.open(url, '_blank'); } else { alert("Coming Soon! \n準備中です。公開をお楽しみに！"); }
+}
+
 const OPS = {
     add: { label: '+', op: '+' }, sub: { label: '-', op: '-' },
     mul: { label: '×', op: '*' }, div: { label: '÷', op: '/' }
 };
 
-const MISSIONS = [
-    { id: 'odd', label: 'ODD NUMS', sub: '奇数をロックせよ (1,3,5...)', color: '#FF0055' },
-    { id: 'even', label: 'EVEN NUMS', sub: '偶数をロックせよ (2,4,6...)', color: '#00CCFF' },
-    { id: 'asc', label: 'ASCEND', sub: '小さい順にロックせよ (1→2→3)', color: '#00FF00' },
-    { id: 'desc', label: 'DESCEND', sub: '大きい順にロックせよ (9→8→7)', color: '#FFCC00' }
+const FEVER_TYPES = [
+    { id: 'asc', labelEn: 'ASCENDING (Low->High)', labelJa: '昇順で撃て (小 → 大)' },
+    { id: 'desc', labelEn: 'DESCENDING (High->Low)', labelJa: '降順で撃て (大 → 小)' },
+    { id: 'even', labelEn: 'EVEN NUMBERS', labelJa: '偶数を撃て' },
+    { id: 'odd', labelEn: 'ODD NUMBERS', labelJa: '奇数を撃て' }
 ];
 
+// ★ エビランク設定（上に行くほどスコアが高い）
 const RANKS = [
     { min: 30000, nameEn: "WHITE SHRIMP",   nameJa: "シロエビ" },
     { min: 20000, nameEn: "ISE LOBSTER",    nameJa: "伊勢海老" },
@@ -316,27 +356,19 @@ class Game {
         setTimeout(() => this.resize(), 100);
         window.addEventListener('resize', () => this.resize());
         this.state = 'menu';
-        this.score = 0; this.maxTime = 60; this.timeLeft = this.maxTime;
-        
-        this.entities = []; 
-        this.selectedEntities = [];
-        this.lasers = [];
-        this.effects = [];
-        
-        this.mission = null;
-        this.combo = 0;
-        this.lastSelectedVal = -1;
-        this.bgScroll = 0;
-        this.scanAngle = 0;
-        this.maxNum = 30;
+        this.score = 0; this.maxTime = 90; this.timeLeft = this.maxTime;
+        this.targetNum = 0; this.entities = []; this.formulaStack = [];
+        this.clearCount = 0; this.feverTimer = 0; this.feverMaxTime = 10;
+        this.feverType = null; this.effects = [];
+        this.radarRadius = 0; this.centerX = 0; this.centerY = 0;
+        this.lastTime = 0; this.scanAngle = 0; this.bgScroll = 0;
+        this.maxNum = 30; this.difficultyLabel = "Lv.3";
 
         this.drawStaticMascot('mascot-canvas-menu', 'normal');
         this.drawStaticMascot('mascot-canvas-over', 'panic');
         this.updateCommander('normal');
 
-        // タップ操作に変更
         this.canvas.addEventListener('pointerdown', (e) => this.handleClick(e));
-        
         this.loop = this.loop.bind(this);
         requestAnimationFrame(this.loop);
     }
@@ -352,82 +384,51 @@ class Game {
         this.centerX = this.width / 2;
         const maxRadius = Math.min(this.width, (this.height - topSpace - bottomSpace)) / 2;
         this.radarRadius = Math.max(0, maxRadius - 10);
-        if (this.state === 'playing' && this.entities.length === 0) { this.replenishEntities(15); }
+        if (this.state === 'playing' && this.entities.length === 0) { this.replenishEntities(); }
     }
 
     start(mode) {
-        if (mode === 'easy') { this.maxNum = 9; }
-        else if (mode === 'normal') { this.maxNum = 19; }
-        else { this.maxNum = 30; }
+        if (mode === 'easy') { this.maxNum = 9; this.difficultyLabel = "Lv.1 EASY"; }
+        else if (mode === 'normal') { this.maxNum = 19; this.difficultyLabel = "Lv.2 NRM"; }
+        else { this.maxNum = 30; this.difficultyLabel = "Lv.3 HARD"; }
+        document.getElementById('difficulty-display').innerText = this.difficultyLabel;
 
         this.resize(); this.state = 'playing'; this.score = 0; this.timeLeft = this.maxTime;
-        this.selectedEntities = []; this.entities = []; this.lasers = []; this.effects = [];
-        this.combo = 0;
+        this.clearCount = 0; this.updateGauge(); this.updateTimeBar();
+        this.formulaStack = []; this.entities = []; this.effects = [];
         
         this.updateCommander('normal');
-        this.replenishEntities(15);
-        this.setNextMission();
-        this.updateUI();
+        this.replenishEntities();
+        this.generateTarget();
+        this.updateUI(); this.clearFormula();
+        document.body.classList.remove('fever-mode');
         document.getElementById('menu-screen').classList.add('hidden');
         document.getElementById('gameover-screen').classList.add('hidden');
+        this.checkDeadlock();
     }
 
-    setNextMission() {
-        // 20%でボス（計算）、それ以外は反射神経
-        if (this.score > 500 && Math.random() < 0.2) {
-            this.setBossMission();
-            return;
-        }
-
-        let next;
-        do { next = MISSIONS[Math.floor(Math.random() * MISSIONS.length)]; } 
-        while (this.mission && this.mission.id === next.id);
-        
-        this.mission = next;
-        this.lastSelectedVal = -1;
-        this.updateMissionUI();
+    generateTarget() {
+        this.targetNum = Math.floor(Math.random() * (this.maxNum + 1));
+        document.getElementById('target-display').innerText = this.targetNum;
+        document.getElementById('target-label').innerText = "TARGET";
+        this.addEffect({type: 'text', text: 'TARGET UPDATED', color: '#FFDC00', size: 20});
     }
 
-    setBossMission() {
-        const targets = [
-            { val: 6, op: 'mul', label: 'TARGET: 6', sub: '掛け算で作れ (例: 2×3)' },
-            { val: 12, op: 'mul', label: 'TARGET: 12', sub: '掛け算で作れ (例: 3×4)' },
-            { val: 10, op: 'add', label: 'TARGET: 10', sub: '足し算で作れ (例: 5+5)' }
-        ];
-        const t = targets[Math.floor(Math.random()*targets.length)];
-        this.mission = { id: 'calc', label: t.label, sub: t.sub, targetVal: t.val, targetOp: t.op, color: '#FFFFFF' };
-        this.lastSelectedVal = -1;
-        this.updateMissionUI();
-        this.updateCommander('panic');
-        this.ensureBossSolvable();
-    }
-
-    updateMissionUI() {
-        const title = document.getElementById('mission-display');
-        const guide = document.getElementById('guide-msg');
-        
-        title.innerText = this.mission.label;
-        title.style.color = this.mission.color;
-        
-        title.classList.remove('pulse-text');
-        void title.offsetWidth;
-        title.classList.add('pulse-text');
-
-        guide.innerHTML = `MISSION<span class="sub">${this.mission.sub}</span>`;
-    }
-
-    replenishEntities(count) {
-        if(count <= 0) return;
+    replenishEntities() {
         const area = this.width * this.height;
-        for (let i = 0; i < count; i++) { this.spawnEntity(); }
+        let targetCount = 20; 
+        if (this.width < 400) targetCount = 22; else if (this.width > 800) targetCount = 35;
+        let currentCount = this.entities.length;
+        let needed = targetCount - currentCount;
+        for (let i = 0; i < needed; i++) { this.spawnEntity(false); }
     }
 
-    spawnEntity() {
+    spawnEntity(isFever) {
         const baseR = Math.min(this.width, this.height) / 16; 
         const r = Math.max(16, Math.min(24, baseR)); 
         let x, y, safe = false, attempts = 0;
-        
-        while (!safe && attempts < 50) {
+        const maxAttempts = 100; 
+        while (!safe && attempts < maxAttempts) {
             attempts++;
             const angle = Math.random() * Math.PI * 2;
             const dist = Math.sqrt(Math.random()) * (this.radarRadius - r - 5);
@@ -435,248 +436,366 @@ class Game {
             y = this.centerY + Math.sin(angle) * dist;
             safe = true;
             for (let ent of this.entities) {
-                if (Math.hypot(ent.x - x, ent.y - y) < r * 2.1) { safe = false; break; } 
+                const d = Math.hypot(ent.x - x, ent.y - y);
+                if (d < r * 2.05) { safe = false; break; } 
             }
         }
         if (!safe) return; 
-
-        // ボス戦中のみ演算子を混ぜる
-        let type = 'num';
-        let val = Math.floor(Math.random() * (this.maxNum + 1));
-        if (this.mission && this.mission.id === 'calc' && Math.random() < 0.4) {
-            type = 'op';
-            val = ['add','mul'][Math.floor(Math.random()*2)];
+        const ent = { 
+            type: isFever ? 'num' : (Math.random() < 0.5 ? 'num' : 'op'),
+            val: 0, x: x, y: y, r: r, selected: false, isFever: !!isFever, scale: 0
+        };
+        if (ent.type === 'num') {
+            ent.val = Math.floor(Math.random() * (this.maxNum + 1));
+        } else {
+            const keys = Object.keys(OPS);
+            ent.val = keys[Math.floor(Math.random() * keys.length)];
         }
-
-        this.entities.push({ 
-            type: type, val: val, x: x, y: y, r: r, selected: false, scale: 0,
-            vx: (Math.random()-0.5)*0.5, vy: (Math.random()-0.5)*0.5
-        });
+        this.entities.push(ent);
     }
 
-    ensureBossSolvable() {
-        const t = this.mission.targetVal;
-        const op = this.mission.targetOp === 'mul' ? 'mul' : 'add';
-        // 簡易解を追加
-        this.entities.push({ type:'num', val:1, x:this.centerX, y:this.centerY, r:20, selected:false, scale:1, vx:0, vy:0 });
-        this.entities.push({ type:'op', val:op, x:this.centerX+40, y:this.centerY, r:20, selected:false, scale:1, vx:0, vy:0 });
-        this.entities.push({ type:'num', val:t, x:this.centerX-40, y:this.centerY, r:20, selected:false, scale:1, vx:0, vy:0 });
+    calc(val1, op, val2) {
+        if (op === 'add') return val1 + val2;
+        if (op === 'sub') return val1 - val2;
+        if (op === 'mul') return val1 * val2;
+        if (op === 'div') {
+            if (val2 === 0) return null;
+            if (val1 % val2 !== 0) return null;
+            return val1 / val2;
+        }
+        return 0;
     }
 
-    // ★タップ操作（ロックオン）
-    handleClick(e) {
+    checkDeadlock() {
         if (this.state !== 'playing') return;
-        const rect = this.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
-        for (let ent of this.entities) {
-            const dist = Math.hypot(ent.x - x, ent.y - y);
-            if (dist < ent.r + 15) {
-                ent.selected = !ent.selected; // トグル
-                if (ent.selected) {
-                    ent.scale = 1.3;
-                    ent.selectTime = Date.now(); // 昇順降順用
-                }
-                this.updateFireBtn();
-                return;
-            }
-        }
-    }
-
-    updateFireBtn() {
-        const btn = document.getElementById('fire-btn');
-        const selected = this.entities.filter(e => e.selected);
-        if (selected.length > 0) {
-            btn.classList.add('ready');
-            // 数式バー更新
-            let txt = "";
-            if (this.mission.id === 'asc' || this.mission.id === 'desc' || this.mission.id === 'calc') {
-                selected.sort((a,b) => a.selectTime - b.selectTime);
-            }
-            selected.forEach(e => {
-                txt += (e.type==='op' ? OPS[e.val].label : e.val) + " ";
-            });
-            document.getElementById('formula-bar').innerText = txt;
-        } else {
-            btn.classList.remove('ready');
-            document.getElementById('formula-bar').innerText = "";
-        }
-    }
-
-    // ★発射（ハイマットフルバースト）
-    fire() {
-        const selected = this.entities.filter(e => e.selected);
-        if (selected.length === 0) return;
-
-        // 昇順・降順・計算は選択順にソート
-        if (['asc', 'desc', 'calc'].includes(this.mission.id)) {
-            selected.sort((a,b) => a.selectTime - b.selectTime);
-        }
-
-        let success = false;
-        let bonus = 0;
-
-        if (this.mission.id === 'calc') {
-            // 計算モード
-            if (selected.length >= 3) {
-                let exp = "";
-                let hasOp = false;
-                selected.forEach(e => {
-                    let v = e.val;
-                    if (e.type === 'op') {
-                        v = OPS[e.val].op;
-                        if (e.val === this.mission.targetOp) hasOp = true;
-                    }
-                    exp += v;
-                });
-                try {
-                    const res = new Function('return ' + exp)();
-                    if (res === this.mission.targetVal && hasOp) {
-                        success = true;
-                        bonus = 5000;
-                    }
-                } catch(e){}
-            }
-        } else {
-            // 反射神経モード
-            let allOK = true;
-            let lastV = -1;
-            selected.forEach((e, i) => {
-                if (e.type !== 'num') { allOK = false; return; }
-                const v = e.val;
-                if (this.mission.id === 'odd' && v % 2 === 0) allOK = false;
-                if (this.mission.id === 'even' && v % 2 !== 0) allOK = false;
-                if (this.mission.id === 'asc') {
-                    if (i > 0 && v <= lastV) allOK = false;
-                    lastV = v;
-                }
-                if (this.mission.id === 'desc') {
-                    if (i > 0 && v >= lastV) allOK = false;
-                    lastV = v;
-                }
-            });
-            if (allOK && selected.length > 0) {
-                success = true;
-                bonus = selected.length * 100 * (1 + selected.length * 0.1);
-            }
-        }
-
-        if (success) {
-            // 成功演出
-            selected.forEach(e => {
-                this.lasers.push({ tx: e.x, ty: e.y, color: this.mission.color, life: 1.0 });
-                this.createExplosion(e.x, e.y, this.mission.color);
-            });
-            // 消去
-            this.entities = this.entities.filter(e => !e.selected);
-            this.score += Math.floor(bonus);
-            this.addEffect({text: `BURST! +${Math.floor(bonus)}`, color: this.mission.color, size: 40});
-            this.updateCommander('happy');
-            
-            // 次へ
-            if (this.mission.id === 'calc') {
-                this.setNextMission();
-                setTimeout(() => this.updateCommander('normal'), 1000);
-            } else {
-                this.combo++;
-                if (this.combo >= 3) { this.combo = 0; this.setNextMission(); }
-            }
-            this.replenishEntities(15 - this.entities.length);
-
-        } else {
-            // 失敗
-            this.entities.forEach(e => e.selected = false);
-            this.addEffect({text: "MISS...", color: "#888", size: 30});
-            this.timeLeft -= 3;
+        const sol = this.findSolutionDeep(); 
+        if (!sol) {
+            this.addEffect({text: "DEADLOCK... RESHUFFLE", color: "#FF4136", size: 24});
             this.updateCommander('panic');
+            setTimeout(() => {
+                this.entities = []; this.clearFormula();
+                this.replenishEntities(); this.updateCommander('normal');
+            }, 800);
         }
+    }
 
-        this.updateFireBtn();
-        this.updateUI();
+    findSolutionDeep() {
+        const nums = this.entities.filter(e => e.type === 'num' && !e.selected);
+        const ops = this.entities.filter(e => e.type === 'op' && !e.selected);
+        const operations = ['add', 'sub', 'mul', 'div'];
+
+        for (let i = 0; i < nums.length; i++) {
+            for (let j = 0; j < nums.length; j++) {
+                if (i === j) continue;
+                for (let k = 0; k < nums.length; k++) {
+                    if (k === i || k === j) continue;
+                    const n1 = nums[i].val; const n2 = nums[j].val; const n3 = nums[k].val;
+                    for (let op1Key of operations) {
+                        const op1Ent = ops.find(o => o.val === op1Key);
+                        if (!op1Ent) continue;
+                        const res1 = this.calc(n1, op1Key, n2);
+                        if (res1 === null) continue;
+                        for (let op2Key of operations) {
+                             const op2Ent = ops.find(o => o.val === op2Key && o !== op1Ent);
+                             if (!op2Ent) continue;
+                             const res2 = this.calc(res1, op2Key, n3);
+                             if (res2 !== null && res2 === this.targetNum) {
+                                 return [nums[i], op1Ent, nums[j], op2Ent, nums[k]]; 
+                             }
+                        }
+                    }
+                }
+            }
+        }
+        for (let i = 0; i < nums.length; i++) {
+            for (let j = 0; j < nums.length; j++) {
+                if (i === j) continue;
+                const n1 = nums[i].val; const n2 = nums[j].val;
+                for (let opKey of operations) {
+                    const opEnt = ops.find(o => o.val === opKey);
+                    if (!opEnt) continue;
+                    const res = this.calc(n1, opKey, n2);
+                    if (res !== null && res === this.targetNum) {
+                        return [nums[i], opEnt, nums[j]];
+                    }
+                }
+            }
+        }
+        for (let n of nums) {
+            if (n.val === this.targetNum) return [n];
+        }
+        return null; 
     }
 
     autoLock() {
         if (this.state !== 'playing') return;
-        const targets = [];
-        this.entities.forEach(e => {
-            let match = false;
-            if (this.mission.id === 'odd') match = (e.type === 'num' && e.val % 2 !== 0);
-            else if (this.mission.id === 'even') match = (e.type === 'num' && e.val % 2 === 0);
-            else if (this.mission.id === 'calc') match = true; // 計算時は全消し
-            else match = (e.type === 'num'); // 昇順降順はとりあえず数字
-            if (match) targets.push(e);
-        });
-
-        if (targets.length > 0) {
-            targets.forEach(e => {
-                this.lasers.push({ tx: e.x, ty: e.y, color: '#FF00FF', life: 1.0 });
-                this.createExplosion(e.x, e.y, '#FF00FF');
+        this.clearFormula();
+        
+        const solution = this.findSolutionDeep();
+        
+        if (solution) {
+            this.updateCommander('happy'); 
+            let delay = 0;
+            solution.forEach(ent => {
+                setTimeout(() => { this.trySelectNormal(ent); }, delay);
+                delay += 80; 
             });
-            this.entities = this.entities.filter(e => !targets.includes(e));
-            this.score += targets.length * 200;
-            this.addEffect({text: "MAP WPN!!", color: "#FF00FF", size: 50});
-            this.updateCommander('happy');
-            this.replenishEntities(15);
-        }
-    }
-
-    createExplosion(x, y, color) {
-        for(let i=0; i<8; i++) {
-            this.effects.push({
-                type: 'particle', x, y, color, life: 1.0,
-                vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10
-            });
+            this.addEffect({text: "AUTO LOCK!!", color: "#FFD700", size: 30});
+            setTimeout(() => this.updateCommander('normal'), 1000);
+        } else {
+            this.addEffect({text: "NO SOLUTION...", color: "#FF4136", size: 20});
+            this.manualShuffle();
         }
     }
 
     manualShuffle() {
         if (this.state !== 'playing') return;
-        this.entities = [];
-        this.replenishEntities(15);
+        this.entities = []; this.clearFormula();
+        this.replenishEntities();
         this.addEffect({text: "RESHUFFLE!", color: "#FFA500", size: 24});
+        setTimeout(() => this.checkDeadlock(), 500);
+    }
+
+    handleClick(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+        for (let i = 0; i < this.entities.length; i++) {
+            const ent = this.entities[i];
+            const dist = Math.hypot(ent.x - clickX, ent.y - clickY);
+            if (dist < ent.r + 15) {
+                if (this.state === 'playing') { this.trySelectNormal(ent); }
+                else if (this.state === 'fever') { this.trySelectFever(ent, i); }
+                return;
+            }
+        }
+    }
+
+    trySelectFever(ent, index) {
+        let isValid = false;
+        const allVals = this.entities.map(e => e.val);
+        if (this.feverType.id === 'asc') {
+            const minVal = Math.min(...allVals); if (ent.val === minVal) isValid = true;
+        } else if (this.feverType.id === 'desc') {
+            const maxVal = Math.max(...allVals); if (ent.val === maxVal) isValid = true;
+        } else if (this.feverType.id === 'even') {
+            if (ent.val % 2 === 0) isValid = true;
+        } else if (this.feverType.id === 'odd') {
+            if (ent.val % 2 !== 0) isValid = true;
+        }
+        if (isValid) {
+            this.score += 500;
+            this.addEffect({text: '+500', x: ent.x, y: ent.y, color: '#FFDC00'});
+            this.entities.splice(index, 1);
+            this.updateCommander('happy');
+        } else {
+            this.addEffect({text: 'MISS', x: ent.x, y: ent.y, color: '#888'});
+        }
+        this.updateUI();
+    }
+
+    trySelectNormal(ent) {
+        if (ent.selected) return;
+        const lastItem = this.formulaStack[this.formulaStack.length - 1];
+        if (!lastItem) {
+            if (ent.type !== 'num') { this.addEffect({text: "Select NUMBER!", x: ent.x, y: ent.y, color: '#FF4136'}); return; }
+        } else {
+            if (lastItem.entity.type === 'num' && ent.type === 'num') { this.addEffect({text: "Select SYMBOL!", x: ent.x, y: ent.y, color: '#FF4136'}); return; }
+            if (lastItem.entity.type === 'op' && ent.type === 'op') { this.addEffect({text: "Select NUMBER!", x: ent.x, y: ent.y, color: '#FF4136'}); return; }
+        }
+        ent.selected = true;
+        ent.order = this.formulaStack.length + 1;
+        this.formulaStack.push({ entity: ent, time: Date.now() });
+        this.addEffect({text: 'LOCK', x: ent.x, y: ent.y - 30, color: '#00FFFF', life: 10, size: 12});
+        this.updateFormulaBar();
+        this.updateGuide();
+        this.checkFireReady();
+    }
+
+    clearFormula() {
+        this.entities.forEach(e => { e.selected = false; e.order = null; });
+        this.formulaStack = [];
+        this.updateFormulaBar();
+        this.updateGuide();
+        this.checkFireReady();
+    }
+
+    updateFormulaBar() {
+        const bar = document.getElementById('formula-bar');
+        if (this.formulaStack.length === 0) { bar.innerText = "STANDBY..."; bar.style.color = "#666"; return; }
+        let displayStr = "";
+        if (this.formulaStack.length >= 1) { displayStr = ${this.formulaStack[0].entity.val}; }
+        for (let i = 1; i < this.formulaStack.length; i += 2) {
+            const opEnt = this.formulaStack[i].entity;
+            const opStr = OPS[opEnt.val].op;
+            if (i + 1 < this.formulaStack.length) {
+                const numEnt = this.formulaStack[i+1].entity;
+                displayStr = (${displayStr} ${opStr} ${numEnt.val});
+            } else { displayStr = ${displayStr} ${opStr} ?; }
+        }
+        bar.innerText = displayStr; bar.style.color = "#00FFFF";
+    }
+
+    updateGuide() {
+        const msg = document.getElementById('guide-msg');
+        if (this.state === 'fever') return;
+        if (this.formulaStack.length === 0) {
+            msg.innerHTML = LOCK: [NUMBER]<span class="sub">数字をロックせよ</span>; msg.style.color = "#FFDC00";
+        } else {
+            const last = this.formulaStack[this.formulaStack.length-1].entity;
+            if (last.type === 'num') {
+                msg.innerHTML = LOCK: [SYMBOL]<span class="sub">記号をロックせよ</span>; msg.style.color = "#2ECC40";
+            } else {
+                msg.innerHTML = LOCK: [NUMBER]<span class="sub">数字をロックせよ</span>; msg.style.color = "#FFDC00";
+            }
+        }
+    }
+
+    checkFireReady() {
+        const btn = document.getElementById('fire-btn');
+        const len = this.formulaStack.length;
+        if (len >= 1 && this.formulaStack[len-1].entity.type === 'num') { btn.classList.add('ready'); } else { btn.classList.remove('ready'); }
+    }
+
+    fire() {
+        if (this.state !== 'playing' || this.formulaStack.length === 0) return;
+        if (this.formulaStack[this.formulaStack.length-1].entity.type === 'op') {
+            this.addEffect({text: "Finish with NUMBER!", color: '#FF4136'}); return;
+        }
+        let result = this.formulaStack[0].entity.val;
+        let scoreBonus = 0;
+        let valid = true; 
+        for (let i = 1; i < this.formulaStack.length; i += 2) {
+            const op = this.formulaStack[i].entity.val;
+            const num = this.formulaStack[i+1].entity.val;
+            const res = this.calc(result, op, num);
+            if (res === null) { valid = false; break; }
+            result = res;
+            if (op === 'mul') scoreBonus += 300;
+            if (op === 'div') scoreBonus += 1000; 
+        }
+        if (valid && result === this.targetNum) {
+            const len = this.formulaStack.length;
+            let totalScore = 0;
+            if (len === 1) { totalScore = 10; } else {
+                let multiplier = 1.0;
+                if (len >= 5) multiplier = 1.5;
+                if (len >= 7) multiplier = 2.5;
+                const baseScore = len * 100;
+                totalScore = Math.floor((baseScore + scoreBonus) * multiplier);
+            }
+            this.score += totalScore;
+            this.addEffect({text: HIT!! +${totalScore}, color: '#FFDC00', size: 40});
+            this.clearCount++;
+            this.updateGauge();
+            this.updateCommander('happy');
+            
+            if (this.clearCount >= 3) { this.startFever(); } else {
+                this.generateTarget();
+                this.entities = this.entities.filter(e => !e.selected);
+                this.replenishEntities();
+                this.checkDeadlock(); 
+                setTimeout(() => this.updateCommander('normal'), 800);
+            }
+        } else {
+            const disp = valid ? Math.round(result) : "INVALID";
+            this.addEffect({text: MISS (${disp}), color: '#888', size: 30});
+            this.entities.forEach(e => { e.selected = false; e.order = null; });
+            this.updateCommander('panic'); 
+            setTimeout(() => this.updateCommander('normal'), 800);
+        }
+        this.formulaStack = [];
+        this.updateFormulaBar();
+        this.updateGuide();
+        this.checkFireReady();
+        this.updateUI();
     }
 
     updateUI() {
-        document.getElementById('score-display').innerText = `SCORE: ${this.score}`;
-        document.getElementById('timer-display').innerText = `TIME: ${Math.floor(this.timeLeft)}`;
-        const pct = Math.max(0, (this.timeLeft / this.maxTime) * 100);
+        document.getElementById('score-display').innerText = SCORE: ${this.score};
+        document.getElementById('timer-display').innerText = TIME: ${Math.floor(this.timeLeft)};
+    }
+
+    startFever() {
+        this.state = 'fever';
+        this.feverTimer = this.feverMaxTime;
+        document.body.classList.add('fever-mode');
+        this.entities = [];
+        this.formulaStack = [];
+        this.feverType = FEVER_TYPES[Math.floor(Math.random() * FEVER_TYPES.length)];
+        document.getElementById('target-display').innerText = "FEVER!!";
+        document.getElementById('target-label').innerText = "MODE";
+        const guideMsg = document.getElementById('guide-msg');
+        
+        // ★文字サイズアップ用クラス追加
+        guideMsg.classList.add('fever-mode-text');
+        guideMsg.innerHTML = ${this.feverType.labelEn}<span class="sub">${this.feverType.labelJa}</span>;
+        
+        document.getElementById('formula-bar').innerText = "DESTROY TARGETS!";
+        this.updateCommander('fever');
+        for(let i=0; i<30; i++) { this.spawnEntity(true); }
+        this.addEffect({type: 'text', text: 'FEVER START!!', color: '#FF4136', size: 30});
+        this.updateTimeBar();
+    }
+
+    endFever() {
+        this.state = 'playing';
+        document.body.classList.remove('fever-mode');
+        
+        // ★文字サイズを戻す
+        document.getElementById('guide-msg').classList.remove('fever-mode-text');
+        
+        this.entities = [];
+        this.clearCount = 0;
+        this.updateGauge();
+        this.replenishEntities();
+        this.generateTarget();
+        this.clearFormula();
+        this.updateTimeBar();
+        this.checkDeadlock();
+        this.updateCommander('normal');
+    }
+
+    updateGauge() {
+        const pct = Math.min(100, (this.clearCount / 3) * 100);
+        document.getElementById('fever-gauge').style.width = ${pct}%;
+    }
+    
+    updateTimeBar() {
         const bar = document.getElementById('time-bar');
-        bar.style.width = `${pct}%`;
-        bar.style.backgroundColor = pct < 20 ? '#FF4136' : '#0074D9';
+        if (this.state === 'fever') {
+            const pct = Math.max(0, (this.feverTimer / this.feverMaxTime) * 100);
+            bar.style.width = ${pct}%; bar.style.backgroundColor = '#FF4136'; 
+        } else {
+            const pct = Math.max(0, (this.timeLeft / this.maxTime) * 100);
+            bar.style.width = ${pct}%;
+            if (pct < 20) {
+                bar.style.backgroundColor = '#FF4136';
+                if(this.state === 'playing') this.updateCommander('panic');
+            } else if (pct < 50) { bar.style.backgroundColor = '#FFDC00'; } else { bar.style.backgroundColor = '#0074D9'; }
+        }
     }
 
     update(dt) {
         this.scanAngle += dt * 1.5; 
         this.bgScroll += dt * 20; 
         this.entities.forEach(ent => {
-            ent.x += ent.vx; ent.y += ent.vy;
-            if (ent.x < ent.r || ent.x > this.width - ent.r) ent.vx *= -1;
-            if (ent.y < 180 || ent.y > this.height - 180) ent.vy *= -1;
             if (ent.scale < 1) ent.scale += dt * 5;
             if (ent.scale > 1) ent.scale = 1;
         });
-        
         if (this.state === 'playing') {
-            this.timeLeft -= dt; this.updateUI();
+            this.timeLeft -= dt; this.updateTimeBar();
             if (this.timeLeft <= 0) this.gameOver();
+        } else if (this.state === 'fever') {
+            this.feverTimer -= dt;
+            document.getElementById('timer-display').innerText = FEVER: ${Math.ceil(this.feverTimer)};
+            this.updateTimeBar(); 
+            if (this.feverTimer <= 0) { this.endFever(); }
         }
-
-        // Effects
         for (let i = this.effects.length - 1; i >= 0; i--) {
             let eff = this.effects[i];
-            if (eff.type === 'particle') {
-                eff.x += eff.vx; eff.y += eff.vy; eff.life -= 0.05;
-            } else {
-                eff.y -= 0.5; eff.life -= 0.02; // Text
-            }
+            eff.y -= 0.5; eff.life = (eff.life || 50) - 1;
             if (eff.life <= 0) this.effects.splice(i, 1);
-        }
-
-        // Lasers
-        for (let i = this.lasers.length - 1; i >= 0; i--) {
-            this.lasers[i].life -= 0.1;
-            if (this.lasers[i].life <= 0) this.lasers.splice(i, 1);
         }
     }
     
@@ -694,57 +813,102 @@ class Game {
             if (!playerRankFound && this.score >= rank.min) {
                 isMyRank = true; playerRankFound = true; div.classList.add('active');
             }
-            div.innerHTML = `
+            div.innerHTML = 
                 <div class="rank-name-col">
                     <span class="rank-name-en">${rank.nameEn}</span>
                     <span class="rank-name-ja">${rank.nameJa}</span>
                 </div>
                 <div class="rank-score">${rank.min}</div>
                 <div class="rank-arrow">${isMyRank ? '◀ YOU' : ''}</div>
-            `;
+            ;
             container.appendChild(div);
         });
         this.drawStaticMascot('mascot-canvas-over', 'panic');
     }
 
-    addEffect(eff) {
-        if (eff.x === undefined) eff.x = this.centerX;
-        if (eff.y === undefined) eff.y = this.centerY;
-        eff.life = 1.0;
-        this.effects.push(eff);
+    addEffect({type, text, x, y, color, size, life}) {
+        if (x === undefined) x = this.centerX + (Math.random() * 80 - 40);
+        if (y === undefined) y = this.centerY + (Math.random() * 80 - 40);
+        this.effects.push({
+            type: type || 'text', text: text, x: x, y: y,
+            color: color || '#FFF', size: size || 20, life: life || 50
+        });
+    }
+
+    drawSciFiRadarBackground(ctx, x, y, r) {
+        const isFever = (this.state === 'fever');
+        const baseColor = isFever ? '255, 65, 54' : '0, 255, 255';
+        ctx.save(); ctx.translate(x, y);
+        ctx.strokeStyle = rgba(${baseColor}, 0.1); ctx.lineWidth = 1;
+        const gridSize = 40; const offset = this.bgScroll % gridSize;
+        for(let i = -r; i < r; i+=gridSize) {
+            ctx.beginPath(); ctx.moveTo(i - offset, -r); ctx.lineTo(i - offset, r); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-r, i + offset); ctx.lineTo(r, i + offset); ctx.stroke();
+        }
+        ctx.restore();
+        ctx.strokeStyle = rgba(${baseColor}, 0.3); ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(x, y, r * 0.3, 0, Math.PI*2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(x, y, r * 0.6, 0, Math.PI*2); ctx.stroke();
+        ctx.lineWidth = 3; ctx.shadowBlur = 10; ctx.shadowColor = rgb(${baseColor});
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.stroke(); ctx.shadowBlur = 0;
+        ctx.strokeStyle = rgba(${baseColor}, 0.2); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x-r, y); ctx.lineTo(x+r, y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x, y-r); ctx.lineTo(x, y+r); ctx.stroke();
+        ctx.save(); ctx.translate(x, y); ctx.rotate(this.scanAngle);
+        const grad = ctx.createLinearGradient(0, 0, r, 0);
+        grad.addColorStop(0, rgba(${baseColor}, 0));
+        grad.addColorStop(1, rgba(${baseColor}, 0.15));
+        ctx.fillStyle = grad; ctx.beginPath(); ctx.moveTo(0, 0);
+        ctx.arc(0, 0, r, -0.3, 0.3); ctx.fill(); 
+        ctx.strokeStyle = rgba(${baseColor}, 0.8); ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(r*Math.cos(0.3), r*Math.sin(0.3)); ctx.lineTo(0,0); ctx.stroke();
+        ctx.restore();
     }
 
     draw() {
         this.ctx.fillStyle = '#050510'; this.ctx.fillRect(0, 0, this.width, this.height);
         this.drawSciFiRadarBackground(this.ctx, this.centerX, this.centerY, this.radarRadius);
 
-        // Lasers
-        this.ctx.globalCompositeOperation = 'lighter';
-        this.lasers.forEach(l => {
-            this.ctx.strokeStyle = l.color;
-            this.ctx.lineWidth = 15 * l.life;
-            this.ctx.lineCap = 'round';
-            this.ctx.beginPath();
-            this.ctx.moveTo(this.width/2, this.height);
-            this.ctx.lineTo(l.tx, l.ty);
-            this.ctx.stroke();
-            this.ctx.lineWidth = 4 * l.life;
-            this.ctx.strokeStyle = '#fff';
-            this.ctx.stroke();
-        });
-        this.ctx.globalCompositeOperation = 'source-over';
+        if (this.formulaStack.length > 0) {
+            const now = Date.now();
+            for (let i = 0; i < this.formulaStack.length - 1; i++) {
+                const curr = this.formulaStack[i]; const next = this.formulaStack[i+1];
+                const age = now - next.time; 
+                if (age < 1000) { 
+                    const alpha = 1 - (age / 1000);
+                    this.ctx.strokeStyle = rgba(255, 0, 255, ${alpha}); // Pink
+                    this.ctx.lineWidth = 3; this.ctx.shadowBlur = 15; this.ctx.shadowColor = '#FF00FF';
+                    this.ctx.beginPath(); this.ctx.moveTo(curr.entity.x, curr.entity.y);
+                    this.ctx.lineTo(next.entity.x, next.entity.y); this.ctx.stroke(); this.ctx.shadowBlur = 0;
+                } else {
+                    this.ctx.strokeStyle = rgba(255, 0, 255, 0.2);
+                    this.ctx.lineWidth = 1;
+                    this.ctx.beginPath(); this.ctx.moveTo(curr.entity.x, curr.entity.y);
+                    this.ctx.lineTo(next.entity.x, next.entity.y); this.ctx.stroke();
+                }
+            }
+        }
 
-        // Bubbles
         this.entities.forEach(ent => {
             const size = ent.r * ent.scale;
-            this.ctx.fillStyle = ent.type === 'op' ? '#FF4136' : (ent.selected ? '#FFDC00' : '#0074D9');
+            if (ent.isFever) { this.ctx.fillStyle = '#FF4136'; } else if (ent.type === 'num') {
+                this.ctx.fillStyle = ent.selected ? '#FFDC00' : '#EEE';
+            } else { this.ctx.fillStyle = ent.selected ? '#00FFFF' : '#0074D9'; }
             
             this.ctx.beginPath(); this.ctx.arc(ent.x, ent.y, size, 0, Math.PI*2); this.ctx.fill();
             this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
             this.ctx.beginPath(); this.ctx.ellipse(ent.x - size * 0.3, ent.y - size * 0.3, size * 0.2, size * 0.1, Math.PI / 4, 0, Math.PI * 2); this.ctx.fill();
 
             if (ent.selected) {
-                this.drawLockSight(ent.x, ent.y, size + 8, this.mission.color);
+                this.drawLockSight(ent.x, ent.y, size + 5);
+                if (ent.order) {
+                    this.ctx.fillStyle = '#FF4136'; this.ctx.beginPath(); this.ctx.arc(ent.x + 12, ent.y - 12, 8, 0, Math.PI*2); this.ctx.fill();
+                    this.ctx.fillStyle = '#fff'; this.ctx.font = 'bold 10px Arial'; this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle'; this.ctx.fillText(ent.order, ent.x + 12, ent.y - 12);
+                }
+            } else if (ent.isFever) {
+                this.ctx.strokeStyle = '#FF0000'; this.ctx.lineWidth = 2; this.ctx.beginPath();
+                this.ctx.arc(ent.x, ent.y, size, 0, Math.PI*2); this.ctx.stroke();
             }
             this.ctx.fillStyle = '#000'; this.ctx.textAlign = 'center'; this.ctx.textBaseline = 'middle';
             this.ctx.font = size > 20 ? 'bold 22px Arial' : 'bold 16px Arial';
@@ -752,23 +916,12 @@ class Game {
             this.ctx.fillText(label, ent.x, ent.y);
         });
 
-        // Effects
         this.effects.forEach(eff => {
-            if (eff.type === 'particle') {
-                this.ctx.globalAlpha = eff.life;
-                this.ctx.fillStyle = eff.color;
-                this.ctx.beginPath(); this.ctx.arc(eff.x, eff.y, 4, 0, Math.PI*2); this.ctx.fill();
-            } else {
-                this.ctx.globalAlpha = eff.life;
-                this.ctx.fillStyle = eff.color; 
-                this.ctx.font = `bold ${eff.size || 20}px Arial`;
-                this.ctx.textAlign = 'center'; this.ctx.fillText(eff.text, eff.x, eff.y);
-            }
-            this.ctx.globalAlpha = 1.0;
+            this.ctx.fillStyle = eff.color; this.ctx.font = bold ${eff.size || 20}px Arial;
+            this.ctx.textAlign = 'center'; this.ctx.fillText(eff.text, eff.x, eff.y);
         });
     }
     
-    // UI Drawing Helpers
     drawStaticMascot(canvasId, mood) {
         const c = document.getElementById(canvasId);
         if(!c) return;
@@ -784,7 +937,9 @@ class Game {
     }
 
     drawEbiGratinFace(ctx, x, y, size, mood) {
-        ctx.fillStyle = mood==='panic'?'#A0A0FF':(mood==='happy'?'#FF4136':'#FFDB58');
+        ctx.fillStyle = '#FFDB58'; 
+        if(mood==='fever') ctx.fillStyle = '#FF4136'; 
+        if(mood==='panic') ctx.fillStyle = '#A0A0FF'; 
         ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#8B4513';
         ctx.beginPath(); ctx.ellipse(x - size*0.4, y - size*0.5, size*0.2, size*0.1, 0, 0, Math.PI*2); ctx.fill();
@@ -798,42 +953,29 @@ class Game {
             ctx.arc(x + size*0.3, y + size*0.1, size*0.1, 0, Math.PI * 2); ctx.fill();
         }
         ctx.beginPath(); ctx.lineWidth = 2;
-        if (mood === 'panic') {
+        if (mood === 'happy' || mood === 'fever') {
+            ctx.arc(x, y + size*0.1, size*0.3, 0, Math.PI); ctx.fill();
+        } else if (mood === 'panic') {
             ctx.moveTo(x-size*0.2, y+size*0.3); ctx.lineTo(x+size*0.2, y+size*0.3); ctx.stroke();
         } else {
             ctx.arc(x, y + size*0.1, size*0.3, 0.2*Math.PI, 0.8*Math.PI); ctx.stroke();
         }
     }
 
-    drawLockSight(x, y, r, color) {
-        this.ctx.strokeStyle = color; this.ctx.lineWidth = 3; 
-        this.ctx.shadowBlur = 10; this.ctx.shadowColor = color;
-        this.ctx.beginPath(); this.ctx.arc(x, y, r, 0, Math.PI*2); this.ctx.stroke();
-        
-        // Rotating Part
-        this.ctx.save(); this.ctx.translate(x, y);
-        this.ctx.rotate(Date.now() / 150);
-        this.ctx.beginPath(); this.ctx.arc(0, 0, r * 0.8, 0, Math.PI*1.5); this.ctx.stroke();
-        this.ctx.restore();
+    drawLockSight(x, y, r) {
+        this.ctx.strokeStyle = '#FF00FF'; this.ctx.lineWidth = 2; this.ctx.shadowBlur = 10; this.ctx.shadowColor = '#FF00FF'; // Pink
+        const gap = Math.PI / 4; 
+        this.ctx.beginPath(); this.ctx.arc(x, y, r, Math.PI + gap, 1.5 * Math.PI - gap); this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.arc(x, y, r, 1.5 * Math.PI + gap, 2 * Math.PI - gap); this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.arc(x, y, r, 0 + gap, 0.5 * Math.PI - gap); this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.arc(x, y, r, 0.5 * Math.PI + gap, Math.PI - gap); this.ctx.stroke();
         this.ctx.shadowBlur = 0;
     }
 
-    drawSciFiRadarBackground(ctx, x, y, r) {
-        const baseColor = this.mission ? this.mission.color : '#00FFFF';
-        // (省略: Shrimp Editionと同じ描画ロジック)
-        ctx.save(); ctx.translate(x, y);
-        ctx.strokeStyle = 'rgba(0,255,255,0.1)'; ctx.lineWidth = 1;
-        const gridSize = 40; const offset = this.bgScroll % gridSize;
-        for(let i = -r; i < r; i+=gridSize) {
-            ctx.beginPath(); ctx.moveTo(i - offset, -r); ctx.lineTo(i - offset, r); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(-r, i + offset); ctx.lineTo(r, i + offset); ctx.stroke();
-        }
-        ctx.restore();
-        ctx.save(); ctx.translate(x, y); ctx.rotate(this.scanAngle);
-        const grad = ctx.createLinearGradient(0, 0, r, 0);
-        grad.addColorStop(0, "rgba(0,255,255,0)"); grad.addColorStop(1, "rgba(0,255,255,0.1)");
-        ctx.fillStyle = grad; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, -0.3, 0.3); ctx.fill(); 
-        ctx.restore();
+    loop(timestamp) {
+        const dt = (timestamp - this.lastTime) / 1000;
+        this.lastTime = timestamp; this.update(dt); this.draw();
+        requestAnimationFrame(this.loop);
     }
 }
 
