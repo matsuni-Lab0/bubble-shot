@@ -3,134 +3,202 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Bubble Shot: Hi-MAT Targeting</title>
+    <title>Bubble Shot: Hi-MAT Shrimp</title>
     <style>
-        /* --- CSS: 重厚なコックピット風UI --- */
+        /* --- CSS設定 (Shrimp Edition Base) --- */
         body {
-            margin: 0; overflow: hidden; background-color: #020205; color: white;
-            font-family: 'Segoe UI', sans-serif;
+            margin: 0; overflow: hidden; background-color: #111; color: white;
+            font-family: 'Helvetica Neue', 'Arial', sans-serif;
             touch-action: none; user-select: none; -webkit-user-select: none;
         }
         #game-container {
             position: relative; width: 100vw; height: 100dvh; overflow: hidden;
-            background: radial-gradient(circle at center, #1a1a2e 0%, #000000 100%);
+            background-color: #050510;
         }
         canvas { display: block; width: 100%; height: 100%; }
-
-        /* UIレイヤー */
+        
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; display: flex; flex-direction: column; justify-content: space-between;
         }
 
-        /* ヘッダーエリア */
-        #top-hud {
-            display: flex; justify-content: space-between; align-items: flex-start;
-            padding: 15px;
-            background: linear-gradient(to bottom, rgba(0, 50, 100, 0.8), transparent);
+        /* --- 上部エリア --- */
+        #top-area {
+            height: 180px; display: flex; flex-direction: column; align-items: center;
+            justify-content: flex-start; background: linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0));
+            z-index: 10; padding-top: 10px; box-sizing: border-box; position: relative;
         }
 
-        /* 司令官通信ウィンドウ */
-        #comm-window {
+        /* 司令官ウィンドウ */
+        #commander-window {
+            position: absolute; top: 10px; left: 10px;
             width: 70px; height: 70px;
-            border: 2px solid #00FFFF; border-radius: 50%;
-            background: rgba(0, 20, 30, 0.7);
-            box-shadow: 0 0 15px #00FFFF;
+            background: rgba(0, 20, 40, 0.6);
+            border: 2px solid #00FFFF; border-radius: 10px;
+            clip-path: polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%);
+            pointer-events: auto; display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+            z-index: 25; backdrop-filter: blur(2px);
+        }
+        #comm-canvas { width: 100%; height: 100%; }
+        #comm-label {
+            position: absolute; bottom: 2px; right: 4px;
+            font-size: 8px; color: #00FFFF; font-family: monospace; opacity: 0.8;
+        }
+
+        /* マニュアルリロード */
+        #manual-shuffle-btn {
+            position: absolute; top: 15px; left: 90px;
+            width: 40px; height: 40px; border-radius: 50%;
+            background: rgba(255, 165, 0, 0.1); border: 2px solid #FFA500;
+            color: #FFA500; box-shadow: 0 0 10px rgba(255, 165, 0, 0.2); font-size: 18px;
             display: flex; justify-content: center; align-items: center;
-            overflow: hidden; position: relative;
+            pointer-events: auto; cursor: pointer; z-index: 20;
+            backdrop-filter: blur(4px);
         }
-        #comm-scanline {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(to bottom, transparent 50%, rgba(0,255,255,0.1) 51%);
-            background-size: 100% 4px; pointer-events: none;
+        #manual-shuffle-btn:active { transform: scale(0.9); }
+
+        #difficulty-display {
+            position: absolute; top: 20px; right: 15px;
+            font-size: 12px; font-weight: bold; color: #888; letter-spacing: 1px;
+            border: 1px solid #444; padding: 2px 6px; border-radius: 4px;
         }
 
-        /* スコア・タイム */
-        #status-panel { text-align: right; }
-        .hud-label { font-size: 10px; color: #00FFFF; letter-spacing: 2px; text-shadow: 0 0 5px #00FFFF; }
-        .hud-value { font-size: 24px; font-weight: bold; font-family: 'Courier New', monospace; color: #fff; }
-
-        /* ミッション表示（画面中央上） */
-        #mission-hud {
-            position: absolute; top: 90px; width: 100%; text-align: center; pointer-events: none;
+        /* オートロックボタン (MAP兵器) */
+        #auto-lock-btn {
+            position: absolute; bottom: 100px; right: 20px;
+            width: 60px; height: 60px; border-radius: 50%;
+            background: rgba(255, 0, 255, 0.2); border: 2px solid #FF00FF; color: #FF00FF;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            font-size: 10px; font-weight: 900; text-align: center;
+            box-shadow: 0 0 15px #FF00FF; cursor: pointer; pointer-events: auto; z-index: 30;
+            animation: pulse 2s infinite; line-height: 1.1;
         }
-        #mission-title {
-            font-size: 36px; font-weight: 900; color: #FFD700;
-            text-shadow: 0 0 20px #FFD700; letter-spacing: 3px;
-            font-family: 'Arial Black', sans-serif;
+        #auto-lock-btn.disabled { filter: grayscale(100%); opacity: 0.5; animation: none; pointer-events: none;} 
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 0, 255, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 0, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 0, 255, 0); }
+        }
+
+        #time-bar-wrapper {
+            width: 50%; height: 6px; background: #222; border-radius: 4px;
+            margin-top: 10px; border: 1px solid #555; position: relative; overflow: hidden;
+        }
+        #time-bar { width: 100%; height: 100%; background: #0074D9; transition: width 0.1s linear, background 0.3s; box-shadow: 0 0 10px currentColor; }
+        
+        #mission-label { font-size: 10px; color: #00FFFF; letter-spacing: 4px; margin-top: 5px; opacity: 0.8;}
+        #mission-display {
+            font-size: 32px; font-weight: 900; color: #FFDC00; line-height: 1.0; margin: 0;
+            text-shadow: 0 0 20px rgba(255, 220, 0, 0.8); font-family: 'Arial Black', sans-serif; letter-spacing: -1px;
             transition: transform 0.1s;
         }
-        #mission-desc {
-            font-size: 14px; color: #fff; background: rgba(0,0,0,0.6);
-            padding: 4px 12px; border-radius: 4px; display: inline-block;
-            border: 1px solid #555; margin-top: 5px;
-        }
-        .pulse-text { animation: pulse 0.8s infinite alternate; }
-        @keyframes pulse { from { opacity: 1; transform: scale(1); } to { opacity: 0.8; transform: scale(0.95); } }
+        .pulse-text { animation: textPulse 0.5s infinite alternate; }
+        @keyframes textPulse { from { transform: scale(1); } to { transform: scale(1.1); } }
 
-        /* フッターエリア（FIREボタン） */
-        #bottom-hud {
-            padding: 20px; display: flex; justify-content: center; align-items: flex-end;
-            background: linear-gradient(to top, rgba(0, 20, 30, 0.9), transparent);
-            pointer-events: auto;
+        #status-bar {
+            color: #aaa; font-family: monospace; font-size: 16px; display: flex; gap: 20px;
+            font-weight: bold; margin-top: 5px; text-shadow: 0 0 2px #000;
         }
 
+        /* --- 下部エリア --- */
+        #bottom-area {
+            height: 180px; display: flex; flex-direction: column; align-items: center;
+            justify-content: flex-end; padding-bottom: 30px;
+            background: linear-gradient(to top, rgba(0,20,30,0.95) 60%, rgba(0,0,0,0)); z-index: 10;
+        }
+        #guide-msg {
+            color: #00FFFF; font-size: 14px; margin-bottom: 5px; min-height: 35px;
+            text-shadow: 0 0 5px #00FFFF; letter-spacing: 1px; text-align: center; line-height: 1.3;
+        }
+        #guide-msg .sub { font-size: 10px; color: #aaa; display: block; margin-top: 2px;}
+
+        #formula-bar {
+            min-height: 20px; margin-bottom: 10px; font-size: 18px; color: #FFF; font-family: monospace;
+            font-weight: bold; text-shadow: 0 0 5px #00FFFF; white-space: nowrap;
+        }
+        #btn-group { display: flex; gap: 20px; align-items: center; }
+        
         #fire-btn {
-            width: 200px; height: 70px;
-            background: rgba(255, 0, 60, 0.2);
-            border: 2px solid #FF003C;
-            color: #FF003C;
-            font-size: 28px; font-weight: 900; letter-spacing: 5px;
-            display: flex; justify-content: center; align-items: center;
-            clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
-            cursor: pointer; transition: all 0.1s;
-            box-shadow: 0 0 20px rgba(255, 0, 60, 0.4);
-            text-shadow: 0 0 10px #FF003C;
+            width: 160px; height: 70px; background: rgba(255, 0, 60, 0.1); border: 2px solid #555;
+            color: #555; font-size: 28px; font-weight: 900; letter-spacing: 4px; display: flex;
+            justify-content: center; align-items: center; clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
+            transition: all 0.1s; cursor: pointer; pointer-events: none;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
-        #fire-btn:active {
-            background: #FF003C; color: #fff; transform: scale(0.95);
-            box-shadow: 0 0 40px #FF003C;
+        #fire-btn.ready {
+            background: rgba(255, 0, 60, 0.8); border: 2px solid #FF003C; color: white; box-shadow: 0 0 30px #FF003C;
+            pointer-events: auto; text-shadow: 0 0 10px white;
         }
-        #fire-btn.disabled {
-            filter: grayscale(100%); opacity: 0.5; pointer-events: none;
-        }
+        #fire-btn:active { transform: scale(0.95); background: #fff; color: #FF003C; }
 
-        #auto-lock-sub {
-            position: absolute; bottom: 30px; right: 20px;
-            width: 60px; height: 60px; border-radius: 50%;
-            border: 2px solid #00FF00; color: #00FF00;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            font-size: 10px; font-weight: bold; background: rgba(0, 255, 0, 0.1);
-            cursor: pointer; pointer-events: auto; box-shadow: 0 0 10px #00FF00;
-        }
-        #auto-lock-sub:active { transform: scale(0.9); background: #00FF00; color: #000; }
-
-        /* タイムバー */
-        #time-gauge {
-            position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: #333;
-        }
-        #time-fill {
-            width: 100%; height: 100%; background: #00FFFF;
-            box-shadow: 0 0 10px #00FFFF; transition: width 0.1s linear;
-        }
-
-        /* スタート画面 */
-        #start-overlay {
+        /* --- 画面オーバーレイ --- */
+        #menu-screen, #gameover-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 50;
+            background: rgba(5, 10, 15, 0.95); display: flex; flex-direction: column;
+            justify-content: flex-start; align-items: center; pointer-events: auto; z-index: 50;
+            text-align: center; box-sizing: border-box; padding: 40px 20px; overflow-y: auto;
         }
-        .title-text {
-            font-size: 40px; color: #00FFFF; font-weight: 900;
-            text-shadow: 0 0 20px #00FFFF; margin-bottom: 10px; text-align: center;
-            font-family: 'Arial Black', sans-serif;
+        #menu-screen { justify-content: center; }
+
+        h1 { 
+            color: #00FFFF; font-size: 36px; font-weight: 900; text-shadow: 0 0 10px #00FFFF, 0 0 30px #00FFFF; 
+            margin: 10px 0; letter-spacing: 4px; font-style: italic; font-family: 'Arial Black', sans-serif;
         }
-        .start-btn {
-            padding: 15px 50px; border: 2px solid #FFD700; color: #FFD700;
-            background: transparent; font-size: 20px; font-weight: bold;
-            cursor: pointer; box-shadow: 0 0 15px #FFD700; margin-top: 30px;
+        
+        .btn {
+            padding: 15px 40px; font-size: 18px; background: transparent; border: 2px solid #FFDC00;
+            color: #FFDC00; cursor: pointer; font-weight: bold; box-shadow: 0 0 10px #FFDC00, inset 0 0 10px #FFDC00;
+            transition: all 0.2s; margin-top: 15px; text-transform: uppercase; letter-spacing: 2px;
+            width: 100%; max-width: 300px;
         }
+        .btn:hover { background: #FFDC00; color: #000; box-shadow: 0 0 30px #FFDC00; }
+
+        /* 難易度選択ボタン */
+        .diff-container {
+            display: flex; flex-direction: column; gap: 15px; width: 100%; align-items: center; margin-bottom: 20px;
+        }
+        .btn-diff {
+            width: 80%; padding: 12px; font-size: 16px; margin: 0;
+            border-color: #00FFFF; color: #00FFFF; box-shadow: 0 0 5px #00FFFF;
+        }
+        .btn-diff:hover { background: #00FFFF; color: #000; }
+        
+        .btn-easy { border-color: #2ECC40; color: #2ECC40; box-shadow: 0 0 5px #2ECC40; }
+        .btn-easy:hover { background: #2ECC40; }
+        .btn-normal { border-color: #0074D9; color: #0074D9; box-shadow: 0 0 5px #0074D9; }
+        .btn-normal:hover { background: #0074D9; }
+        .btn-hard { border-color: #FF4136; color: #FF4136; box-shadow: 0 0 5px #FF4136; }
+        .btn-hard:hover { background: #FF4136; }
+
+        .rule-box {
+            font-size: 14px; color: #ccc; line-height: 1.6; margin-bottom: 20px; text-align: left; display: inline-block;
+        }
+        .rule-box .en { color: #fff; font-weight: bold; display: block; margin-bottom: 2px;}
+        .rule-box .ja { color: #888; font-size: 11px; display: block; margin-bottom: 10px;}
+        
+        #rank-list-container {
+            width: 100%; max-width: 350px; margin-bottom: 20px; text-align: left; border-top: 1px solid #333; margin-top: 20px;
+        }
+        .rank-item {
+            display: flex; justify-content: space-between; align-items: center; padding: 8px 5px; border-bottom: 1px solid #222; font-family: monospace;
+        }
+        .rank-item.active {
+            color: #FFDC00; background: linear-gradient(90deg, transparent, rgba(255, 220, 0, 0.1), transparent);
+            font-weight: bold; text-shadow: 0 0 5px #FFDC00;
+        }
+        .rank-name-col { flex-grow: 1; padding-left: 10px; display: flex; flex-direction: column;}
+        .rank-name-en { font-size: 14px; color: #ccc; }
+        .rank-name-ja { font-size: 10px; color: #666; }
+        .active .rank-name-en { color: #FFDC00; }
+        .active .rank-name-ja { color: #AA8800; }
+        .rank-score { width: 60px; text-align: right; font-size: 14px; color: #888; }
+        .rank-arrow { width: 40px; color: #FF4136; text-align: right; font-weight:bold; font-size: 12px; animation: blink 0.5s infinite alternate; }
+        @keyframes blink { from { opacity: 1; } to { opacity: 0.3; } }
         .hidden { display: none !important; }
+
+        #mascot-canvas-menu, #mascot-canvas-over { width: 100px; height: 100px; margin-bottom: 10px; }
 
     </style>
 </head>
@@ -138,49 +206,104 @@
 
 <div id="game-container">
     <canvas id="gameCanvas"></canvas>
-
+    
     <div id="ui-layer">
-        <div id="time-gauge"><div id="time-fill"></div></div>
-
-        <div id="top-hud">
-            <div id="comm-window">
+        <div id="top-area">
+            <div id="commander-window">
                 <canvas id="comm-canvas" width="70" height="70"></canvas>
-                <div id="comm-scanline"></div>
+                <div id="comm-label">CMD</div>
             </div>
-            <div id="status-panel">
-                <div class="hud-label">SCORE</div>
-                <div class="hud-value" id="score-val">00000</div>
-                <div class="hud-label">TIME</div>
-                <div class="hud-value" id="time-val">60</div>
+
+            <div id="manual-shuffle-btn" onclick="game.manualShuffle()">↻</div>
+            <div id="difficulty-display">Lv.?</div>
+
+            <div id="time-bar-wrapper"><div id="time-bar"></div></div>
+            <div id="mission-label">MISSION</div>
+            <div id="mission-display">READY</div>
+            <div id="status-bar">
+                <span id="score-display">SCORE: 0</span>
+                <span id="timer-display">TIME: 60</span>
             </div>
         </div>
-
-        <div id="mission-hud">
-            <div id="mission-title" class="pulse-text">ODD NUMS</div>
-            <div id="mission-desc">奇数(1,3,5...)をロックして撃て</div>
+        
+        <div style="flex-grow: 1;"></div>
+        
+        <div id="auto-lock-btn" onclick="game.autoLock()">
+            <div class="trial-badge">MAP WPN</div>
+            AUTO<br>LOCK
+            <span class="ja-sub">全自動射撃</span>
         </div>
 
-        <div id="bottom-hud">
-            <div id="fire-btn" onclick="game.fire()">FIRE</div>
-            <div id="auto-lock-sub" onclick="game.autoLock()">
-                MAP<br>WPN
+        <div id="bottom-area">
+            <div id="guide-msg">
+                TAP TO LOCK
+                <span class="sub">ターゲットをタップせよ</span>
+            </div>
+            <div id="formula-bar"></div>
+            <div id="btn-group">
+                <div id="fire-btn" onclick="game.fire()">FIRE</div>
             </div>
         </div>
     </div>
 
-    <div id="start-overlay">
-        <div class="title-text">Hi-MAT<br>TARGETING</div>
-        <div style="color:#ccc; font-size:14px;">Tap to Lock-on > Press FIRE</div>
-        <button class="start-btn" onclick="game.start()">LAUNCH</button>
+    <div id="menu-screen">
+        <canvas id="mascot-canvas-menu" width="100" height="100"></canvas>
+        <h1>Hi-MAT SHRIMP</h1>
+        <p style="color:#00FFFF; font-size:12px; margin-bottom: 20px; font-family: monospace;">
+            SYSTEM: ONLINE<br>MODE: REFLEX TARGETING
+        </p>
+        <div class="rule-box">
+            <span class="en">1. Check the MISSION (e.g., ODD).</span>
+            <span class="ja">ミッションを確認 (例: 奇数)。</span>
+            <span class="en">2. TAP bubbles to Multi-Lock.</span>
+            <span class="ja">タップして複数をロックオン。</span>
+            <span class="en">3. Press FIRE to Burst!</span>
+            <span class="ja">FIREボタンで一斉発射！</span>
+        </div>
+        <div class="diff-container">
+            <button class="btn btn-diff btn-easy" onclick="game.start('easy')">
+                EASY (0-9) <span style="font-size:10px">初級</span>
+            </button>
+            <button class="btn btn-diff btn-normal" onclick="game.start('normal')">
+                NORMAL (0-19) <span style="font-size:10px">中級</span>
+            </button>
+            <button class="btn btn-diff btn-hard" onclick="game.start('hard')">
+                HARD (0-30) <span style="font-size:10px">上級</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="gameover-screen" class="hidden">
+        <canvas id="mascot-canvas-over" width="100" height="100"></canvas>
+        <h1 id="result-title">MISSION OVER</h1>
+        <p id="result-final">0</p>
+        <div id="rank-list-container"></div>
+        <button class="btn" onclick="location.reload()">Return to Menu</button>
     </div>
 </div>
 
 <script>
-/**
- * Bubble Shot Ver 4.1: Hi-MAT TARGETING
- * 操作：タップでロックオン（複数選択可） → FIREボタンで発射
- * ルール：反射神経（奇数・偶数）＋ボス（計算）
- */
+const OPS = {
+    add: { label: '+', op: '+' }, sub: { label: '-', op: '-' },
+    mul: { label: '×', op: '*' }, div: { label: '÷', op: '/' }
+};
+
+const MISSIONS = [
+    { id: 'odd', label: 'ODD NUMS', sub: '奇数をロックせよ (1,3,5...)', color: '#FF0055' },
+    { id: 'even', label: 'EVEN NUMS', sub: '偶数をロックせよ (2,4,6...)', color: '#00CCFF' },
+    { id: 'asc', label: 'ASCEND', sub: '小さい順にロックせよ (1→2→3)', color: '#00FF00' },
+    { id: 'desc', label: 'DESCEND', sub: '大きい順にロックせよ (9→8→7)', color: '#FFCC00' }
+];
+
+const RANKS = [
+    { min: 30000, nameEn: "WHITE SHRIMP",   nameJa: "シロエビ" },
+    { min: 20000, nameEn: "ISE LOBSTER",    nameJa: "伊勢海老" },
+    { min: 10000, nameEn: "WILD PRAWN",     nameJa: "クルマエビ(天然)" },
+    { min: 6000,  nameEn: "BOTAN SHRIMP",   nameJa: "ボタンエビ" },
+    { min: 3000,  nameEn: "SWEET SHRIMP",   nameJa: "アマエビ" },
+    { min: 1000,  nameEn: "BLACK TIGER",    nameJa: "ブラックタイガー" },
+    { min: 0,     nameEn: "SAKURA SHRIMP",  nameJa: "サクラエビ" }
+];
 
 class Game {
     constructor() {
@@ -188,142 +311,209 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         this.commCanvas = document.getElementById('comm-canvas');
         this.commCtx = this.commCanvas.getContext('2d');
+        this.commState = 'normal';
 
-        this.resize();
+        setTimeout(() => this.resize(), 100);
         window.addEventListener('resize', () => this.resize());
-
-        // 入力：タップのみ（ドラッグではない）
-        this.canvas.addEventListener('pointerdown', (e) => this.handleTap(e));
-
-        // 状態
-        this.state = 'menu'; 
-        this.score = 0;
-        this.maxTime = 60;
-        this.timeLeft = 60;
+        this.state = 'menu';
+        this.score = 0; this.maxTime = 60; this.timeLeft = this.maxTime;
         
-        this.bubbles = [];
+        this.entities = []; 
+        this.selectedEntities = [];
         this.lasers = [];
-        this.particles = [];
-        this.texts = [];
+        this.effects = [];
         
-        this.mission = null; // 現在の任務
-        this.combo = 0; // ルール変更用
+        this.mission = null;
+        this.combo = 0;
+        this.lastSelectedVal = -1;
+        this.bgScroll = 0;
+        this.scanAngle = 0;
+        this.maxNum = 30;
 
-        // ループ
-        this.lastTime = 0;
+        this.drawStaticMascot('mascot-canvas-menu', 'normal');
+        this.drawStaticMascot('mascot-canvas-over', 'panic');
+        this.updateCommander('normal');
+
+        // タップ操作に変更
+        this.canvas.addEventListener('pointerdown', (e) => this.handleClick(e));
+        
         this.loop = this.loop.bind(this);
         requestAnimationFrame(this.loop);
-
-        this.drawCommander('normal');
     }
 
     resize() {
-        this.dpr = window.devicePixelRatio || 1;
-        this.width = window.innerWidth;
-        this.height = window.innerHeight;
-        this.canvas.width = this.width * this.dpr;
-        this.canvas.height = this.height * this.dpr;
-        this.ctx.scale(this.dpr, this.dpr);
-        this.bubbleR = Math.min(this.width, this.height) / 8;
+        const dpr = window.devicePixelRatio || 1;
+        this.width = window.innerWidth; this.height = window.innerHeight;
+        this.canvas.width = this.width * dpr; this.canvas.height = this.height * dpr;
+        this.canvas.style.width = this.width + 'px'; this.canvas.style.height = this.height + 'px';
+        this.ctx.scale(dpr, dpr);
+        const topSpace = 180; const bottomSpace = 180; 
+        this.centerY = topSpace + (this.height - topSpace - bottomSpace) / 2;
+        this.centerX = this.width / 2;
+        const maxRadius = Math.min(this.width, (this.height - topSpace - bottomSpace)) / 2;
+        this.radarRadius = Math.max(0, maxRadius - 10);
+        if (this.state === 'playing' && this.entities.length === 0) { this.replenishEntities(15); }
     }
 
-    start() {
-        document.getElementById('start-overlay').classList.add('hidden');
-        this.state = 'playing';
-        this.score = 0;
-        this.timeLeft = this.maxTime;
-        this.bubbles = [];
-        this.replenishBubbles(15);
+    start(mode) {
+        if (mode === 'easy') { this.maxNum = 9; }
+        else if (mode === 'normal') { this.maxNum = 19; }
+        else { this.maxNum = 30; }
+
+        this.resize(); this.state = 'playing'; this.score = 0; this.timeLeft = this.maxTime;
+        this.selectedEntities = []; this.entities = []; this.lasers = []; this.effects = [];
+        this.combo = 0;
+        
+        this.updateCommander('normal');
+        this.replenishEntities(15);
         this.setNextMission();
         this.updateUI();
+        document.getElementById('menu-screen').classList.add('hidden');
+        document.getElementById('gameover-screen').classList.add('hidden');
     }
 
-    // --- ミッション管理 ---
     setNextMission() {
-        const rules = [
-            { id: 'odd', title: 'ODD', desc: '奇数 (1,3,5...) をロックせよ', color: '#FF0055' },
-            { id: 'even', title: 'EVEN', desc: '偶数 (2,4,6...) をロックせよ', color: '#00CCFF' },
-            { id: 'asc', title: 'ASCEND', desc: '小さい順 (1→2→3) にロックせよ', color: '#00FF00' },
-            { id: 'desc', title: 'DESCEND', desc: '大きい順 (9→8→7) にロックせよ', color: '#FFCC00' }
-        ];
-
-        // 低確率でボス（計算ミッション）
-        if (Math.random() < 0.25 && this.score > 500) {
+        // 20%でボス（計算）、それ以外は反射神経
+        if (this.score > 500 && Math.random() < 0.2) {
             this.setBossMission();
             return;
         }
 
         let next;
-        do { next = rules[Math.floor(Math.random()*rules.length)]; } 
-        while(this.mission && this.mission.id === next.id);
+        do { next = MISSIONS[Math.floor(Math.random() * MISSIONS.length)]; } 
+        while (this.mission && this.mission.id === next.id);
         
         this.mission = next;
+        this.lastSelectedVal = -1;
         this.updateMissionUI();
-        this.drawCommander('normal');
     }
 
     setBossMission() {
         const targets = [
-            { t: 6, op: 'mul', title: 'TARGET: 6', desc: '掛け算で作れ (2×3)' },
-            { t: 12, op: 'mul', title: 'TARGET: 12', desc: '掛け算で作れ (3×4)' },
-            { t: 10, op: 'add', title: 'TARGET: 10', desc: '足し算で作れ (5+5)' }
+            { val: 6, op: 'mul', label: 'TARGET: 6', sub: '掛け算で作れ (例: 2×3)' },
+            { val: 12, op: 'mul', label: 'TARGET: 12', sub: '掛け算で作れ (例: 3×4)' },
+            { val: 10, op: 'add', label: 'TARGET: 10', sub: '足し算で作れ (例: 5+5)' }
         ];
         const t = targets[Math.floor(Math.random()*targets.length)];
-        this.mission = { id: 'calc', title: t.title, desc: t.desc, targetVal: t.t, targetOp: t.op, color: '#FFFFFF' };
-        
+        this.mission = { id: 'calc', label: t.label, sub: t.sub, targetVal: t.val, targetOp: t.op, color: '#FFFFFF' };
+        this.lastSelectedVal = -1;
         this.updateMissionUI();
-        this.drawCommander('panic');
+        this.updateCommander('panic');
         this.ensureBossSolvable();
     }
 
     updateMissionUI() {
-        const t = document.getElementById('mission-title');
-        const d = document.getElementById('mission-desc');
-        t.innerText = this.mission.title;
-        t.style.color = this.mission.color;
-        d.innerText = this.mission.desc;
-        t.classList.remove('pulse-text');
-        void t.offsetWidth;
-        t.classList.add('pulse-text');
+        const title = document.getElementById('mission-display');
+        const guide = document.getElementById('guide-msg');
+        
+        title.innerText = this.mission.label;
+        title.style.color = this.mission.color;
+        
+        title.classList.remove('pulse-text');
+        void title.offsetWidth;
+        title.classList.add('pulse-text');
+
+        guide.innerHTML = `MISSION<span class="sub">${this.mission.sub}</span>`;
     }
 
-    // --- 入力処理（タップでロックオン） ---
-    handleTap(e) {
+    replenishEntities(count) {
+        if(count <= 0) return;
+        const area = this.width * this.height;
+        for (let i = 0; i < count; i++) { this.spawnEntity(); }
+    }
+
+    spawnEntity() {
+        const baseR = Math.min(this.width, this.height) / 16; 
+        const r = Math.max(16, Math.min(24, baseR)); 
+        let x, y, safe = false, attempts = 0;
+        
+        while (!safe && attempts < 50) {
+            attempts++;
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.sqrt(Math.random()) * (this.radarRadius - r - 5);
+            x = this.centerX + Math.cos(angle) * dist;
+            y = this.centerY + Math.sin(angle) * dist;
+            safe = true;
+            for (let ent of this.entities) {
+                if (Math.hypot(ent.x - x, ent.y - y) < r * 2.1) { safe = false; break; } 
+            }
+        }
+        if (!safe) return; 
+
+        // ボス戦中のみ演算子を混ぜる
+        let type = 'num';
+        let val = Math.floor(Math.random() * (this.maxNum + 1));
+        if (this.mission && this.mission.id === 'calc' && Math.random() < 0.4) {
+            type = 'op';
+            val = ['add','mul'][Math.floor(Math.random()*2)];
+        }
+
+        this.entities.push({ 
+            type: type, val: val, x: x, y: y, r: r, selected: false, scale: 0,
+            vx: (Math.random()-0.5)*0.5, vy: (Math.random()-0.5)*0.5
+        });
+    }
+
+    ensureBossSolvable() {
+        const t = this.mission.targetVal;
+        const op = this.mission.targetOp === 'mul' ? 'mul' : 'add';
+        // 簡易解を追加
+        this.entities.push({ type:'num', val:1, x:this.centerX, y:this.centerY, r:20, selected:false, scale:1, vx:0, vy:0 });
+        this.entities.push({ type:'op', val:op, x:this.centerX+40, y:this.centerY, r:20, selected:false, scale:1, vx:0, vy:0 });
+        this.entities.push({ type:'num', val:t, x:this.centerX-40, y:this.centerY, r:20, selected:false, scale:1, vx:0, vy:0 });
+    }
+
+    // ★タップ操作（ロックオン）
+    handleClick(e) {
         if (this.state !== 'playing') return;
         const rect = this.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-
-        // タップした場所にあるバブルを探す
-        for (let b of this.bubbles) {
-            const dist = Math.hypot(b.x - x, b.y - y);
-            if (dist < b.r * 1.2) {
-                // 選択状態のトグル（ON/OFF）
-                b.selected = !b.selected;
-                if (b.selected) {
-                    // 選択時の音エフェクト的な振動
-                    b.scale = 1.3;
-                    // 昇順・降順のチェック順序記録用
-                    b.selectTime = Date.now();
+        
+        for (let ent of this.entities) {
+            const dist = Math.hypot(ent.x - x, ent.y - y);
+            if (dist < ent.r + 15) {
+                ent.selected = !ent.selected; // トグル
+                if (ent.selected) {
+                    ent.scale = 1.3;
+                    ent.selectTime = Date.now(); // 昇順降順用
                 }
-                break; // 重なり防止
+                this.updateFireBtn();
+                return;
             }
         }
     }
 
-    // --- 発射処理 ---
+    updateFireBtn() {
+        const btn = document.getElementById('fire-btn');
+        const selected = this.entities.filter(e => e.selected);
+        if (selected.length > 0) {
+            btn.classList.add('ready');
+            // 数式バー更新
+            let txt = "";
+            if (this.mission.id === 'asc' || this.mission.id === 'desc' || this.mission.id === 'calc') {
+                selected.sort((a,b) => a.selectTime - b.selectTime);
+            }
+            selected.forEach(e => {
+                txt += (e.type==='op' ? OPS[e.val].label : e.val) + " ";
+            });
+            document.getElementById('formula-bar').innerText = txt;
+        } else {
+            btn.classList.remove('ready');
+            document.getElementById('formula-bar').innerText = "";
+        }
+    }
+
+    // ★発射（ハイマットフルバースト）
     fire() {
-        if (this.state !== 'playing') return;
-        
-        const selected = this.bubbles.filter(b => b.selected);
+        const selected = this.entities.filter(e => e.selected);
         if (selected.length === 0) return;
 
-        // 昇順・降順は選択順序でソート
-        if (this.mission.id === 'asc' || this.mission.id === 'desc' || this.mission.id === 'calc') {
+        // 昇順・降順・計算は選択順にソート
+        if (['asc', 'desc', 'calc'].includes(this.mission.id)) {
             selected.sort((a,b) => a.selectTime - b.selectTime);
         }
 
-        // 判定
         let success = false;
         let bonus = 0;
 
@@ -332,14 +522,17 @@ class Game {
             if (selected.length >= 3) {
                 let exp = "";
                 let hasOp = false;
-                selected.forEach(b => {
-                    let v = b.val;
-                    if (v === '×') { v = '*'; if(this.mission.targetOp === 'mul') hasOp=true; }
-                    if (v === '+') { if(this.mission.targetOp === 'add') hasOp=true; }
+                selected.forEach(e => {
+                    let v = e.val;
+                    if (e.type === 'op') {
+                        v = OPS[e.val].op;
+                        if (e.val === this.mission.targetOp) hasOp = true;
+                    }
                     exp += v;
                 });
                 try {
-                    if (new Function('return '+exp)() === this.mission.targetVal && hasOp) {
+                    const res = new Function('return ' + exp)();
+                    if (res === this.mission.targetVal && hasOp) {
                         success = true;
                         bonus = 5000;
                     }
@@ -347,286 +540,304 @@ class Game {
             }
         } else {
             // 反射神経モード
-            // 全てが条件を満たしているか？
-            let allCorrect = true;
-            let lastVal = -1;
-
-            selected.forEach((b, i) => {
-                if (b.type !== 'num') { allCorrect = false; return; }
-                const v = b.val;
-
-                if (this.mission.id === 'odd' && v % 2 === 0) allCorrect = false;
-                if (this.mission.id === 'even' && v % 2 !== 0) allCorrect = false;
-                
+            let allOK = true;
+            let lastV = -1;
+            selected.forEach((e, i) => {
+                if (e.type !== 'num') { allOK = false; return; }
+                const v = e.val;
+                if (this.mission.id === 'odd' && v % 2 === 0) allOK = false;
+                if (this.mission.id === 'even' && v % 2 !== 0) allOK = false;
                 if (this.mission.id === 'asc') {
-                    if (i > 0 && v <= lastVal) allCorrect = false;
-                    lastVal = v;
+                    if (i > 0 && v <= lastV) allOK = false;
+                    lastV = v;
                 }
                 if (this.mission.id === 'desc') {
-                    if (i > 0 && v >= lastVal) allCorrect = false;
-                    lastVal = v;
+                    if (i > 0 && v >= lastV) allOK = false;
+                    lastV = v;
                 }
             });
-
-            if (allCorrect && selected.length > 0) {
+            if (allOK && selected.length > 0) {
                 success = true;
-                bonus = selected.length * 200;
+                bonus = selected.length * 100 * (1 + selected.length * 0.1);
             }
         }
 
         if (success) {
-            // 成功：フルバースト！
-            this.triggerBurst(selected, this.mission.color);
-            this.score += bonus;
-            this.addText(this.width/2, this.height/2, `BURST! +${bonus}`, this.mission.color, 40);
-            this.timeLeft = Math.min(this.maxTime, this.timeLeft + 1);
-            this.drawCommander('happy');
-
-            // ルール進行
+            // 成功演出
+            selected.forEach(e => {
+                this.lasers.push({ tx: e.x, ty: e.y, color: this.mission.color, life: 1.0 });
+                this.createExplosion(e.x, e.y, this.mission.color);
+            });
+            // 消去
+            this.entities = this.entities.filter(e => !e.selected);
+            this.score += Math.floor(bonus);
+            this.addEffect({text: `BURST! +${Math.floor(bonus)}`, color: this.mission.color, size: 40});
+            this.updateCommander('happy');
+            
+            // 次へ
             if (this.mission.id === 'calc') {
                 this.setNextMission();
+                setTimeout(() => this.updateCommander('normal'), 1000);
             } else {
                 this.combo++;
-                if (this.combo > 2) {
-                    this.combo = 0;
-                    this.setNextMission();
-                }
+                if (this.combo >= 3) { this.combo = 0; this.setNextMission(); }
             }
+            this.replenishEntities(15 - this.entities.length);
+
         } else {
             // 失敗
-            selected.forEach(b => b.selected = false);
-            this.addText(this.width/2, this.height/2, "MISS...", "#888");
+            this.entities.forEach(e => e.selected = false);
+            this.addEffect({text: "MISS...", color: "#888", size: 30});
             this.timeLeft -= 3;
-            this.drawCommander('panic');
-            // ダメージ演出
-            document.body.style.backgroundColor = '#500';
-            setTimeout(() => document.body.style.backgroundColor = '#020205', 100);
+            this.updateCommander('panic');
         }
+
+        this.updateFireBtn();
+        this.updateUI();
     }
 
     autoLock() {
         if (this.state !== 'playing') return;
-        
-        // 条件に合うものを全検索してロック
         const targets = [];
-        this.bubbles.forEach(b => {
+        this.entities.forEach(e => {
             let match = false;
-            if (this.mission.id === 'odd') match = (b.type === 'num' && b.val % 2 !== 0);
-            else if (this.mission.id === 'even') match = (b.type === 'num' && b.val % 2 === 0);
-            else if (this.mission.id === 'calc') match = true; // マップ兵器（全消し）
-            else match = (b.type === 'num'); // 昇順などはとりあえず数字なら消す
-            
-            if (match) targets.push(b);
+            if (this.mission.id === 'odd') match = (e.type === 'num' && e.val % 2 !== 0);
+            else if (this.mission.id === 'even') match = (e.type === 'num' && e.val % 2 === 0);
+            else if (this.mission.id === 'calc') match = true; // 計算時は全消し
+            else match = (e.type === 'num'); // 昇順降順はとりあえず数字
+            if (match) targets.push(e);
         });
 
         if (targets.length > 0) {
-            this.triggerBurst(targets, '#00FF00');
-            this.score += targets.length * 100;
-            this.addText(this.width/2, this.height/2, "MAP ATTACK!", "#00FF00", 50);
-            this.drawCommander('happy');
-        }
-    }
-
-    triggerBurst(targets, color) {
-        targets.forEach(b => {
-            // レーザー
-            this.lasers.push({ tx: b.x, ty: b.y, life: 1.0, color: color });
-            // 爆発
-            this.spawnParticles(b.x, b.y, color);
-            // 消去
-            const idx = this.bubbles.indexOf(b);
-            if (idx > -1) this.bubbles.splice(idx, 1);
-        });
-        // 補充
-        this.replenishBubbles(15 - this.bubbles.length);
-    }
-
-    // --- 汎用 ---
-    replenishBubbles(count) {
-        if (count <= 0) return;
-        for(let i=0; i<count; i++) {
-            let type = 'num';
-            let val = Math.floor(Math.random()*9)+1;
-            
-            // 計算モード時は演算子も出す
-            if (this.mission && this.mission.id === 'calc' && Math.random()<0.4) {
-                type = 'op';
-                val = ['+','×'][Math.floor(Math.random()*2)];
-            }
-            
-            this.bubbles.push({
-                x: Math.random() * (this.width - 60) + 30,
-                y: Math.random() * (this.height - 250) + 150,
-                r: this.bubbleR * 0.7,
-                val: val, type: type,
-                vx: (Math.random()-0.5)*1.5, vy: (Math.random()-0.5)*1.5,
-                selected: false, scale: 1, selectTime: 0,
-                color: type==='num' ? '#0074D9' : '#FF4136'
+            targets.forEach(e => {
+                this.lasers.push({ tx: e.x, ty: e.y, color: '#FF00FF', life: 1.0 });
+                this.createExplosion(e.x, e.y, '#FF00FF');
             });
+            this.entities = this.entities.filter(e => !targets.includes(e));
+            this.score += targets.length * 200;
+            this.addEffect({text: "MAP WPN!!", color: "#FF00FF", size: 50});
+            this.updateCommander('happy');
+            this.replenishEntities(15);
         }
     }
 
-    ensureBossSolvable() {
-        // 計算に必要なパーツを追加
-        const t = this.mission.targetVal;
-        const op = this.mission.targetOp === 'mul' ? '×' : '+';
-        this.bubbles.push(this.makeBubble(1, 'num'));
-        this.bubbles.push(this.makeBubble(op, 'op'));
-        this.bubbles.push(this.makeBubble(t, 'num'));
-    }
-    
-    makeBubble(val, type) {
-        return {
-            x: this.width/2, y: this.height/2,
-            r: this.bubbleR * 0.7, val: val, type: type,
-            vx: (Math.random()-0.5)*2, vy: (Math.random()-0.5)*2,
-            selected: false, scale: 1, selectTime: 0,
-            color: type==='num' ? '#0074D9' : '#FF4136'
-        };
-    }
-
-    spawnParticles(x, y, color) {
+    createExplosion(x, y, color) {
         for(let i=0; i<8; i++) {
-            this.particles.push({
-                x, y, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10,
-                life: 1.0, color
+            this.effects.push({
+                type: 'particle', x, y, color, life: 1.0,
+                vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10
             });
         }
     }
-    
-    addText(x, y, text, color, size=20) {
-        this.texts.push({ x, y, text, color, size, life: 1.0 });
+
+    manualShuffle() {
+        if (this.state !== 'playing') return;
+        this.entities = [];
+        this.replenishEntities(15);
+        this.addEffect({text: "RESHUFFLE!", color: "#FFA500", size: 24});
     }
 
-    drawCommander(mood) {
-        const ctx = this.commCtx;
-        ctx.clearRect(0,0,70,70);
-        const x=35, y=35, s=28;
-        ctx.fillStyle = mood==='panic'?'#A0A0FF':(mood==='happy'?'#FF4136':'#FFDB58');
-        ctx.beginPath(); ctx.arc(x,y,s,0,Math.PI*2); ctx.fill();
-        // 簡易顔（前回と同じ）
-        ctx.fillStyle='#000'; 
-        ctx.beginPath(); ctx.arc(x-8, y-5, 3, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x+8, y-5, 3, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath();
-        if(mood==='panic') { ctx.moveTo(x-10,y+10); ctx.lineTo(x+10,y+10); ctx.stroke(); }
-        else { ctx.arc(x,y+5,10,0,Math.PI); ctx.fill(); }
+    updateUI() {
+        document.getElementById('score-display').innerText = `SCORE: ${this.score}`;
+        document.getElementById('timer-display').innerText = `TIME: ${Math.floor(this.timeLeft)}`;
+        const pct = Math.max(0, (this.timeLeft / this.maxTime) * 100);
+        const bar = document.getElementById('time-bar');
+        bar.style.width = `${pct}%`;
+        bar.style.backgroundColor = pct < 20 ? '#FF4136' : '#0074D9';
     }
 
-    // --- ループ ---
-    loop() {
+    update(dt) {
+        this.scanAngle += dt * 1.5; 
+        this.bgScroll += dt * 20; 
+        this.entities.forEach(ent => {
+            ent.x += ent.vx; ent.y += ent.vy;
+            if (ent.x < ent.r || ent.x > this.width - ent.r) ent.vx *= -1;
+            if (ent.y < 180 || ent.y > this.height - 180) ent.vy *= -1;
+            if (ent.scale < 1) ent.scale += dt * 5;
+            if (ent.scale > 1) ent.scale = 1;
+        });
+        
         if (this.state === 'playing') {
-            this.timeLeft -= 1/60;
-            if (this.timeLeft <= 0) {
-                this.state = 'gameover';
-                document.getElementById('start-overlay').classList.remove('hidden');
-                document.querySelector('.title-text').innerText = "TIME UP";
-                document.querySelector('.start-btn').innerText = "RETRY";
-            }
-            // UI更新
-            document.getElementById('score-val').innerText = this.score.toString().padStart(5, '0');
-            document.getElementById('time-val').innerText = Math.ceil(this.timeLeft);
-            const pct = (this.timeLeft/this.maxTime)*100;
-            document.getElementById('time-fill').style.width = pct + '%';
-            if(pct<20) document.getElementById('time-fill').style.backgroundColor = '#FF0000';
+            this.timeLeft -= dt; this.updateUI();
+            if (this.timeLeft <= 0) this.gameOver();
         }
 
-        // 描画
-        this.ctx.fillStyle = '#020205';
-        this.ctx.fillRect(0, 0, this.width, this.height);
+        // Effects
+        for (let i = this.effects.length - 1; i >= 0; i--) {
+            let eff = this.effects[i];
+            if (eff.type === 'particle') {
+                eff.x += eff.vx; eff.y += eff.vy; eff.life -= 0.05;
+            } else {
+                eff.y -= 0.5; eff.life -= 0.02; // Text
+            }
+            if (eff.life <= 0) this.effects.splice(i, 1);
+        }
 
-        // レーザー
-        this.ctx.globalCompositeOperation = 'lighter';
+        // Lasers
         for (let i = this.lasers.length - 1; i >= 0; i--) {
-            let l = this.lasers[i];
-            l.life -= 0.1;
+            this.lasers[i].life -= 0.1;
+            if (this.lasers[i].life <= 0) this.lasers.splice(i, 1);
+        }
+    }
+    
+    gameOver() {
+        this.state = 'gameover';
+        document.getElementById('gameover-screen').classList.remove('hidden');
+        document.getElementById('result-final').innerText = this.score;
+        const container = document.getElementById('rank-list-container');
+        container.innerHTML = ''; 
+        let playerRankFound = false;
+        RANKS.forEach(rank => {
+            const div = document.createElement('div');
+            div.className = 'rank-item';
+            let isMyRank = false;
+            if (!playerRankFound && this.score >= rank.min) {
+                isMyRank = true; playerRankFound = true; div.classList.add('active');
+            }
+            div.innerHTML = `
+                <div class="rank-name-col">
+                    <span class="rank-name-en">${rank.nameEn}</span>
+                    <span class="rank-name-ja">${rank.nameJa}</span>
+                </div>
+                <div class="rank-score">${rank.min}</div>
+                <div class="rank-arrow">${isMyRank ? '◀ YOU' : ''}</div>
+            `;
+            container.appendChild(div);
+        });
+        this.drawStaticMascot('mascot-canvas-over', 'panic');
+    }
+
+    addEffect(eff) {
+        if (eff.x === undefined) eff.x = this.centerX;
+        if (eff.y === undefined) eff.y = this.centerY;
+        eff.life = 1.0;
+        this.effects.push(eff);
+    }
+
+    draw() {
+        this.ctx.fillStyle = '#050510'; this.ctx.fillRect(0, 0, this.width, this.height);
+        this.drawSciFiRadarBackground(this.ctx, this.centerX, this.centerY, this.radarRadius);
+
+        // Lasers
+        this.ctx.globalCompositeOperation = 'lighter';
+        this.lasers.forEach(l => {
             this.ctx.strokeStyle = l.color;
-            this.ctx.lineWidth = 20 * l.life;
+            this.ctx.lineWidth = 15 * l.life;
             this.ctx.lineCap = 'round';
             this.ctx.beginPath();
             this.ctx.moveTo(this.width/2, this.height);
             this.ctx.lineTo(l.tx, l.ty);
             this.ctx.stroke();
-            this.ctx.lineWidth = 5 * l.life;
+            this.ctx.lineWidth = 4 * l.life;
             this.ctx.strokeStyle = '#fff';
             this.ctx.stroke();
-            if (l.life <= 0) this.lasers.splice(i, 1);
-        }
+        });
         this.ctx.globalCompositeOperation = 'source-over';
 
-        // バブル
-        this.bubbles.forEach(b => {
-            b.x += b.vx; b.y += b.vy;
-            if (b.x < b.r || b.x > this.width-b.r) b.vx *= -1;
-            if (b.y < 150 || b.y > this.height-100) b.vy *= -1;
-            if (b.scale > 1) b.scale -= 0.05;
-
-            // 本体
-            this.ctx.fillStyle = b.color;
-            this.ctx.beginPath();
-            this.ctx.arc(b.x, b.y, b.r * b.scale, 0, Math.PI*2);
-            this.ctx.fill();
+        // Bubbles
+        this.entities.forEach(ent => {
+            const size = ent.r * ent.scale;
+            this.ctx.fillStyle = ent.type === 'op' ? '#FF4136' : (ent.selected ? '#FFDC00' : '#0074D9');
             
-            // ロックオンサイト（選択時）
-            if (b.selected) {
-                this.drawReticle(b.x, b.y, b.r * 1.3, this.mission.color);
-                // 選択順序番号（計算モードのみ）
-                if (this.mission.id === 'calc' || this.mission.id === 'asc' || this.mission.id === 'desc') {
-                     // 簡易的なバッジ
-                }
+            this.ctx.beginPath(); this.ctx.arc(ent.x, ent.y, size, 0, Math.PI*2); this.ctx.fill();
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            this.ctx.beginPath(); this.ctx.ellipse(ent.x - size * 0.3, ent.y - size * 0.3, size * 0.2, size * 0.1, Math.PI / 4, 0, Math.PI * 2); this.ctx.fill();
+
+            if (ent.selected) {
+                this.drawLockSight(ent.x, ent.y, size + 8, this.mission.color);
             }
-            
-            // 文字
-            this.ctx.fillStyle = '#fff';
-            this.ctx.font = 'bold 24px Arial';
-            this.ctx.textAlign = 'center';
-            this.ctx.textBaseline = 'middle';
-            this.ctx.fillText(b.val, b.x, b.y);
+            this.ctx.fillStyle = '#000'; this.ctx.textAlign = 'center'; this.ctx.textBaseline = 'middle';
+            this.ctx.font = size > 20 ? 'bold 22px Arial' : 'bold 16px Arial';
+            let label = ent.type === 'num' ? ent.val : OPS[ent.val].label;
+            this.ctx.fillText(label, ent.x, ent.y);
         });
 
-        // エフェクト
-        this.particles.forEach((p, i) => {
-            p.x += p.vx; p.y += p.vy; p.life -= 0.05;
-            this.ctx.globalAlpha = p.life;
-            this.ctx.fillStyle = p.color;
-            this.ctx.beginPath(); this.ctx.arc(p.x, p.y, 4, 0, Math.PI*2); this.ctx.fill();
-            this.ctx.globalAlpha = 1;
-            if (p.life<=0) this.particles.splice(i,1);
+        // Effects
+        this.effects.forEach(eff => {
+            if (eff.type === 'particle') {
+                this.ctx.globalAlpha = eff.life;
+                this.ctx.fillStyle = eff.color;
+                this.ctx.beginPath(); this.ctx.arc(eff.x, eff.y, 4, 0, Math.PI*2); this.ctx.fill();
+            } else {
+                this.ctx.globalAlpha = eff.life;
+                this.ctx.fillStyle = eff.color; 
+                this.ctx.font = `bold ${eff.size || 20}px Arial`;
+                this.ctx.textAlign = 'center'; this.ctx.fillText(eff.text, eff.x, eff.y);
+            }
+            this.ctx.globalAlpha = 1.0;
         });
-
-        this.texts.forEach((t, i) => {
-            t.y -= 1; t.life -= 0.02;
-            this.ctx.globalAlpha = t.life;
-            this.ctx.fillStyle = t.color;
-            this.ctx.font = `bold ${t.size}px Arial`;
-            this.ctx.textAlign = 'center';
-            this.ctx.fillText(t.text, t.x, t.y);
-            this.ctx.globalAlpha = 1;
-            if (t.life<=0) this.texts.splice(i,1);
-        });
-
-        requestAnimationFrame(this.loop);
+    }
+    
+    // UI Drawing Helpers
+    drawStaticMascot(canvasId, mood) {
+        const c = document.getElementById(canvasId);
+        if(!c) return;
+        const cx = c.getContext('2d');
+        cx.clearRect(0,0,100,100);
+        this.drawEbiGratinFace(cx, 50, 50, 40, mood);
     }
 
-    drawReticle(x, y, r, color) {
-        this.ctx.strokeStyle = color;
-        this.ctx.lineWidth = 3;
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, r, 0, Math.PI*2);
-        this.ctx.stroke();
+    updateCommander(mood) {
+        this.commState = mood;
+        this.commCtx.clearRect(0,0,70,70);
+        this.drawEbiGratinFace(this.commCtx, 35, 35, 25, mood);
+    }
+
+    drawEbiGratinFace(ctx, x, y, size, mood) {
+        ctx.fillStyle = mood==='panic'?'#A0A0FF':(mood==='happy'?'#FF4136':'#FFDB58');
+        ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#8B4513';
+        ctx.beginPath(); ctx.ellipse(x - size*0.4, y - size*0.5, size*0.2, size*0.1, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(x + size*0.3, y - size*0.4, size*0.25, size*0.15, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#000'; ctx.beginPath();
+        if (mood === 'happy') {
+            ctx.arc(x - size*0.3, y, size*0.15, Math.PI, 0); ctx.stroke(); ctx.beginPath();
+            ctx.arc(x + size*0.3, y, size*0.15, Math.PI, 0); ctx.stroke();
+        } else {
+            ctx.arc(x - size*0.3, y + size*0.1, size*0.1, 0, Math.PI * 2);
+            ctx.arc(x + size*0.3, y + size*0.1, size*0.1, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.beginPath(); ctx.lineWidth = 2;
+        if (mood === 'panic') {
+            ctx.moveTo(x-size*0.2, y+size*0.3); ctx.lineTo(x+size*0.2, y+size*0.3); ctx.stroke();
+        } else {
+            ctx.arc(x, y + size*0.1, size*0.3, 0.2*Math.PI, 0.8*Math.PI); ctx.stroke();
+        }
+    }
+
+    drawLockSight(x, y, r, color) {
+        this.ctx.strokeStyle = color; this.ctx.lineWidth = 3; 
+        this.ctx.shadowBlur = 10; this.ctx.shadowColor = color;
+        this.ctx.beginPath(); this.ctx.arc(x, y, r, 0, Math.PI*2); this.ctx.stroke();
         
-        // 回転パーツ
-        this.ctx.save();
-        this.ctx.translate(x, y);
+        // Rotating Part
+        this.ctx.save(); this.ctx.translate(x, y);
         this.ctx.rotate(Date.now() / 150);
-        this.ctx.beginPath();
-        this.ctx.arc(0, 0, r * 0.8, 0, Math.PI*1.5);
-        this.ctx.stroke();
+        this.ctx.beginPath(); this.ctx.arc(0, 0, r * 0.8, 0, Math.PI*1.5); this.ctx.stroke();
         this.ctx.restore();
+        this.ctx.shadowBlur = 0;
+    }
+
+    drawSciFiRadarBackground(ctx, x, y, r) {
+        const baseColor = this.mission ? this.mission.color : '#00FFFF';
+        // (省略: Shrimp Editionと同じ描画ロジック)
+        ctx.save(); ctx.translate(x, y);
+        ctx.strokeStyle = 'rgba(0,255,255,0.1)'; ctx.lineWidth = 1;
+        const gridSize = 40; const offset = this.bgScroll % gridSize;
+        for(let i = -r; i < r; i+=gridSize) {
+            ctx.beginPath(); ctx.moveTo(i - offset, -r); ctx.lineTo(i - offset, r); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-r, i + offset); ctx.lineTo(r, i + offset); ctx.stroke();
+        }
+        ctx.restore();
+        ctx.save(); ctx.translate(x, y); ctx.rotate(this.scanAngle);
+        const grad = ctx.createLinearGradient(0, 0, r, 0);
+        grad.addColorStop(0, "rgba(0,255,255,0)"); grad.addColorStop(1, "rgba(0,255,255,0.1)");
+        ctx.fillStyle = grad; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, -0.3, 0.3); ctx.fill(); 
+        ctx.restore();
     }
 }
 
-window.game = new Game();
+window.onload = () => { window.game = new Game(); };
 </script>
 </body>
 </html>
