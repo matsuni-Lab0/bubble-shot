@@ -1,985 +1,1384 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Bubble Shot: Shrimp Edition</title>
-    <style>
-        /* --- CSS設定 --- */
-        body {
-            margin: 0; overflow: hidden; background-color: #111; color: white;
-            font-family: 'Helvetica Neue', 'Arial', sans-serif;
-            touch-action: none; user-select: none; -webkit-user-select: none;
-        }
-        #game-container {
-            position: relative; width: 100vw; height: 100dvh; overflow: hidden;
-            background-color: #050510;
-        }
-        canvas { display: block; width: 100%; height: 100%; }
-        
-        #ui-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; display: flex; flex-direction: column; justify-content: space-between;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Bubble Shot: Shrimp Edition (Fixed)</title>
+  <style>
+    body {
+      margin: 0; overflow: hidden; background-color: #111; color: white;
+      font-family: 'Helvetica Neue', 'Arial', sans-serif;
+      touch-action: none; user-select: none; -webkit-user-select: none;
+    }
+    #game-container {
+      position: relative; width: 100vw; height: 100dvh; overflow: hidden;
+      background-color: #050510;
+    }
+    canvas { display: block; width: 100%; height: 100%; }
 
-        /* --- 上部エリア --- */
-        #top-area {
-            height: 180px; display: flex; flex-direction: column; align-items: center;
-            justify-content: flex-start; background: linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0));
-            z-index: 10; padding-top: 10px; box-sizing: border-box; position: relative;
-        }
+    #ui-layer {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; display: flex; flex-direction: column; justify-content: space-between;
+    }
 
-        /* 司令官ウィンドウ */
-        #commander-window {
-            position: absolute; top: 10px; left: 10px;
-            width: 70px; height: 70px;
-            background: rgba(0, 20, 40, 0.6);
-            border: 2px solid #00FFFF; border-radius: 10px;
-            clip-path: polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%);
-            pointer-events: auto; display: flex; justify-content: center; align-items: center;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
-            z-index: 25; backdrop-filter: blur(2px);
-        }
-        #comm-canvas { width: 100%; height: 100%; }
-        #comm-label {
-            position: absolute; bottom: 2px; right: 4px;
-            font-size: 8px; color: #00FFFF; font-family: monospace; opacity: 0.8;
-        }
+    #top-area {
+      height: 180px; display: flex; flex-direction: column; align-items: center;
+      justify-content: flex-start; background: linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0));
+      z-index: 10; padding-top: 10px; box-sizing: border-box; position: relative;
+    }
 
-        /* シャッフルボタン */
-        #manual-shuffle-btn {
-            position: absolute; top: 15px; left: 90px;
-            width: 40px; height: 40px; border-radius: 50%;
-            background: rgba(255, 165, 0, 0.1); border: 2px solid #FFA500;
-            color: #FFA500; box-shadow: 0 0 10px rgba(255, 165, 0, 0.2); font-size: 18px;
-            display: flex; justify-content: center; align-items: center;
-            pointer-events: auto; cursor: pointer; z-index: 20;
-            backdrop-filter: blur(4px);
-        }
-        #manual-shuffle-btn:active { transform: scale(0.9); }
+    #commander-window {
+      position: absolute; top: 10px; left: 10px;
+      width: 70px; height: 70px;
+      background: rgba(0, 20, 40, 0.6);
+      border: 2px solid #00FFFF; border-radius: 10px;
+      clip-path: polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%);
+      pointer-events: auto; display: flex; justify-content: center; align-items: center;
+      box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+      z-index: 25; backdrop-filter: blur(2px);
+    }
+    #comm-canvas { width: 100%; height: 100%; }
+    #comm-label {
+      position: absolute; bottom: 2px; right: 4px;
+      font-size: 8px; color: #00FFFF; font-family: monospace; opacity: 0.8;
+    }
 
-        #difficulty-display {
-            position: absolute; top: 20px; right: 15px;
-            font-size: 12px; font-weight: bold; color: #888; letter-spacing: 1px;
-            border: 1px solid #444; padding: 2px 6px; border-radius: 4px;
-        }
+    #manual-shuffle-btn {
+      position: absolute; top: 15px; left: 90px;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(255, 165, 0, 0.1); border: 2px solid #FFA500;
+      color: #FFA500; box-shadow: 0 0 10px rgba(255, 165, 0, 0.2); font-size: 18px;
+      display: flex; justify-content: center; align-items: center;
+      pointer-events: auto; cursor: pointer; z-index: 20;
+      backdrop-filter: blur(4px);
+    }
+    #manual-shuffle-btn:active { transform: scale(0.9); }
 
-        /* オートロックボタン */
-        #auto-lock-btn {
-            position: absolute; bottom: 100px; right: 20px;
-            width: 60px; height: 60px; border-radius: 50%;
-            background: rgba(255, 215, 0, 0.2); border: 2px solid #FFD700; color: #FFD700;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            font-size: 10px; font-weight: 900; text-align: center;
-            box-shadow: 0 0 15px #FFD700; cursor: pointer; pointer-events: auto; z-index: 30;
-            animation: pulse 2s infinite; line-height: 1.1;
-        }
-        .ja-sub { font-size: 8px; font-weight: normal; opacity: 0.8; }
-        .trial-badge { 
-            position: absolute; top: -5px; right: -5px; background: #FF4136; color: #fff;
-            font-size: 8px; padding: 2px 4px; border-radius: 4px; font-weight: bold;
-        }
+    #difficulty-display {
+      position: absolute; top: 20px; right: 15px;
+      font-size: 12px; font-weight: bold; color: #888; letter-spacing: 1px;
+      border: 1px solid #444; padding: 2px 6px; border-radius: 4px;
+    }
 
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
-        }
+    #auto-lock-btn {
+      position: absolute; bottom: 100px; right: 20px;
+      width: 60px; height: 60px; border-radius: 50%;
+      background: rgba(255, 215, 0, 0.2); border: 2px solid #FFD700; color: #FFD700;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      font-size: 10px; font-weight: 900; text-align: center;
+      box-shadow: 0 0 15px #FFD700; cursor: pointer; pointer-events: auto; z-index: 30;
+      animation: pulse 2s infinite; line-height: 1.1;
+    }
+    .ja-sub { font-size: 8px; font-weight: normal; opacity: 0.8; }
+    .trial-badge {
+      position: absolute; top: -5px; right: -5px; background: #FF4136; color: #fff;
+      font-size: 8px; padding: 2px 4px; border-radius: 4px; font-weight: bold;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
+    }
 
-        #time-bar-wrapper {
-            width: 50%; height: 6px; background: #222; border-radius: 4px;
-            margin-top: 10px; border: 1px solid #555; position: relative; overflow: hidden;
-        }
-        #time-bar { width: 100%; height: 100%; background: #0074D9; transition: width 0.1s linear, background 0.3s; box-shadow: 0 0 10px currentColor; }
-        
-        #target-label { font-size: 10px; color: #00FFFF; letter-spacing: 4px; margin-top: 5px; opacity: 0.8;}
-        #target-display {
-            font-size: 64px; font-weight: 900; color: #FFDC00; line-height: 1.0; margin: 0;
-            text-shadow: 0 0 20px rgba(255, 220, 0, 0.8); font-family: 'Arial Black', sans-serif; letter-spacing: -2px;
-        }
-        #status-bar {
-            color: #aaa; font-family: monospace; font-size: 16px; display: flex; gap: 20px;
-            font-weight: bold; margin-top: 5px; text-shadow: 0 0 2px #000;
-        }
-        #fever-label { font-size: 10px; color: #888; margin-top: 5px; letter-spacing: 2px;}
-        #fever-gauge-container { width: 200px; height: 4px; background: #333; border-radius: 2px; overflow: hidden; margin-top: 2px; }
-        #fever-gauge { width: 0%; height: 100%; background: linear-gradient(90deg, #FFDC00, #FF4136); transition: width 0.3s; box-shadow: 0 0 5px #FF4136; }
+    #time-bar-wrapper {
+      width: 50%; height: 6px; background: #222; border-radius: 4px;
+      margin-top: 10px; border: 1px solid #555; position: relative; overflow: hidden;
+    }
+    #time-bar { width: 100%; height: 100%; background: #0074D9; transition: width 0.1s linear, background 0.3s; box-shadow: 0 0 10px currentColor; }
 
-        /* --- 下部エリア --- */
-        #bottom-area {
-            height: 180px; display: flex; flex-direction: column; align-items: center;
-            justify-content: flex-end; padding-bottom: 30px;
-            background: linear-gradient(to top, rgba(0,20,30,0.95) 60%, rgba(0,0,0,0)); z-index: 10;
-        }
-        #guide-msg {
-            color: #00FFFF; font-size: 14px; margin-bottom: 5px; min-height: 35px;
-            text-shadow: 0 0 5px #00FFFF; letter-spacing: 1px; text-align: center; line-height: 1.3;
-            transition: all 0.3s; /* 文字サイズ変更用のアニメーション */
-        }
-        #guide-msg .sub { font-size: 10px; color: #aaa; display: block; margin-top: 2px; transition: all 0.3s;}
-        
-        /* ★フィーバー時の文字サイズ強調クラス */
-        #guide-msg.fever-mode-text {
-            font-size: 24px; color: #FF4136; font-weight: 900; text-shadow: 0 0 10px #FF4136;
-        }
-        #guide-msg.fever-mode-text .sub {
-            font-size: 14px; color: #FFD700; font-weight: bold;
-        }
+    #target-label { font-size: 10px; color: #00FFFF; letter-spacing: 4px; margin-top: 5px; opacity: 0.8;}
+    #target-display {
+      font-size: 64px; font-weight: 900; color: #FFDC00; line-height: 1.0; margin: 0;
+      text-shadow: 0 0 20px rgba(255, 220, 0, 0.8); font-family: 'Arial Black', sans-serif; letter-spacing: -2px;
+    }
+    #status-bar {
+      color: #aaa; font-family: monospace; font-size: 16px; display: flex; gap: 20px;
+      font-weight: bold; margin-top: 5px; text-shadow: 0 0 2px #000;
+    }
+    #fever-label { font-size: 10px; color: #888; margin-top: 5px; letter-spacing: 2px;}
+    #fever-gauge-container { width: 200px; height: 4px; background: #333; border-radius: 2px; overflow: hidden; margin-top: 2px; }
+    #fever-gauge { width: 0%; height: 100%; background: linear-gradient(90deg, #FFDC00, #FF4136); transition: width 0.3s; box-shadow: 0 0 5px #FF4136; }
 
-        #formula-bar {
-            min-height: 30px; margin-bottom: 15px; font-size: 24px; color: #FFF; font-family: monospace;
-            font-weight: bold; text-shadow: 0 0 5px #00FFFF, 0 0 10px #00FFFF; white-space: nowrap;
-            max-width: 90%; overflow: hidden; text-overflow: ellipsis;
-        }
-        #btn-group { display: flex; gap: 20px; align-items: center; }
-        #fire-btn {
-            width: 150px; height: 60px; background: rgba(255, 65, 54, 0.1); border: 2px solid #555;
-            color: #555; font-size: 24px; font-weight: 900; letter-spacing: 4px; display: flex;
-            justify-content: center; align-items: center; clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
-            transition: all 0.2s; cursor: pointer; pointer-events: none;
-        }
-        #fire-btn.ready {
-            background: rgba(255, 65, 54, 0.8); border: none; color: white; box-shadow: 0 0 30px #FF4136;
-            pointer-events: auto; transform: scale(1.05); text-shadow: 0 0 10px white;
-        }
-        #fire-btn:active { transform: scale(0.95); background: #fff; color: #FF4136; }
-        #clear-btn {
-            width: 50px; height: 50px; border-radius: 50%; border: 1px solid #00FFFF; color: #00FFFF;
-            display: flex; justify-content: center; align-items: center; font-size: 10px; cursor: pointer;
-            background: rgba(0, 255, 255, 0.05); pointer-events: auto; box-shadow: 0 0 5px rgba(0, 255, 255, 0.2);
-        }
+    #bottom-area {
+      height: 180px; display: flex; flex-direction: column; align-items: center;
+      justify-content: flex-end; padding-bottom: 30px;
+      background: linear-gradient(to top, rgba(0,20,30,0.95) 60%, rgba(0,0,0,0)); z-index: 10;
+    }
+    #guide-msg {
+      color: #00FFFF; font-size: 14px; margin-bottom: 5px; min-height: 35px;
+      text-shadow: 0 0 5px #00FFFF; letter-spacing: 1px; text-align: center; line-height: 1.3;
+      transition: all 0.3s;
+    }
+    #guide-msg .sub { font-size: 10px; color: #aaa; display: block; margin-top: 2px; transition: all 0.3s;}
 
-        /* --- 画面オーバーレイ --- */
-        #menu-screen, #gameover-screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(5, 10, 15, 0.95); display: flex; flex-direction: column;
-            justify-content: flex-start; align-items: center; pointer-events: auto; z-index: 50;
-            text-align: center; box-sizing: border-box; padding: 40px 20px; overflow-y: auto;
-        }
-        #menu-screen { justify-content: center; }
+    #guide-msg.fever-mode-text {
+      font-size: 24px; color: #FF4136; font-weight: 900; text-shadow: 0 0 10px #FF4136;
+    }
+    #guide-msg.fever-mode-text .sub {
+      font-size: 14px; color: #FFD700; font-weight: bold;
+    }
 
-        h1 { 
-            color: #00FFFF; font-size: 36px; font-weight: 900; text-shadow: 0 0 10px #00FFFF, 0 0 30px #00FFFF; 
-            margin: 10px 0; letter-spacing: 4px; font-style: italic; font-family: 'Arial Black', sans-serif;
-        }
-        
-        .btn {
-            padding: 15px 40px; font-size: 18px; background: transparent; border: 2px solid #FFDC00;
-            color: #FFDC00; cursor: pointer; font-weight: bold; box-shadow: 0 0 10px #FFDC00, inset 0 0 10px #FFDC00;
-            transition: all 0.2s; margin-top: 15px; text-transform: uppercase; letter-spacing: 2px;
-            width: 100%; max-width: 300px;
-        }
-        .btn:hover { background: #FFDC00; color: #000; box-shadow: 0 0 30px #FFDC00; }
+    #formula-bar {
+      min-height: 30px; margin-bottom: 15px; font-size: 24px; color: #FFF; font-family: monospace;
+      font-weight: bold; text-shadow: 0 0 5px #00FFFF, 0 0 10px #00FFFF; white-space: nowrap;
+      max-width: 90%; overflow: hidden; text-overflow: ellipsis;
+    }
+    #btn-group { display: flex; gap: 20px; align-items: center; }
+    #fire-btn {
+      width: 150px; height: 60px; background: rgba(255, 65, 54, 0.1); border: 2px solid #555;
+      color: #555; font-size: 24px; font-weight: 900; letter-spacing: 4px; display: flex;
+      justify-content: center; align-items: center; clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
+      transition: all 0.2s; cursor: pointer; pointer-events: none;
+    }
+    #fire-btn.ready {
+      background: rgba(255, 65, 54, 0.8); border: none; color: white; box-shadow: 0 0 30px #FF4136;
+      pointer-events: auto; transform: scale(1.05); text-shadow: 0 0 10px white;
+    }
+    #fire-btn:active { transform: scale(0.95); background: #fff; color: #FF4136; }
+    #clear-btn {
+      width: 50px; height: 50px; border-radius: 50%; border: 1px solid #00FFFF; color: #00FFFF;
+      display: flex; justify-content: center; align-items: center; font-size: 10px; cursor: pointer;
+      background: rgba(0, 255, 255, 0.05); pointer-events: auto; box-shadow: 0 0 5px rgba(0, 255, 255, 0.2);
+    }
 
-        /* 難易度選択ボタン */
-        .diff-container {
-            display: flex; flex-direction: column; gap: 15px; width: 100%; align-items: center; margin-bottom: 20px;
-        }
-        .btn-diff {
-            width: 80%; padding: 12px; font-size: 16px; margin: 0;
-            border-color: #00FFFF; color: #00FFFF; box-shadow: 0 0 5px #00FFFF;
-        }
-        .btn-diff:hover { background: #00FFFF; color: #000; }
-        
-        .btn-easy { border-color: #2ECC40; color: #2ECC40; box-shadow: 0 0 5px #2ECC40; }
-        .btn-easy:hover { background: #2ECC40; }
-        .btn-normal { border-color: #0074D9; color: #0074D9; box-shadow: 0 0 5px #0074D9; }
-        .btn-normal:hover { background: #0074D9; }
-        .btn-hard { border-color: #FF4136; color: #FF4136; box-shadow: 0 0 5px #FF4136; }
-        .btn-hard:hover { background: #FF4136; }
+    #menu-screen, #gameover-screen {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(5, 10, 15, 0.95); display: flex; flex-direction: column;
+      justify-content: flex-start; align-items: center; pointer-events: auto; z-index: 50;
+      text-align: center; box-sizing: border-box; padding: 40px 20px; overflow-y: auto;
+    }
+    #menu-screen { justify-content: center; }
 
-        .btn-link {
-            border-color: #AAAAAA; color: #AAAAAA; box-shadow: none; border-style: dashed; font-size: 12px;
-        }
-        .btn-link:hover { background: #555; color: #fff; }
+    h1 {
+      color: #00FFFF; font-size: 36px; font-weight: 900; text-shadow: 0 0 10px #00FFFF, 0 0 30px #00FFFF;
+      margin: 10px 0; letter-spacing: 4px; font-style: italic; font-family: 'Arial Black', sans-serif;
+    }
 
-        .rule-box {
-            font-size: 14px; color: #ccc; line-height: 1.6; margin-bottom: 20px; text-align: left; display: inline-block;
-        }
-        .rule-box .en { color: #fff; font-weight: bold; display: block; margin-bottom: 2px;}
-        .rule-box .ja { color: #888; font-size: 11px; display: block; margin-bottom: 10px;}
-        
-        #rank-list-container {
-            width: 100%; max-width: 350px; margin-bottom: 20px; text-align: left; border-top: 1px solid #333; margin-top: 20px;
-        }
-        .rank-item {
-            display: flex; justify-content: space-between; align-items: center; padding: 8px 5px; border-bottom: 1px solid #222; font-family: monospace;
-        }
-        .rank-item.active {
-            color: #FFDC00; background: linear-gradient(90deg, transparent, rgba(255, 220, 0, 0.1), transparent);
-            font-weight: bold; text-shadow: 0 0 5px #FFDC00;
-        }
-        .rank-name-col { flex-grow: 1; padding-left: 10px; display: flex; flex-direction: column;}
-        .rank-name-en { font-size: 14px; color: #ccc; }
-        .rank-name-ja { font-size: 10px; color: #666; }
-        .active .rank-name-en { color: #FFDC00; }
-        .active .rank-name-ja { color: #AA8800; }
-        .rank-score { width: 60px; text-align: right; font-size: 14px; color: #888; }
-        .rank-arrow { width: 40px; color: #FF4136; text-align: right; font-weight:bold; font-size: 12px; animation: blink 0.5s infinite alternate; }
-        @keyframes blink { from { opacity: 1; } to { opacity: 0.3; } }
-        .hidden { display: none !important; }
+    .btn {
+      padding: 15px 40px; font-size: 18px; background: transparent; border: 2px solid #FFDC00;
+      color: #FFDC00; cursor: pointer; font-weight: bold; box-shadow: 0 0 10px #FFDC00, inset 0 0 10px #FFDC00;
+      transition: all 0.2s; margin-top: 15px; text-transform: uppercase; letter-spacing: 2px;
+      width: 100%; max-width: 300px;
+    }
+    .btn:hover { background: #FFDC00; color: #000; box-shadow: 0 0 30px #FFDC00; }
 
-        #mascot-canvas-menu, #mascot-canvas-over {
-            width: 100px; height: 100px; margin-bottom: 10px;
-        }
+    .diff-container {
+      display: flex; flex-direction: column; gap: 15px; width: 100%; align-items: center; margin-bottom: 20px;
+    }
+    .btn-diff {
+      width: 80%; padding: 12px; font-size: 16px; margin: 0;
+      border-color: #00FFFF; color: #00FFFF; box-shadow: 0 0 5px #00FFFF;
+    }
+    .btn-diff:hover { background: #00FFFF; color: #000; }
 
-    </style>
+    .btn-easy { border-color: #2ECC40; color: #2ECC40; box-shadow: 0 0 5px #2ECC40; }
+    .btn-easy:hover { background: #2ECC40; }
+    .btn-normal { border-color: #0074D9; color: #0074D9; box-shadow: 0 0 5px #0074D9; }
+    .btn-normal:hover { background: #0074D9; }
+    .btn-hard { border-color: #FF4136; color: #FF4136; box-shadow: 0 0 5px #FF4136; }
+    .btn-hard:hover { background: #FF4136; }
+
+    .btn-link {
+      border-color: #AAAAAA; color: #AAAAAA; box-shadow: none; border-style: dashed; font-size: 12px;
+    }
+    .btn-link:hover { background: #555; color: #fff; }
+
+    .rule-box {
+      font-size: 14px; color: #ccc; line-height: 1.6; margin-bottom: 20px; text-align: left; display: inline-block;
+    }
+    .rule-box .en { color: #fff; font-weight: bold; display: block; margin-bottom: 2px;}
+    .rule-box .ja { color: #888; font-size: 11px; display: block; margin-bottom: 10px;}
+
+    #rank-list-container {
+      width: 100%; max-width: 350px; margin-bottom: 20px; text-align: left; border-top: 1px solid #333; margin-top: 20px;
+    }
+    .rank-item {
+      display: flex; justify-content: space-between; align-items: center; padding: 8px 5px; border-bottom: 1px solid #222; font-family: monospace;
+    }
+    .rank-item.active {
+      color: #FFDC00; background: linear-gradient(90deg, transparent, rgba(255, 220, 0, 0.1), transparent);
+      font-weight: bold; text-shadow: 0 0 5px #FFDC00;
+    }
+    .rank-name-col { flex-grow: 1; padding-left: 10px; display: flex; flex-direction: column;}
+    .rank-name-en { font-size: 14px; color: #ccc; }
+    .rank-name-ja { font-size: 10px; color: #666; }
+    .active .rank-name-en { color: #FFDC00; }
+    .active .rank-name-ja { color: #AA8800; }
+    .rank-score { width: 60px; text-align: right; font-size: 14px; color: #888; }
+    .rank-arrow { width: 40px; color: #FF4136; text-align: right; font-weight:bold; font-size: 12px; animation: blink 0.5s infinite alternate; }
+    @keyframes blink { from { opacity: 1; } to { opacity: 0.3; } }
+    .hidden { display: none !important; }
+
+    #mascot-canvas-menu, #mascot-canvas-over {
+      width: 100px; height: 100px; margin-bottom: 10px;
+    }
+  </style>
 </head>
 <body>
 
 <div id="game-container">
-    <canvas id="gameCanvas"></canvas>
-    
-    <div id="ui-layer">
-        <div id="top-area">
-            <div id="commander-window">
-                <canvas id="comm-canvas" width="70" height="70"></canvas>
-                <div id="comm-label">CMD</div>
-            </div>
+  <canvas id="gameCanvas"></canvas>
 
-            <div id="manual-shuffle-btn" onclick="game.manualShuffle()">↻</div>
-            <div id="difficulty-display">Lv.?</div>
+  <div id="ui-layer">
+    <div id="top-area">
+      <div id="commander-window">
+        <canvas id="comm-canvas" width="70" height="70"></canvas>
+        <div id="comm-label">CMD</div>
+      </div>
 
-            <div id="time-bar-wrapper"><div id="time-bar"></div></div>
-            <div id="target-label">TARGET</div>
-            <div id="target-display">??</div>
-            <div id="status-bar">
-                <span id="score-display">SCORE: 0</span>
-                <span id="timer-display">TIME: 90</span>
-            </div>
-            <div id="fever-label">SYNC RATIO</div>
-            <div id="fever-gauge-container"><div id="fever-gauge"></div></div>
-        </div>
-        
-        <div style="flex-grow: 1;"></div>
-        
-        <div id="auto-lock-btn" onclick="game.autoLock()">
-            <div class="trial-badge">FREE TRIAL</div>
-            AUTO<br>LOCK
-            <span class="ja-sub">自動(お試し)</span>
-        </div>
+      <div id="manual-shuffle-btn" onclick="game.manualShuffle()">↻</div>
+      <div id="difficulty-display">Lv.?</div>
 
-        <div id="bottom-area">
-            <div id="guide-msg">
-                LOCK: [NUM]
-                <span class="sub">数字をロックせよ</span>
-            </div>
-            <div id="formula-bar">READY...</div>
-            <div id="btn-group">
-                <div id="clear-btn" onclick="game.clearFormula()">CLR</div>
-                <div id="fire-btn" onclick="game.fire()">FIRE</div>
-            </div>
-        </div>
+      <div id="time-bar-wrapper"><div id="time-bar"></div></div>
+      <div id="target-label">TARGET</div>
+      <div id="target-display">??</div>
+      <div id="status-bar">
+        <span id="score-display">SCORE: 0</span>
+        <span id="timer-display">TIME: 90</span>
+      </div>
+      <div id="fever-label">SYNC RATIO</div>
+      <div id="fever-gauge-container"><div id="fever-gauge"></div></div>
     </div>
 
-    <div id="menu-screen">
-        <canvas id="mascot-canvas-menu" width="100" height="100"></canvas>
-        <h1>BUBBLE SHOT</h1>
-        <p style="color:#00FFFF; font-size:12px; margin-bottom: 20px; font-family: monospace;">
-            SYSTEM: ONLINE<br>MODE: FULL YEAST BURST
-        </p>
-        <div class="rule-box">
-            <span class="en">1. Select Difficulty & Start.</span>
-            <span class="ja">難易度を選んでスタート。</span>
-            <span class="en">2. Lock numbers to match TARGET.</span>
-            <span class="ja">ターゲットと同じ数字を作る。</span>
-            <span class="en">3. "AUTO LOCK" for instant win!</span>
-            <span class="ja">「AUTO LOCK」で一撃必殺！</span>
-        </div>
-        <div class="diff-container">
-            <button class="btn btn-diff btn-easy" onclick="game.start('easy')">
-                EASY (0-9)<br><span style="font-size:10px">初級：1桁のみ</span>
-            </button>
-            <button class="btn btn-diff btn-normal" onclick="game.start('normal')">
-                NORMAL (0-19)<br><span style="font-size:10px">中級：標準</span>
-            </button>
-            <button class="btn btn-diff btn-hard" onclick="game.start('hard')">
-                HARD (0-30)<br><span style="font-size:10px">上級：高難度</span>
-            </button>
-        </div>
-        <div style="margin-top: 10px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-            <button class="btn btn-link" onclick="openLink('line')">LINE STICKERS (Check Characters)</button>
-            <button class="btn btn-link" onclick="openLink('roblox')">COMING SOON to ROBLOX</button>
-        </div>
+    <div style="flex-grow: 1;"></div>
+
+    <div id="auto-lock-btn" onclick="game.autoLock()">
+      <div class="trial-badge">FREE TRIAL</div>
+      AUTO<br>LOCK
+      <span class="ja-sub">自動(お試し)</span>
     </div>
 
-    <div id="gameover-screen" class="hidden">
-        <canvas id="mascot-canvas-over" width="100" height="100"></canvas>
-        <h1 id="result-title">MISSION OVER</h1>
-        <p id="result-final">0</p>
-        <div id="rank-list-container"></div>
-        <button class="btn" onclick="location.reload()">Return to Menu</button>
-        <div style="margin-top: 20px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-            <button class="btn btn-link" onclick="openLink('line')">See More Characters? (LINE)</button>
-        </div>
+    <div id="bottom-area">
+      <div id="guide-msg">
+        LOCK: [NUM]
+        <span class="sub">数字をロックせよ</span>
+      </div>
+      <div id="formula-bar">READY...</div>
+      <div id="btn-group">
+        <div id="clear-btn" onclick="game.clearFormula()">CLR</div>
+        <div id="fire-btn" onclick="game.fire()">FIRE</div>
+      </div>
     </div>
+  </div>
+
+  <div id="menu-screen">
+    <canvas id="mascot-canvas-menu" width="100" height="100"></canvas>
+    <h1>BUBBLE SHOT</h1>
+    <p style="color:#00FFFF; font-size:12px; margin-bottom: 20px; font-family: monospace;">
+      SYSTEM: ONLINE<br>MODE: FULL YEAST BURST
+    </p>
+    <div class="rule-box">
+      <span class="en">1. Select Difficulty & Start.</span>
+      <span class="ja">難易度を選んでスタート。</span>
+      <span class="en">2. Lock numbers to match TARGET.</span>
+      <span class="ja">ターゲットと同じ数字を作る。</span>
+      <span class="en">3. "AUTO LOCK" for instant win!</span>
+      <span class="ja">「AUTO LOCK」で一撃必殺！</span>
+    </div>
+    <div class="diff-container">
+      <button class="btn btn-diff btn-easy" onclick="game.start('easy')">
+        EASY (0-9)<br><span style="font-size:10px">初級：1桁のみ</span>
+      </button>
+      <button class="btn btn-diff btn-normal" onclick="game.start('normal')">
+        NORMAL (0-19)<br><span style="font-size:10px">中級：標準</span>
+      </button>
+      <button class="btn btn-diff btn-hard" onclick="game.start('hard')">
+        HARD (0-30)<br><span style="font-size:10px">上級：高難度</span>
+      </button>
+    </div>
+    <div style="margin-top: 10px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+      <button class="btn btn-link" onclick="openLink('line')">LINE STICKERS (Check Characters)</button>
+      <button class="btn btn-link" onclick="openLink('roblox')">COMING SOON to ROBLOX</button>
+    </div>
+  </div>
+
+  <div id="gameover-screen" class="hidden">
+    <canvas id="mascot-canvas-over" width="100" height="100"></canvas>
+    <h1 id="result-title">MISSION OVER</h1>
+    <p id="result-final">0</p>
+    <div id="rank-list-container"></div>
+    <button class="btn" onclick="location.reload()">Return to Menu</button>
+    <div style="margin-top: 20px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+      <button class="btn btn-link" onclick="openLink('line')">See More Characters? (LINE)</button>
+    </div>
+  </div>
 </div>
 
 <script>
-const URL_CONFIG = { line: "", roblox: "" };
-function openLink(type) {
+  const URL_CONFIG = { line: "", roblox: "" };
+  function openLink(type) {
     const url = URL_CONFIG[type];
-    if (url && url.length > 0) { window.open(url, '_blank'); } else { alert("Coming Soon! \n準備中です。公開をお楽しみに！"); }
-}
+    if (url && url.length > 0) window.open(url, "_blank");
+    else alert("Coming Soon! \n準備中です。公開をお楽しみに！");
+  }
 
-const OPS = {
-    add: { label: '+', op: '+' }, sub: { label: '-', op: '-' },
-    mul: { label: '×', op: '*' }, div: { label: '÷', op: '/' }
-};
+  const OPS = {
+    add: { label: "+", op: "+" },
+    sub: { label: "-", op: "-" },
+    mul: { label: "×", op: "*" },
+    div: { label: "÷", op: "/" },
+  };
 
-const FEVER_TYPES = [
-    { id: 'asc', labelEn: 'ASCENDING (Low->High)', labelJa: '昇順で撃て (小 → 大)' },
-    { id: 'desc', labelEn: 'DESCENDING (High->Low)', labelJa: '降順で撃て (大 → 小)' },
-    { id: 'even', labelEn: 'EVEN NUMBERS', labelJa: '偶数を撃て' },
-    { id: 'odd', labelEn: 'ODD NUMBERS', labelJa: '奇数を撃て' }
-];
+  const FEVER_TYPES = [
+    { id: "asc",  labelEn: "ASCENDING (Low->High)",  labelJa: "昇順で撃て (小 → 大)" },
+    { id: "desc", labelEn: "DESCENDING (High->Low)", labelJa: "降順で撃て (大 → 小)" },
+    { id: "even", labelEn: "EVEN NUMBERS",          labelJa: "偶数を撃て" },
+    { id: "odd",  labelEn: "ODD NUMBERS",           labelJa: "奇数を撃て" },
+  ];
 
-// ★ エビランク設定（上に行くほどスコアが高い）
-const RANKS = [
+  const RANKS = [
     { min: 30000, nameEn: "WHITE SHRIMP",   nameJa: "シロエビ" },
     { min: 20000, nameEn: "ISE LOBSTER",    nameJa: "伊勢海老" },
     { min: 10000, nameEn: "WILD PRAWN",     nameJa: "クルマエビ(天然)" },
     { min: 6000,  nameEn: "BOTAN SHRIMP",   nameJa: "ボタンエビ" },
     { min: 3000,  nameEn: "SWEET SHRIMP",   nameJa: "アマエビ" },
     { min: 1000,  nameEn: "BLACK TIGER",    nameJa: "ブラックタイガー" },
-    { min: 0,     nameEn: "SAKURA SHRIMP",  nameJa: "サクラエビ" }
-];
+    { min: 0,     nameEn: "SAKURA SHRIMP",  nameJa: "サクラエビ" },
+  ];
 
-class Game {
+  class Game {
     constructor() {
-        this.canvas = document.getElementById('gameCanvas');
-        this.ctx = this.canvas.getContext('2d');
-        this.commCanvas = document.getElementById('comm-canvas');
-        this.commCtx = this.commCanvas.getContext('2d');
-        this.commState = 'normal';
+      this.canvas = document.getElementById("gameCanvas");
+      this.ctx = this.canvas.getContext("2d");
 
-        setTimeout(() => this.resize(), 100);
-        window.addEventListener('resize', () => this.resize());
-        this.state = 'menu';
-        this.score = 0; this.maxTime = 90; this.timeLeft = this.maxTime;
-        this.targetNum = 0; this.entities = []; this.formulaStack = [];
-        this.clearCount = 0; this.feverTimer = 0; this.feverMaxTime = 10;
-        this.feverType = null; this.effects = [];
-        this.radarRadius = 0; this.centerX = 0; this.centerY = 0;
-        this.lastTime = 0; this.scanAngle = 0; this.bgScroll = 0;
-        this.maxNum = 30; this.difficultyLabel = "Lv.3";
+      this.commCanvas = document.getElementById("comm-canvas");
+      this.commCtx = this.commCanvas.getContext("2d");
+      this.commState = "normal";
 
-        this.drawStaticMascot('mascot-canvas-menu', 'normal');
-        this.drawStaticMascot('mascot-canvas-over', 'panic');
-        this.updateCommander('normal');
+      this.state = "menu";
+      this.score = 0;
+      this.maxTime = 90;
+      this.timeLeft = this.maxTime;
 
-        this.canvas.addEventListener('pointerdown', (e) => this.handleClick(e));
-        this.loop = this.loop.bind(this);
-        requestAnimationFrame(this.loop);
+      this.targetNum = 0;
+      this.entities = [];
+      this.formulaStack = [];
+      this.effects = [];
+
+      this.clearCount = 0;
+      this.feverTimer = 0;
+      this.feverMaxTime = 10;
+      this.feverType = null;
+
+      this.radarRadius = 0;
+      this.centerX = 0;
+      this.centerY = 0;
+
+      this.lastTime = 0;
+      this.scanAngle = 0;
+      this.bgScroll = 0;
+
+      this.maxNum = 30;
+      this.difficultyLabel = "Lv.3";
+      this.deadlockRetry = 0;
+
+      // 盤面の「遊べる比率」調整（数字が多いほど式が組みやすい）
+      this.numRatio = 0.72; // ★数字:記号 = 約7:3
+
+      this.drawStaticMascot("mascot-canvas-menu", "normal");
+      this.drawStaticMascot("mascot-canvas-over", "panic");
+      this.updateCommander("normal");
+
+      setTimeout(() => this.resize(), 100);
+      window.addEventListener("resize", () => this.resize());
+
+      this.canvas.addEventListener("pointerdown", (e) => this.handleClick(e));
+
+      this.loop = this.loop.bind(this);
+      requestAnimationFrame(this.loop);
     }
 
+    // ======= FIX 1: scale累積防止 + 位置補正 =======
     resize() {
-        const dpr = window.devicePixelRatio || 1;
-        this.width = window.innerWidth; this.height = window.innerHeight;
-        this.canvas.width = this.width * dpr; this.canvas.height = this.height * dpr;
-        this.canvas.style.width = this.width + 'px'; this.canvas.style.height = this.height + 'px';
-        this.ctx.scale(dpr, dpr);
-        const topSpace = 180; const bottomSpace = 180; 
-        this.centerY = topSpace + (this.height - topSpace - bottomSpace) / 2;
-        this.centerX = this.width / 2;
-        const maxRadius = Math.min(this.width, (this.height - topSpace - bottomSpace)) / 2;
-        this.radarRadius = Math.max(0, maxRadius - 10);
-        if (this.state === 'playing' && this.entities.length === 0) { this.replenishEntities(); }
+      const dpr = window.devicePixelRatio || 1;
+
+      const prevCX = this.centerX || 0;
+      const prevCY = this.centerY || 0;
+      const prevR  = this.radarRadius || 1;
+
+      this.width = window.innerWidth;
+      this.height = window.innerHeight;
+
+      this.canvas.width = Math.floor(this.width * dpr);
+      this.canvas.height = Math.floor(this.height * dpr);
+      this.canvas.style.width = this.width + "px";
+      this.canvas.style.height = this.height + "px";
+
+      // ★重要：累積スケールを完全に潰す
+      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const topSpace = 180;
+      const bottomSpace = 180;
+
+      this.centerY = topSpace + (this.height - topSpace - bottomSpace) / 2;
+      this.centerX = this.width / 2;
+
+      const maxRadius = Math.min(this.width, (this.height - topSpace - bottomSpace)) / 2;
+      this.radarRadius = Math.max(0, maxRadius - 10);
+
+      // 既存エンティティ位置補正（中心基準）
+      if (this.entities && this.entities.length > 0) {
+        const s = prevR > 0 ? (this.radarRadius / prevR) : 1;
+        for (const ent of this.entities) {
+          const dx = ent.x - prevCX;
+          const dy = ent.y - prevCY;
+          ent.x = this.centerX + dx * s;
+          ent.y = this.centerY + dy * s;
+
+          // 外に出たら内側へ
+          const dist = Math.hypot(ent.x - this.centerX, ent.y - this.centerY);
+          const lim = Math.max(0, this.radarRadius - ent.r - 6);
+          if (dist > lim && dist > 0) {
+            const k = lim / dist;
+            ent.x = this.centerX + (ent.x - this.centerX) * k;
+            ent.y = this.centerY + (ent.y - this.centerY) * k;
+          }
+        }
+      }
+
+      if (this.state === "playing" && this.entities.length === 0) {
+        this.replenishEntities();
+      }
     }
 
     start(mode) {
-        if (mode === 'easy') { this.maxNum = 9; this.difficultyLabel = "Lv.1 EASY"; }
-        else if (mode === 'normal') { this.maxNum = 19; this.difficultyLabel = "Lv.2 NRM"; }
-        else { this.maxNum = 30; this.difficultyLabel = "Lv.3 HARD"; }
-        document.getElementById('difficulty-display').innerText = this.difficultyLabel;
+      if (mode === "easy") {
+        this.maxNum = 9;
+        this.difficultyLabel = "Lv.1 EASY";
+        this.numRatio = 0.78;
+      } else if (mode === "normal") {
+        this.maxNum = 19;
+        this.difficultyLabel = "Lv.2 NRM";
+        this.numRatio = 0.72;
+      } else {
+        this.maxNum = 30;
+        this.difficultyLabel = "Lv.3 HARD";
+        this.numRatio = 0.68;
+      }
+      document.getElementById("difficulty-display").innerText = this.difficultyLabel;
 
-        this.resize(); this.state = 'playing'; this.score = 0; this.timeLeft = this.maxTime;
-        this.clearCount = 0; this.updateGauge(); this.updateTimeBar();
-        this.formulaStack = []; this.entities = []; this.effects = [];
-        
-        this.updateCommander('normal');
-        this.replenishEntities();
-        this.generateTarget();
-        this.updateUI(); this.clearFormula();
-        document.body.classList.remove('fever-mode');
-        document.getElementById('menu-screen').classList.add('hidden');
-        document.getElementById('gameover-screen').classList.add('hidden');
-        this.checkDeadlock();
+      this.resize();
+      this.state = "playing";
+      this.score = 0;
+      this.timeLeft = this.maxTime;
+
+      this.clearCount = 0;
+      this.deadlockRetry = 0;
+
+      this.updateGauge();
+      this.updateTimeBar();
+
+      this.formulaStack = [];
+      this.entities = [];
+      this.effects = [];
+
+      this.updateCommander("normal");
+      this.replenishEntities();
+      this.generateTarget();
+
+      this.updateUI();
+      this.clearFormula();
+
+      document.getElementById("menu-screen").classList.add("hidden");
+      document.getElementById("gameover-screen").classList.add("hidden");
+
+      this.checkDeadlock();
+    }
+
+    // ======= 目標に重み付け（作りやすさを少しだけ上げる） =======
+    weightedTarget() {
+      const m = this.maxNum;
+      // easy: 0-9 そのままでも良い
+      if (m <= 9) return Math.floor(Math.random() * (m + 1));
+
+      // normal/hard: 低い値を出しやすくする（理不尽連発を軽減）
+      // 例：0-12(重み3), 13-19(重み2), 20-30(重み1)
+      const buckets = [];
+      for (let n = 0; n <= m; n++) {
+        let w = 1;
+        if (n <= 12) w = 3;
+        else if (n <= 19) w = 2;
+        else w = 1;
+        buckets.push({ n, w });
+      }
+      const sumW = buckets.reduce((a, b) => a + b.w, 0);
+      let r = Math.random() * sumW;
+      for (const it of buckets) {
+        r -= it.w;
+        if (r <= 0) return it.n;
+      }
+      return Math.floor(Math.random() * (m + 1));
     }
 
     generateTarget() {
-        this.targetNum = Math.floor(Math.random() * (this.maxNum + 1));
-        document.getElementById('target-display').innerText = this.targetNum;
-        document.getElementById('target-label').innerText = "TARGET";
-        this.addEffect({type: 'text', text: 'TARGET UPDATED', color: '#FFDC00', size: 20});
+      this.targetNum = this.weightedTarget();
+      document.getElementById("target-display").innerText = this.targetNum;
+      document.getElementById("target-label").innerText = "TARGET";
+      this.addEffect({ type: "text", text: "TARGET UPDATED", color: "#FFDC00", size: 20 });
     }
 
     replenishEntities() {
-        const area = this.width * this.height;
-        let targetCount = 20; 
-        if (this.width < 400) targetCount = 22; else if (this.width > 800) targetCount = 35;
-        let currentCount = this.entities.length;
-        let needed = targetCount - currentCount;
-        for (let i = 0; i < needed; i++) { this.spawnEntity(false); }
+      let targetCount = 20;
+      if (this.width < 400) targetCount = 22;
+      else if (this.width > 800) targetCount = 35;
+
+      const needed = targetCount - this.entities.length;
+      for (let i = 0; i < needed; i++) this.spawnEntity(false);
+
+      // ★最低限の演算記号が揃っていないと詰みやすいので補正（軽量）
+      this.ensureOpCoverage();
+    }
+
+    ensureOpCoverage() {
+      if (this.state !== "playing") return;
+
+      const opsNeeded = ["add", "sub", "mul", "div"];
+      const existing = new Set(this.entities.filter(e => e.type === "op").map(e => e.val));
+
+      // 足りない記号があれば、数字を少しだけ置換して補う
+      const missing = opsNeeded.filter(k => !existing.has(k));
+      if (missing.length === 0) return;
+
+      const nums = this.entities.filter(e => e.type === "num" && !e.selected);
+      let idx = 0;
+      for (const opKey of missing) {
+        if (idx >= nums.length) break;
+        const ent = nums[idx++];
+        ent.type = "op";
+        ent.val = opKey;
+      }
     }
 
     spawnEntity(isFever) {
-        const baseR = Math.min(this.width, this.height) / 16; 
-        const r = Math.max(16, Math.min(24, baseR)); 
-        let x, y, safe = false, attempts = 0;
-        const maxAttempts = 100; 
-        while (!safe && attempts < maxAttempts) {
-            attempts++;
-            const angle = Math.random() * Math.PI * 2;
-            const dist = Math.sqrt(Math.random()) * (this.radarRadius - r - 5);
-            x = this.centerX + Math.cos(angle) * dist;
-            y = this.centerY + Math.sin(angle) * dist;
-            safe = true;
-            for (let ent of this.entities) {
-                const d = Math.hypot(ent.x - x, ent.y - y);
-                if (d < r * 2.05) { safe = false; break; } 
-            }
+      const baseR = Math.min(this.width, this.height) / 16;
+      const r = Math.max(16, Math.min(24, baseR));
+
+      let x, y, safe = false, attempts = 0;
+      const maxAttempts = 100;
+
+      while (!safe && attempts < maxAttempts) {
+        attempts++;
+        const angle = Math.random() * Math.PI * 2;
+        const dist = Math.sqrt(Math.random()) * (this.radarRadius - r - 5);
+        x = this.centerX + Math.cos(angle) * dist;
+        y = this.centerY + Math.sin(angle) * dist;
+
+        safe = true;
+        for (let ent of this.entities) {
+          const d = Math.hypot(ent.x - x, ent.y - y);
+          if (d < r * 2.05) { safe = false; break; }
         }
-        if (!safe) return; 
-        const ent = { 
-            type: isFever ? 'num' : (Math.random() < 0.5 ? 'num' : 'op'),
-            val: 0, x: x, y: y, r: r, selected: false, isFever: !!isFever, scale: 0
-        };
-        if (ent.type === 'num') {
-            ent.val = Math.floor(Math.random() * (this.maxNum + 1));
+      }
+      if (!safe) return;
+
+      const ent = {
+        type: "num",
+        val: 0,
+        x, y, r,
+        selected: false,
+        isFever: !!isFever,
+        scale: 0,
+      };
+
+      if (isFever) {
+        ent.type = "num";
+        ent.val = Math.floor(Math.random() * (this.maxNum + 1));
+      } else {
+        // ★数字多めにする（ゲーム性の復活ポイント）
+        ent.type = (Math.random() < this.numRatio) ? "num" : "op";
+        if (ent.type === "num") {
+          ent.val = Math.floor(Math.random() * (this.maxNum + 1));
         } else {
-            const keys = Object.keys(OPS);
-            ent.val = keys[Math.floor(Math.random() * keys.length)];
+          const keys = Object.keys(OPS);
+          ent.val = keys[Math.floor(Math.random() * keys.length)];
         }
-        this.entities.push(ent);
+      }
+
+      this.entities.push(ent);
     }
 
     calc(val1, op, val2) {
-        if (op === 'add') return val1 + val2;
-        if (op === 'sub') return val1 - val2;
-        if (op === 'mul') return val1 * val2;
-        if (op === 'div') {
-            if (val2 === 0) return null;
-            if (val1 % val2 !== 0) return null;
-            return val1 / val2;
-        }
-        return 0;
+      if (op === "add") return val1 + val2;
+      if (op === "sub") return val1 - val2;
+      if (op === "mul") return val1 * val2;
+      if (op === "div") {
+        if (val2 === 0) return null;
+        if (val1 % val2 !== 0) return null;
+        return val1 / val2;
+      }
+      return 0;
     }
 
+    // ======= なるべく「長い式」を優先して探すソルバ（軽量制限あり） =======
+    findSolutionBest(maxTokens = 9, nodeLimit = 4500) {
+      const numsAll = this.entities.filter(e => e.type === "num" && !e.selected);
+      const opsAll  = this.entities.filter(e => e.type === "op"  && !e.selected);
+
+      // 候補を絞る（重くしないため）
+      // 数字は「ターゲットに近い」＆「小さい値」＆「大きい値」を少し混ぜる
+      const nums = numsAll
+        .slice()
+        .sort((a,b) => Math.abs(a.val - this.targetNum) - Math.abs(b.val - this.targetNum))
+        .slice(0, 10);
+
+      const ops = opsAll.slice(0, 10);
+
+      if (nums.length === 0) return null;
+      if (this.targetNum === undefined || this.targetNum === null) return null;
+
+      let best = null; // 最長優先
+      let nodes = 0;
+
+      const usedNum = new Set();
+      const usedOp = new Set();
+
+      const dfs = (currentValue, lastType, exprList) => {
+        nodes++;
+        if (nodes > nodeLimit) return;
+
+        // 終端チェック（最後がnumの時のみ）
+        if (lastType === "num") {
+          if (currentValue === this.targetNum) {
+            if (!best || exprList.length > best.length) {
+              best = exprList.slice();
+              // 最長がmaxTokensなら即終了して良い
+              if (best.length >= maxTokens) return;
+            }
+          }
+        }
+
+        // これ以上伸ばせない
+        if (exprList.length >= maxTokens) return;
+
+        if (lastType === "num") {
+          // 次はop
+          for (let i = 0; i < ops.length; i++) {
+            const opEnt = ops[i];
+            if (usedOp.has(opEnt)) continue;
+            usedOp.add(opEnt);
+            exprList.push(opEnt);
+
+            dfs(currentValue, "op", exprList);
+
+            exprList.pop();
+            usedOp.delete(opEnt);
+            if (best && best.length >= maxTokens) return;
+          }
+        } else {
+          // lastType === "op" → 次はnum
+          const opEnt = exprList[exprList.length - 1];
+          for (let i = 0; i < nums.length; i++) {
+            const numEnt = nums[i];
+            if (usedNum.has(numEnt)) continue;
+
+            const res = this.calc(currentValue, opEnt.val, numEnt.val);
+            if (res === null) continue;
+
+            usedNum.add(numEnt);
+            exprList.push(numEnt);
+
+            dfs(res, "num", exprList);
+
+            exprList.pop();
+            usedNum.delete(numEnt);
+            if (best && best.length >= maxTokens) return;
+          }
+        }
+      };
+
+      // 開始はnumから
+      for (let i = 0; i < nums.length; i++) {
+        const start = nums[i];
+        usedNum.add(start);
+        const expr = [start];
+        dfs(start.val, "num", expr);
+        usedNum.delete(start);
+
+        if (best && best.length >= maxTokens) break;
+        if (nodes > nodeLimit) break;
+      }
+
+      // bestは entity配列（num/op交互）で返す
+      return best;
+    }
+
+    // ======= FIX 2: 詰み救済（最大2回＋再チェック） =======
     checkDeadlock() {
-        if (this.state !== 'playing') return;
-        const sol = this.findSolutionDeep(); 
-        if (!sol) {
-            this.addEffect({text: "DEADLOCK... RESHUFFLE", color: "#FF4136", size: 24});
-            this.updateCommander('panic');
-            setTimeout(() => {
-                this.entities = []; this.clearFormula();
-                this.replenishEntities(); this.updateCommander('normal');
-            }, 800);
-        }
-    }
+      if (this.state !== "playing") return;
 
-    findSolutionDeep() {
-        const nums = this.entities.filter(e => e.type === 'num' && !e.selected);
-        const ops = this.entities.filter(e => e.type === 'op' && !e.selected);
-        const operations = ['add', 'sub', 'mul', 'div'];
+      // デッドロック判定は「最大7トークン」くらいでOK（軽量）
+      const sol = this.findSolutionBest(7, 2500);
+      if (sol) { this.deadlockRetry = 0; return; }
 
-        for (let i = 0; i < nums.length; i++) {
-            for (let j = 0; j < nums.length; j++) {
-                if (i === j) continue;
-                for (let k = 0; k < nums.length; k++) {
-                    if (k === i || k === j) continue;
-                    const n1 = nums[i].val; const n2 = nums[j].val; const n3 = nums[k].val;
-                    for (let op1Key of operations) {
-                        const op1Ent = ops.find(o => o.val === op1Key);
-                        if (!op1Ent) continue;
-                        const res1 = this.calc(n1, op1Key, n2);
-                        if (res1 === null) continue;
-                        for (let op2Key of operations) {
-                             const op2Ent = ops.find(o => o.val === op2Key && o !== op1Ent);
-                             if (!op2Ent) continue;
-                             const res2 = this.calc(res1, op2Key, n3);
-                             if (res2 !== null && res2 === this.targetNum) {
-                                 return [nums[i], op1Ent, nums[j], op2Ent, nums[k]]; 
-                             }
-                        }
-                    }
-                }
-            }
-        }
-        for (let i = 0; i < nums.length; i++) {
-            for (let j = 0; j < nums.length; j++) {
-                if (i === j) continue;
-                const n1 = nums[i].val; const n2 = nums[j].val;
-                for (let opKey of operations) {
-                    const opEnt = ops.find(o => o.val === opKey);
-                    if (!opEnt) continue;
-                    const res = this.calc(n1, opKey, n2);
-                    if (res !== null && res === this.targetNum) {
-                        return [nums[i], opEnt, nums[j]];
-                    }
-                }
-            }
-        }
-        for (let n of nums) {
-            if (n.val === this.targetNum) return [n];
-        }
-        return null; 
+      if (this.deadlockRetry >= 2) {
+        this.addEffect({ text: "DEADLOCK! TAP ↻", color: "#FF4136", size: 22 });
+        this.updateCommander("panic");
+        return;
+      }
+
+      this.deadlockRetry++;
+      this.addEffect({ text: `DEADLOCK... RESHUFFLE (${this.deadlockRetry}/2)`, color: "#FF4136", size: 22 });
+      this.updateCommander("panic");
+
+      setTimeout(() => {
+        this.entities = [];
+        this.clearFormula();
+        this.replenishEntities();
+        this.updateCommander("normal");
+        // ★再チェック（連続詰み防止）
+        this.checkDeadlock();
+      }, 350);
     }
 
     autoLock() {
-        if (this.state !== 'playing') return;
-        this.clearFormula();
-        
-        const solution = this.findSolutionDeep();
-        
-        if (solution) {
-            this.updateCommander('happy'); 
-            let delay = 0;
-            solution.forEach(ent => {
-                setTimeout(() => { this.trySelectNormal(ent); }, delay);
-                delay += 80; 
-            });
-            this.addEffect({text: "AUTO LOCK!!", color: "#FFD700", size: 30});
-            setTimeout(() => this.updateCommander('normal'), 1000);
-        } else {
-            this.addEffect({text: "NO SOLUTION...", color: "#FF4136", size: 20});
-            this.manualShuffle();
-        }
+      if (this.state !== "playing") return;
+
+      this.clearFormula();
+
+      // ★オートロックは「長い式優先」で探す（最大9トークン）
+      const solution = this.findSolutionBest(9, 6000);
+
+      if (solution && solution.length > 0) {
+        this.updateCommander("happy");
+        let delay = 0;
+
+        solution.forEach(ent => {
+          setTimeout(() => { this.trySelectNormal(ent); }, delay);
+          delay += 75; // ロック演出テンポ
+        });
+
+        this.addEffect({ text: "AUTO LOCK!!", color: "#FFD700", size: 30 });
+        setTimeout(() => this.updateCommander("normal"), 1000);
+      } else {
+        this.addEffect({ text: "NO SOLUTION...", color: "#FF4136", size: 20 });
+        this.manualShuffle();
+      }
     }
 
     manualShuffle() {
-        if (this.state !== 'playing') return;
-        this.entities = []; this.clearFormula();
-        this.replenishEntities();
-        this.addEffect({text: "RESHUFFLE!", color: "#FFA500", size: 24});
-        setTimeout(() => this.checkDeadlock(), 500);
+      if (this.state !== "playing") return;
+      this.entities = [];
+      this.clearFormula();
+      this.replenishEntities();
+      this.addEffect({ text: "RESHUFFLE!", color: "#FFA500", size: 24 });
+      setTimeout(() => this.checkDeadlock(), 300);
     }
 
     handleClick(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const clickY = e.clientY - rect.top;
-        for (let i = 0; i < this.entities.length; i++) {
-            const ent = this.entities[i];
-            const dist = Math.hypot(ent.x - clickX, ent.y - clickY);
-            if (dist < ent.r + 15) {
-                if (this.state === 'playing') { this.trySelectNormal(ent); }
-                else if (this.state === 'fever') { this.trySelectFever(ent, i); }
-                return;
-            }
+      const rect = this.canvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      for (let i = 0; i < this.entities.length; i++) {
+        const ent = this.entities[i];
+        const dist = Math.hypot(ent.x - clickX, ent.y - clickY);
+        if (dist < ent.r + 15) {
+          if (this.state === "playing") this.trySelectNormal(ent);
+          else if (this.state === "fever") this.trySelectFever(ent, i);
+          return;
         }
+      }
     }
 
+    // ======= FIX 3: フィーバーのmin/max判定で「記号が混ざる」バグ修正 =======
     trySelectFever(ent, index) {
-        let isValid = false;
-        const allVals = this.entities.map(e => e.val);
-        if (this.feverType.id === 'asc') {
-            const minVal = Math.min(...allVals); if (ent.val === minVal) isValid = true;
-        } else if (this.feverType.id === 'desc') {
-            const maxVal = Math.max(...allVals); if (ent.val === maxVal) isValid = true;
-        } else if (this.feverType.id === 'even') {
-            if (ent.val % 2 === 0) isValid = true;
-        } else if (this.feverType.id === 'odd') {
-            if (ent.val % 2 !== 0) isValid = true;
-        }
-        if (isValid) {
-            this.score += 500;
-            this.addEffect({text: '+500', x: ent.x, y: ent.y, color: '#FFDC00'});
-            this.entities.splice(index, 1);
-            this.updateCommander('happy');
-        } else {
-            this.addEffect({text: 'MISS', x: ent.x, y: ent.y, color: '#888'});
-        }
-        this.updateUI();
+      if (ent.type !== "num") return;
+
+      let isValid = false;
+      const numVals = this.entities.filter(e => e.type === "num").map(e => e.val);
+      if (numVals.length === 0) return;
+
+      if (this.feverType.id === "asc") {
+        const minVal = Math.min(...numVals);
+        if (ent.val === minVal) isValid = true;
+      } else if (this.feverType.id === "desc") {
+        const maxVal = Math.max(...numVals);
+        if (ent.val === maxVal) isValid = true;
+      } else if (this.feverType.id === "even") {
+        if (ent.val % 2 === 0) isValid = true;
+      } else if (this.feverType.id === "odd") {
+        if (ent.val % 2 !== 0) isValid = true;
+      }
+
+      if (isValid) {
+        this.score += 500;
+        this.addEffect({ text: "+500", x: ent.x, y: ent.y, color: "#FFDC00" });
+        this.entities.splice(index, 1);
+        this.updateCommander("happy");
+      } else {
+        this.addEffect({ text: "MISS", x: ent.x, y: ent.y, color: "#888" });
+      }
+
+      this.updateUI();
     }
 
     trySelectNormal(ent) {
-        if (ent.selected) return;
-        const lastItem = this.formulaStack[this.formulaStack.length - 1];
-        if (!lastItem) {
-            if (ent.type !== 'num') { this.addEffect({text: "Select NUMBER!", x: ent.x, y: ent.y, color: '#FF4136'}); return; }
-        } else {
-            if (lastItem.entity.type === 'num' && ent.type === 'num') { this.addEffect({text: "Select SYMBOL!", x: ent.x, y: ent.y, color: '#FF4136'}); return; }
-            if (lastItem.entity.type === 'op' && ent.type === 'op') { this.addEffect({text: "Select NUMBER!", x: ent.x, y: ent.y, color: '#FF4136'}); return; }
+      if (ent.selected) return;
+
+      const lastItem = this.formulaStack[this.formulaStack.length - 1];
+      if (!lastItem) {
+        if (ent.type !== "num") {
+          this.addEffect({ text: "Select NUMBER!", x: ent.x, y: ent.y, color: "#FF4136" });
+          return;
         }
-        ent.selected = true;
-        ent.order = this.formulaStack.length + 1;
-        this.formulaStack.push({ entity: ent, time: Date.now() });
-        this.addEffect({text: 'LOCK', x: ent.x, y: ent.y - 30, color: '#00FFFF', life: 10, size: 12});
-        this.updateFormulaBar();
-        this.updateGuide();
-        this.checkFireReady();
+      } else {
+        if (lastItem.entity.type === "num" && ent.type === "num") {
+          this.addEffect({ text: "Select SYMBOL!", x: ent.x, y: ent.y, color: "#FF4136" });
+          return;
+        }
+        if (lastItem.entity.type === "op" && ent.type === "op") {
+          this.addEffect({ text: "Select NUMBER!", x: ent.x, y: ent.y, color: "#FF4136" });
+          return;
+        }
+      }
+
+      ent.selected = true;
+      ent.order = this.formulaStack.length + 1;
+      this.formulaStack.push({ entity: ent, time: Date.now() });
+
+      this.addEffect({ text: "LOCK", x: ent.x, y: ent.y - 30, color: "#00FFFF", life: 10, size: 12 });
+      this.updateFormulaBar();
+      this.updateGuide();
+      this.checkFireReady();
     }
 
     clearFormula() {
-        this.entities.forEach(e => { e.selected = false; e.order = null; });
-        this.formulaStack = [];
-        this.updateFormulaBar();
-        this.updateGuide();
-        this.checkFireReady();
+      this.entities.forEach(e => { e.selected = false; e.order = null; });
+      this.formulaStack = [];
+      this.updateFormulaBar();
+      this.updateGuide();
+      this.checkFireReady();
     }
 
     updateFormulaBar() {
-        const bar = document.getElementById('formula-bar');
-        if (this.formulaStack.length === 0) { bar.innerText = "STANDBY..."; bar.style.color = "#666"; return; }
-        let displayStr = "";
-        if (this.formulaStack.length >= 1) { displayStr = `${this.formulaStack[0].entity.val}`; }
-        for (let i = 1; i < this.formulaStack.length; i += 2) {
-            const opEnt = this.formulaStack[i].entity;
-            const opStr = OPS[opEnt.val].op;
-            if (i + 1 < this.formulaStack.length) {
-                const numEnt = this.formulaStack[i+1].entity;
-                displayStr = `${displayStr} ${opStr} ${numEnt.val}`;
-            } else { displayStr = `${displayStr} ${opStr} ?`; }
+      const bar = document.getElementById("formula-bar");
+      if (this.formulaStack.length === 0) {
+        bar.innerText = "STANDBY...";
+        bar.style.color = "#666";
+        return;
+      }
+
+      let displayStr = `${this.formulaStack[0].entity.val}`;
+      for (let i = 1; i < this.formulaStack.length; i += 2) {
+        const opEnt = this.formulaStack[i].entity;
+        const opStr = OPS[opEnt.val].op;
+        if (i + 1 < this.formulaStack.length) {
+          const numEnt = this.formulaStack[i + 1].entity;
+          displayStr = `${displayStr} ${opStr} ${numEnt.val}`;
+        } else {
+          displayStr = `${displayStr} ${opStr} ?`;
         }
-        bar.innerText = displayStr; bar.style.color = "#00FFFF";
+      }
+      bar.innerText = displayStr;
+      bar.style.color = "#00FFFF";
     }
 
     updateGuide() {
-        const msg = document.getElementById('guide-msg');
-        if (this.state === 'fever') return;
-        if (this.formulaStack.length === 0) {
-            msg.innerHTML = `LOCK: [NUMBER]<span class="sub">数字をロックせよ</span>`; msg.style.color = "#FFDC00";
+      const msg = document.getElementById("guide-msg");
+      if (this.state === "fever") return;
+
+      if (this.formulaStack.length === 0) {
+        msg.innerHTML = `LOCK: [NUMBER]<span class="sub">数字をロックせよ</span>`;
+        msg.style.color = "#FFDC00";
+      } else {
+        const last = this.formulaStack[this.formulaStack.length - 1].entity;
+        if (last.type === "num") {
+          msg.innerHTML = `LOCK: [SYMBOL]<span class="sub">記号をロックせよ</span>`;
+          msg.style.color = "#2ECC40";
         } else {
-            const last = this.formulaStack[this.formulaStack.length-1].entity;
-            if (last.type === 'num') {
-                msg.innerHTML = `LOCK: [SYMBOL]<span class="sub">記号をロックせよ</span>`; msg.style.color = "#2ECC40";
-            } else {
-                msg.innerHTML = `LOCK: [NUMBER]<span class="sub">数字をロックせよ</span>`; msg.style.color = "#FFDC00";
-            }
+          msg.innerHTML = `LOCK: [NUMBER]<span class="sub">数字をロックせよ</span>`;
+          msg.style.color = "#FFDC00";
         }
+      }
     }
 
     checkFireReady() {
-        const btn = document.getElementById('fire-btn');
-        const len = this.formulaStack.length;
-        if (len >= 1 && this.formulaStack[len-1].entity.type === 'num') { btn.classList.add('ready'); } else { btn.classList.remove('ready'); }
+      const btn = document.getElementById("fire-btn");
+      const len = this.formulaStack.length;
+      if (len >= 1 && this.formulaStack[len - 1].entity.type === "num") btn.classList.add("ready");
+      else btn.classList.remove("ready");
     }
 
     fire() {
-        if (this.state !== 'playing' || this.formulaStack.length === 0) return;
-        if (this.formulaStack[this.formulaStack.length-1].entity.type === 'op') {
-            this.addEffect({text: "Finish with NUMBER!", color: '#FF4136'}); return;
-        }
-        let result = this.formulaStack[0].entity.val;
-        let scoreBonus = 0;
-        let valid = true; 
-        for (let i = 1; i < this.formulaStack.length; i += 2) {
-            const op = this.formulaStack[i].entity.val;
-            const num = this.formulaStack[i+1].entity.val;
-            const res = this.calc(result, op, num);
-            if (res === null) { valid = false; break; }
-            result = res;
-            if (op === 'mul') scoreBonus += 300;
-            if (op === 'div') scoreBonus += 1000; 
-        }
-        if (valid && result === this.targetNum) {
-            const len = this.formulaStack.length;
-            let totalScore = 0;
-            if (len === 1) { totalScore = 10; } else {
-                let multiplier = 1.0;
-                if (len >= 5) multiplier = 1.5;
-                if (len >= 7) multiplier = 2.5;
-                const baseScore = len * 100;
-                totalScore = Math.floor((baseScore + scoreBonus) * multiplier);
-            }
-            this.score += totalScore;
-            this.addEffect({text: `HIT!! +${totalScore}`, color: '#FFDC00', size: 40});
-            this.clearCount++;
-            this.updateGauge();
-            this.updateCommander('happy');
-            
-            if (this.clearCount >= 3) { this.startFever(); } else {
-                this.generateTarget();
-                this.entities = this.entities.filter(e => !e.selected);
-                this.replenishEntities();
-                this.checkDeadlock(); 
-                setTimeout(() => this.updateCommander('normal'), 800);
-            }
+      if (this.state !== "playing" || this.formulaStack.length === 0) return;
+
+      if (this.formulaStack[this.formulaStack.length - 1].entity.type === "op") {
+        this.addEffect({ text: "Finish with NUMBER!", color: "#FF4136" });
+        return;
+      }
+
+      let result = this.formulaStack[0].entity.val;
+      let scoreBonus = 0;
+      let valid = true;
+
+      for (let i = 1; i < this.formulaStack.length; i += 2) {
+        const op = this.formulaStack[i].entity.val;
+        const num = this.formulaStack[i + 1].entity.val;
+
+        const res = this.calc(result, op, num);
+        if (res === null) { valid = false; break; }
+        result = res;
+
+        if (op === "mul") scoreBonus += 300;
+        if (op === "div") scoreBonus += 1000;
+      }
+
+      if (valid && result === this.targetNum) {
+        const len = this.formulaStack.length;
+
+        let totalScore = 0;
+        if (len === 1) {
+          totalScore = 10;
         } else {
-            const disp = valid ? Math.round(result) : "INVALID";
-            this.addEffect({text: `MISS (${disp})`, color: '#888', size: 30});
-            this.entities.forEach(e => { e.selected = false; e.order = null; });
-            this.updateCommander('panic'); 
-            setTimeout(() => this.updateCommander('normal'), 800);
+          // 「長い式ほど気持ちいい」設計
+          // 5トークン以上で倍率UP、7以上でさらにUP、9で最大
+          let multiplier = 1.0;
+          if (len >= 5) multiplier = 1.6;
+          if (len >= 7) multiplier = 2.6;
+          if (len >= 9) multiplier = 3.6;
+
+          const baseScore = len * 110; // 少し上げる
+          totalScore = Math.floor((baseScore + scoreBonus) * multiplier);
         }
-        this.formulaStack = [];
-        this.updateFormulaBar();
-        this.updateGuide();
-        this.checkFireReady();
-        this.updateUI();
+
+        this.score += totalScore;
+        this.addEffect({ text: `HIT!! +${totalScore}`, color: "#FFDC00", size: 40 });
+
+        this.clearCount++;
+        this.updateGauge();
+        this.updateCommander("happy");
+
+        if (this.clearCount >= 3) {
+          this.startFever();
+        } else {
+          this.generateTarget();
+          this.entities = this.entities.filter(e => !e.selected);
+          this.replenishEntities();
+          this.checkDeadlock();
+          setTimeout(() => this.updateCommander("normal"), 700);
+        }
+      } else {
+        const disp = valid ? Math.round(result) : "INVALID";
+        this.addEffect({ text: `MISS (${disp})`, color: "#888", size: 30 });
+        this.entities.forEach(e => { e.selected = false; e.order = null; });
+        this.updateCommander("panic");
+        setTimeout(() => this.updateCommander("normal"), 700);
+      }
+
+      this.formulaStack = [];
+      this.updateFormulaBar();
+      this.updateGuide();
+      this.checkFireReady();
+      this.updateUI();
     }
 
     updateUI() {
-        document.getElementById('score-display').innerText = `SCORE: ${this.score}`;
-        document.getElementById('timer-display').innerText = `TIME: ${Math.floor(this.timeLeft)}`;
+      document.getElementById("score-display").innerText = `SCORE: ${this.score}`;
+      document.getElementById("timer-display").innerText = `TIME: ${Math.floor(this.timeLeft)}`;
     }
 
     startFever() {
-        this.state = 'fever';
-        this.feverTimer = this.feverMaxTime;
-        document.body.classList.add('fever-mode');
-        this.entities = [];
-        this.formulaStack = [];
-        this.feverType = FEVER_TYPES[Math.floor(Math.random() * FEVER_TYPES.length)];
-        document.getElementById('target-display').innerText = "FEVER!!";
-        document.getElementById('target-label').innerText = "MODE";
-        const guideMsg = document.getElementById('guide-msg');
-        
-        // ★文字サイズアップ用クラス追加
-        guideMsg.classList.add('fever-mode-text');
-        guideMsg.innerHTML = `${this.feverType.labelEn}<span class="sub">${this.feverType.labelJa}</span>`;
-        
-        document.getElementById('formula-bar').innerText = "DESTROY TARGETS!";
-        this.updateCommander('fever');
-        for(let i=0; i<30; i++) { this.spawnEntity(true); }
-        this.addEffect({type: 'text', text: 'FEVER START!!', color: '#FF4136', size: 30});
-        this.updateTimeBar();
+      this.state = "fever";
+      this.feverTimer = this.feverMaxTime;
+
+      this.entities = [];
+      this.formulaStack = [];
+
+      this.feverType = FEVER_TYPES[Math.floor(Math.random() * FEVER_TYPES.length)];
+
+      document.getElementById("target-display").innerText = "FEVER!!";
+      document.getElementById("target-label").innerText = "MODE";
+
+      const guideMsg = document.getElementById("guide-msg");
+      guideMsg.classList.add("fever-mode-text");
+      guideMsg.innerHTML = `${this.feverType.labelEn}<span class="sub">${this.feverType.labelJa}</span>`;
+
+      document.getElementById("formula-bar").innerText = "DESTROY TARGETS!";
+      this.updateCommander("fever");
+
+      for (let i = 0; i < 30; i++) this.spawnEntity(true);
+
+      this.addEffect({ type: "text", text: "FEVER START!!", color: "#FF4136", size: 30 });
+      this.updateTimeBar();
     }
 
     endFever() {
-        this.state = 'playing';
-        document.body.classList.remove('fever-mode');
-        
-        // ★文字サイズを戻す
-        document.getElementById('guide-msg').classList.remove('fever-mode-text');
-        
-        this.entities = [];
-        this.clearCount = 0;
-        this.updateGauge();
-        this.replenishEntities();
-        this.generateTarget();
-        this.clearFormula();
-        this.updateTimeBar();
-        this.checkDeadlock();
-        this.updateCommander('normal');
+      this.state = "playing";
+
+      document.getElementById("guide-msg").classList.remove("fever-mode-text");
+
+      this.entities = [];
+      this.clearCount = 0;
+      this.updateGauge();
+
+      this.replenishEntities();
+      this.generateTarget();
+      this.clearFormula();
+      this.updateTimeBar();
+      this.checkDeadlock();
+      this.updateCommander("normal");
     }
 
     updateGauge() {
-        const pct = Math.min(100, (this.clearCount / 3) * 100);
-        document.getElementById('fever-gauge').style.width = `${pct}%`;
+      const pct = Math.min(100, (this.clearCount / 3) * 100);
+      document.getElementById("fever-gauge").style.width = `${pct}%`;
     }
-    
+
     updateTimeBar() {
-        const bar = document.getElementById('time-bar');
-        if (this.state === 'fever') {
-            const pct = Math.max(0, (this.feverTimer / this.feverMaxTime) * 100);
-            bar.style.width = `${pct}%`; bar.style.backgroundColor = '#FF4136'; 
+      const bar = document.getElementById("time-bar");
+      if (this.state === "fever") {
+        const pct = Math.max(0, (this.feverTimer / this.feverMaxTime) * 100);
+        bar.style.width = `${pct}%`;
+        bar.style.backgroundColor = "#FF4136";
+      } else {
+        const pct = Math.max(0, (this.timeLeft / this.maxTime) * 100);
+        bar.style.width = `${pct}%`;
+        if (pct < 20) {
+          bar.style.backgroundColor = "#FF4136";
+          if (this.state === "playing") this.updateCommander("panic");
+        } else if (pct < 50) {
+          bar.style.backgroundColor = "#FFDC00";
         } else {
-            const pct = Math.max(0, (this.timeLeft / this.maxTime) * 100);
-            bar.style.width = `${pct}%`;
-            if (pct < 20) {
-                bar.style.backgroundColor = '#FF4136';
-                if(this.state === 'playing') this.updateCommander('panic');
-            } else if (pct < 50) { bar.style.backgroundColor = '#FFDC00'; } else { bar.style.backgroundColor = '#0074D9'; }
+          bar.style.backgroundColor = "#0074D9";
         }
+      }
     }
 
     update(dt) {
-        this.scanAngle += dt * 1.5; 
-        this.bgScroll += dt * 20; 
-        this.entities.forEach(ent => {
-            if (ent.scale < 1) ent.scale += dt * 5;
-            if (ent.scale > 1) ent.scale = 1;
-        });
-        if (this.state === 'playing') {
-            this.timeLeft -= dt; this.updateTimeBar();
-            if (this.timeLeft <= 0) this.gameOver();
-        } else if (this.state === 'fever') {
-            this.feverTimer -= dt;
-            document.getElementById('timer-display').innerText = `FEVER: ${Math.ceil(this.feverTimer)}`;
-            this.updateTimeBar(); 
-            if (this.feverTimer <= 0) { this.endFever(); }
-        }
-        for (let i = this.effects.length - 1; i >= 0; i--) {
-            let eff = this.effects[i];
-            eff.y -= 0.5; eff.life = (eff.life || 50) - 1;
-            if (eff.life <= 0) this.effects.splice(i, 1);
-        }
-    }
-    
-    gameOver() {
-        this.state = 'gameover';
-        document.getElementById('gameover-screen').classList.remove('hidden');
-        document.getElementById('result-final').innerText = this.score;
-        const container = document.getElementById('rank-list-container');
-        container.innerHTML = ''; 
-        let playerRankFound = false;
-        RANKS.forEach(rank => {
-            const div = document.createElement('div');
-            div.className = 'rank-item';
-            let isMyRank = false;
-            if (!playerRankFound && this.score >= rank.min) {
-                isMyRank = true; playerRankFound = true; div.classList.add('active');
-            }
-            div.innerHTML = `
-                <div class="rank-name-col">
-                    <span class="rank-name-en">${rank.nameEn}</span>
-                    <span class="rank-name-ja">${rank.nameJa}</span>
-                </div>
-                <div class="rank-score">${rank.min}</div>
-                <div class="rank-arrow">${isMyRank ? '◀ YOU' : ''}</div>
-            `;
-            container.appendChild(div);
-        });
-        this.drawStaticMascot('mascot-canvas-over', 'panic');
+      this.scanAngle += dt * 1.5;
+      this.bgScroll += dt * 20;
+
+      this.entities.forEach(ent => {
+        if (ent.scale < 1) ent.scale += dt * 5;
+        if (ent.scale > 1) ent.scale = 1;
+      });
+
+      if (this.state === "playing") {
+        this.timeLeft -= dt;
+        this.updateTimeBar();
+        if (this.timeLeft <= 0) this.gameOver();
+      } else if (this.state === "fever") {
+        this.feverTimer -= dt;
+        document.getElementById("timer-display").innerText = `FEVER: ${Math.ceil(this.feverTimer)}`;
+        this.updateTimeBar();
+        if (this.feverTimer <= 0) this.endFever();
+      }
+
+      for (let i = this.effects.length - 1; i >= 0; i--) {
+        let eff = this.effects[i];
+        eff.y -= 0.5;
+        eff.life = (eff.life || 50) - 1;
+        if (eff.life <= 0) this.effects.splice(i, 1);
+      }
     }
 
-    addEffect({type, text, x, y, color, size, life}) {
-        if (x === undefined) x = this.centerX + (Math.random() * 80 - 40);
-        if (y === undefined) y = this.centerY + (Math.random() * 80 - 40);
-        this.effects.push({
-            type: type || 'text', text: text, x: x, y: y,
-            color: color || '#FFF', size: size || 20, life: life || 50
-        });
+    gameOver() {
+      this.state = "gameover";
+      document.getElementById("gameover-screen").classList.remove("hidden");
+      document.getElementById("result-final").innerText = this.score;
+
+      const container = document.getElementById("rank-list-container");
+      container.innerHTML = "";
+
+      let playerRankFound = false;
+      RANKS.forEach(rank => {
+        const div = document.createElement("div");
+        div.className = "rank-item";
+
+        let isMyRank = false;
+        if (!playerRankFound && this.score >= rank.min) {
+          isMyRank = true;
+          playerRankFound = true;
+          div.classList.add("active");
+        }
+
+        div.innerHTML = `
+          <div class="rank-name-col">
+            <span class="rank-name-en">${rank.nameEn}</span>
+            <span class="rank-name-ja">${rank.nameJa}</span>
+          </div>
+          <div class="rank-score">${rank.min}</div>
+          <div class="rank-arrow">${isMyRank ? "◀ YOU" : ""}</div>
+        `;
+        container.appendChild(div);
+      });
+
+      this.drawStaticMascot("mascot-canvas-over", "panic");
+    }
+
+    addEffect({ type, text, x, y, color, size, life }) {
+      if (x === undefined) x = this.centerX + (Math.random() * 80 - 40);
+      if (y === undefined) y = this.centerY + (Math.random() * 80 - 40);
+
+      this.effects.push({
+        type: type || "text",
+        text: text,
+        x, y,
+        color: color || "#FFF",
+        size: size || 20,
+        life: life || 50,
+      });
     }
 
     drawSciFiRadarBackground(ctx, x, y, r) {
-        const isFever = (this.state === 'fever');
-        const baseColor = isFever ? '255, 65, 54' : '0, 255, 255';
-        ctx.save(); ctx.translate(x, y);
-        ctx.strokeStyle = `rgba(${baseColor}, 0.1)`; ctx.lineWidth = 1;
-        const gridSize = 40; const offset = this.bgScroll % gridSize;
-        for(let i = -r; i < r; i+=gridSize) {
-            ctx.beginPath(); ctx.moveTo(i - offset, -r); ctx.lineTo(i - offset, r); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(-r, i + offset); ctx.lineTo(r, i + offset); ctx.stroke();
-        }
-        ctx.restore();
-        ctx.strokeStyle = `rgba(${baseColor}, 0.3)`; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.arc(x, y, r * 0.3, 0, Math.PI*2); ctx.stroke();
-        ctx.beginPath(); ctx.arc(x, y, r * 0.6, 0, Math.PI*2); ctx.stroke();
-        ctx.lineWidth = 3; ctx.shadowBlur = 10; ctx.shadowColor = `rgb(${baseColor})`;
-        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.stroke(); ctx.shadowBlur = 0;
-        ctx.strokeStyle = `rgba(${baseColor}, 0.2)`; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(x-r, y); ctx.lineTo(x+r, y); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x, y-r); ctx.lineTo(x, y+r); ctx.stroke();
-        ctx.save(); ctx.translate(x, y); ctx.rotate(this.scanAngle);
-        const grad = ctx.createLinearGradient(0, 0, r, 0);
-        grad.addColorStop(0, `rgba(${baseColor}, 0)`);
-        grad.addColorStop(1, `rgba(${baseColor}, 0.15)`);
-        ctx.fillStyle = grad; ctx.beginPath(); ctx.moveTo(0, 0);
-        ctx.arc(0, 0, r, -0.3, 0.3); ctx.fill(); 
-        ctx.strokeStyle = `rgba(${baseColor}, 0.8)`; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(r*Math.cos(0.3), r*Math.sin(0.3)); ctx.lineTo(0,0); ctx.stroke();
-        ctx.restore();
+      const isFever = (this.state === "fever");
+      const baseColor = isFever ? "255, 65, 54" : "0, 255, 255";
+
+      ctx.save();
+      ctx.translate(x, y);
+
+      ctx.strokeStyle = `rgba(${baseColor}, 0.1)`;
+      ctx.lineWidth = 1;
+
+      const gridSize = 40;
+      const offset = this.bgScroll % gridSize;
+      for (let i = -r; i < r; i += gridSize) {
+        ctx.beginPath(); ctx.moveTo(i - offset, -r); ctx.lineTo(i - offset, r); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-r, i + offset); ctx.lineTo(r, i + offset); ctx.stroke();
+      }
+      ctx.restore();
+
+      ctx.strokeStyle = `rgba(${baseColor}, 0.3)`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(x, y, r * 0.3, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x, y, r * 0.6, 0, Math.PI * 2); ctx.stroke();
+
+      ctx.lineWidth = 3;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = `rgb(${baseColor})`;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      ctx.strokeStyle = `rgba(${baseColor}, 0.2)`;
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x - r, y); ctx.lineTo(x + r, y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x, y + r); ctx.stroke();
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(this.scanAngle);
+
+      const grad = ctx.createLinearGradient(0, 0, r, 0);
+      grad.addColorStop(0, `rgba(${baseColor}, 0)`);
+      grad.addColorStop(1, `rgba(${baseColor}, 0.15)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, r, -0.3, 0.3);
+      ctx.fill();
+
+      ctx.strokeStyle = `rgba(${baseColor}, 0.8)`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(r * Math.cos(0.3), r * Math.sin(0.3));
+      ctx.lineTo(0, 0);
+      ctx.stroke();
+
+      ctx.restore();
     }
 
     draw() {
-        this.ctx.fillStyle = '#050510'; this.ctx.fillRect(0, 0, this.width, this.height);
-        this.drawSciFiRadarBackground(this.ctx, this.centerX, this.centerY, this.radarRadius);
+      this.ctx.fillStyle = "#050510";
+      this.ctx.fillRect(0, 0, this.width, this.height);
 
-        if (this.formulaStack.length > 0) {
-            const now = Date.now();
-            for (let i = 0; i < this.formulaStack.length - 1; i++) {
-                const curr = this.formulaStack[i]; const next = this.formulaStack[i+1];
-                const age = now - next.time; 
-                if (age < 1000) { 
-                    const alpha = 1 - (age / 1000);
-                    this.ctx.strokeStyle = `rgba(255, 0, 255, ${alpha})`; // Pink
-                    this.ctx.lineWidth = 3; this.ctx.shadowBlur = 15; this.ctx.shadowColor = '#FF00FF';
-                    this.ctx.beginPath(); this.ctx.moveTo(curr.entity.x, curr.entity.y);
-                    this.ctx.lineTo(next.entity.x, next.entity.y); this.ctx.stroke(); this.ctx.shadowBlur = 0;
-                } else {
-                    this.ctx.strokeStyle = `rgba(255, 0, 255, 0.2)`;
-                    this.ctx.lineWidth = 1;
-                    this.ctx.beginPath(); this.ctx.moveTo(curr.entity.x, curr.entity.y);
-                    this.ctx.lineTo(next.entity.x, next.entity.y); this.ctx.stroke();
-                }
-            }
+      this.drawSciFiRadarBackground(this.ctx, this.centerX, this.centerY, this.radarRadius);
+
+      // ロックライン描画
+      if (this.formulaStack.length > 0) {
+        const now = Date.now();
+        for (let i = 0; i < this.formulaStack.length - 1; i++) {
+          const curr = this.formulaStack[i];
+          const next = this.formulaStack[i + 1];
+          const age = now - next.time;
+
+          if (age < 1000) {
+            const alpha = 1 - (age / 1000);
+            this.ctx.strokeStyle = `rgba(255, 0, 255, ${alpha})`;
+            this.ctx.lineWidth = 3;
+            this.ctx.shadowBlur = 15;
+            this.ctx.shadowColor = "#FF00FF";
+            this.ctx.beginPath();
+            this.ctx.moveTo(curr.entity.x, curr.entity.y);
+            this.ctx.lineTo(next.entity.x, next.entity.y);
+            this.ctx.stroke();
+            this.ctx.shadowBlur = 0;
+          } else {
+            this.ctx.strokeStyle = `rgba(255, 0, 255, 0.2)`;
+            this.ctx.lineWidth = 1;
+            this.ctx.beginPath();
+            this.ctx.moveTo(curr.entity.x, curr.entity.y);
+            this.ctx.lineTo(next.entity.x, next.entity.y);
+            this.ctx.stroke();
+          }
+        }
+      }
+
+      // エンティティ描画
+      this.entities.forEach(ent => {
+        const size = ent.r * ent.scale;
+
+        if (ent.isFever) this.ctx.fillStyle = "#FF4136";
+        else if (ent.type === "num") this.ctx.fillStyle = ent.selected ? "#FFDC00" : "#EEE";
+        else this.ctx.fillStyle = ent.selected ? "#00FFFF" : "#0074D9";
+
+        this.ctx.beginPath();
+        this.ctx.arc(ent.x, ent.y, size, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // 光沢
+        this.ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+        this.ctx.beginPath();
+        this.ctx.ellipse(ent.x - size * 0.3, ent.y - size * 0.3, size * 0.2, size * 0.1, Math.PI / 4, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        if (ent.selected) {
+          this.drawLockSight(ent.x, ent.y, size + 5);
+          if (ent.order) {
+            this.ctx.fillStyle = "#FF4136";
+            this.ctx.beginPath();
+            this.ctx.arc(ent.x + 12, ent.y - 12, 8, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            this.ctx.fillStyle = "#fff";
+            this.ctx.font = "bold 10px Arial";
+            this.ctx.textAlign = "center";
+            this.ctx.textBaseline = "middle";
+            this.ctx.fillText(ent.order, ent.x + 12, ent.y - 12);
+          }
+        } else if (ent.isFever) {
+          this.ctx.strokeStyle = "#FF0000";
+          this.ctx.lineWidth = 2;
+          this.ctx.beginPath();
+          this.ctx.arc(ent.x, ent.y, size, 0, Math.PI * 2);
+          this.ctx.stroke();
         }
 
-        this.entities.forEach(ent => {
-            const size = ent.r * ent.scale;
-            if (ent.isFever) { this.ctx.fillStyle = '#FF4136'; } else if (ent.type === 'num') {
-                this.ctx.fillStyle = ent.selected ? '#FFDC00' : '#EEE';
-            } else { this.ctx.fillStyle = ent.selected ? '#00FFFF' : '#0074D9'; }
-            
-            this.ctx.beginPath(); this.ctx.arc(ent.x, ent.y, size, 0, Math.PI*2); this.ctx.fill();
-            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-            this.ctx.beginPath(); this.ctx.ellipse(ent.x - size * 0.3, ent.y - size * 0.3, size * 0.2, size * 0.1, Math.PI / 4, 0, Math.PI * 2); this.ctx.fill();
+        this.ctx.fillStyle = "#000";
+        this.ctx.textAlign = "center";
+        this.ctx.textBaseline = "middle";
+        this.ctx.font = size > 20 ? "bold 22px Arial" : "bold 16px Arial";
 
-            if (ent.selected) {
-                this.drawLockSight(ent.x, ent.y, size + 5);
-                if (ent.order) {
-                    this.ctx.fillStyle = '#FF4136'; this.ctx.beginPath(); this.ctx.arc(ent.x + 12, ent.y - 12, 8, 0, Math.PI*2); this.ctx.fill();
-                    this.ctx.fillStyle = '#fff'; this.ctx.font = 'bold 10px Arial'; this.ctx.textAlign = 'center';
-                    this.ctx.textBaseline = 'middle'; this.ctx.fillText(ent.order, ent.x + 12, ent.y - 12);
-                }
-            } else if (ent.isFever) {
-                this.ctx.strokeStyle = '#FF0000'; this.ctx.lineWidth = 2; this.ctx.beginPath();
-                this.ctx.arc(ent.x, ent.y, size, 0, Math.PI*2); this.ctx.stroke();
-            }
-            this.ctx.fillStyle = '#000'; this.ctx.textAlign = 'center'; this.ctx.textBaseline = 'middle';
-            this.ctx.font = size > 20 ? 'bold 22px Arial' : 'bold 16px Arial';
-            let label = ent.type === 'num' ? ent.val : OPS[ent.val].label;
-            this.ctx.fillText(label, ent.x, ent.y);
-        });
+        const label = ent.type === "num" ? ent.val : OPS[ent.val].label;
+        this.ctx.fillText(label, ent.x, ent.y);
+      });
 
-        this.effects.forEach(eff => {
-            this.ctx.fillStyle = eff.color; this.ctx.font = `bold ${eff.size || 20}px Arial`;
-            this.ctx.textAlign = 'center'; this.ctx.fillText(eff.text, eff.x, eff.y);
-        });
+      // エフェクト
+      this.effects.forEach(eff => {
+        this.ctx.fillStyle = eff.color;
+        this.ctx.font = `bold ${eff.size || 20}px Arial`;
+        this.ctx.textAlign = "center";
+        this.ctx.fillText(eff.text, eff.x, eff.y);
+      });
     }
-    
+
     drawStaticMascot(canvasId, mood) {
-        const c = document.getElementById(canvasId);
-        if(!c) return;
-        const cx = c.getContext('2d');
-        cx.clearRect(0,0,100,100);
-        this.drawEbiGratinFace(cx, 50, 50, 40, mood);
+      const c = document.getElementById(canvasId);
+      if (!c) return;
+      const cx = c.getContext("2d");
+      cx.clearRect(0, 0, 100, 100);
+      this.drawEbiGratinFace(cx, 50, 50, 40, mood);
     }
 
     updateCommander(mood) {
-        this.commState = mood;
-        this.commCtx.clearRect(0,0,70,70);
-        this.drawEbiGratinFace(this.commCtx, 35, 35, 25, mood);
+      this.commState = mood;
+      this.commCtx.clearRect(0, 0, 70, 70);
+      this.drawEbiGratinFace(this.commCtx, 35, 35, 25, mood);
     }
 
     drawEbiGratinFace(ctx, x, y, size, mood) {
-        ctx.fillStyle = '#FFDB58'; 
-        if(mood==='fever') ctx.fillStyle = '#FF4136'; 
-        if(mood==='panic') ctx.fillStyle = '#A0A0FF'; 
-        ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#8B4513';
-        ctx.beginPath(); ctx.ellipse(x - size*0.4, y - size*0.5, size*0.2, size*0.1, 0, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(x + size*0.3, y - size*0.4, size*0.25, size*0.15, 0, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#000'; ctx.beginPath();
-        if (mood === 'happy') {
-            ctx.arc(x - size*0.3, y, size*0.15, Math.PI, 0); ctx.stroke(); ctx.beginPath();
-            ctx.arc(x + size*0.3, y, size*0.15, Math.PI, 0); ctx.stroke();
-        } else {
-            ctx.arc(x - size*0.3, y + size*0.1, size*0.1, 0, Math.PI * 2);
-            ctx.arc(x + size*0.3, y + size*0.1, size*0.1, 0, Math.PI * 2); ctx.fill();
-        }
-        ctx.beginPath(); ctx.lineWidth = 2;
-        if (mood === 'happy' || mood === 'fever') {
-            ctx.arc(x, y + size*0.1, size*0.3, 0, Math.PI); ctx.fill();
-        } else if (mood === 'panic') {
-            ctx.moveTo(x-size*0.2, y+size*0.3); ctx.lineTo(x+size*0.2, y+size*0.3); ctx.stroke();
-        } else {
-            ctx.arc(x, y + size*0.1, size*0.3, 0.2*Math.PI, 0.8*Math.PI); ctx.stroke();
-        }
+      ctx.save();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#000";
+
+      ctx.fillStyle = "#FFDB58";
+      if (mood === "fever") ctx.fillStyle = "#FF4136";
+      if (mood === "panic") ctx.fillStyle = "#A0A0FF";
+
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 焦げ
+      ctx.fillStyle = "#8B4513";
+      ctx.beginPath();
+      ctx.ellipse(x - size * 0.4, y - size * 0.5, size * 0.2, size * 0.1, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(x + size * 0.3, y - size * 0.4, size * 0.25, size * 0.15, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 目
+      ctx.beginPath();
+      if (mood === "happy") {
+        ctx.beginPath();
+        ctx.arc(x - size * 0.3, y, size * 0.15, Math.PI, 0);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x + size * 0.3, y, size * 0.15, Math.PI, 0);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = "#000";
+        ctx.beginPath();
+        ctx.arc(x - size * 0.3, y + size * 0.1, size * 0.1, 0, Math.PI * 2);
+        ctx.arc(x + size * 0.3, y + size * 0.1, size * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 口
+      ctx.beginPath();
+      if (mood === "happy" || mood === "fever") {
+        ctx.fillStyle = "#000";
+        ctx.beginPath();
+        ctx.arc(x, y + size * 0.1, size * 0.3, 0, Math.PI);
+        ctx.fill();
+      } else if (mood === "panic") {
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.2, y + size * 0.3);
+        ctx.lineTo(x + size * 0.2, y + size * 0.3);
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.arc(x, y + size * 0.1, size * 0.3, 0.2 * Math.PI, 0.8 * Math.PI);
+        ctx.stroke();
+      }
+      ctx.restore();
     }
 
     drawLockSight(x, y, r) {
-        this.ctx.strokeStyle = '#FF00FF'; this.ctx.lineWidth = 2; this.ctx.shadowBlur = 10; this.ctx.shadowColor = '#FF00FF'; // Pink
-        const gap = Math.PI / 4; 
-        this.ctx.beginPath(); this.ctx.arc(x, y, r, Math.PI + gap, 1.5 * Math.PI - gap); this.ctx.stroke();
-        this.ctx.beginPath(); this.ctx.arc(x, y, r, 1.5 * Math.PI + gap, 2 * Math.PI - gap); this.ctx.stroke();
-        this.ctx.beginPath(); this.ctx.arc(x, y, r, 0 + gap, 0.5 * Math.PI - gap); this.ctx.stroke();
-        this.ctx.beginPath(); this.ctx.arc(x, y, r, 0.5 * Math.PI + gap, Math.PI - gap); this.ctx.stroke();
-        this.ctx.shadowBlur = 0;
+      this.ctx.strokeStyle = "#FF00FF";
+      this.ctx.lineWidth = 2;
+      this.ctx.shadowBlur = 10;
+      this.ctx.shadowColor = "#FF00FF";
+      const gap = Math.PI / 4;
+
+      this.ctx.beginPath(); this.ctx.arc(x, y, r, Math.PI + gap, 1.5 * Math.PI - gap); this.ctx.stroke();
+      this.ctx.beginPath(); this.ctx.arc(x, y, r, 1.5 * Math.PI + gap, 2 * Math.PI - gap); this.ctx.stroke();
+      this.ctx.beginPath(); this.ctx.arc(x, y, r, 0 + gap, 0.5 * Math.PI - gap); this.ctx.stroke();
+      this.ctx.beginPath(); this.ctx.arc(x, y, r, 0.5 * Math.PI + gap, Math.PI - gap); this.ctx.stroke();
+
+      this.ctx.shadowBlur = 0;
     }
 
     loop(timestamp) {
-        const dt = (timestamp - this.lastTime) / 1000;
-        this.lastTime = timestamp; this.update(dt); this.draw();
-        requestAnimationFrame(this.loop);
-    }
-}
+      // dtの暴れを抑える（初回や復帰直後のガクつき対策）
+      if (!this.lastTime) this.lastTime = timestamp;
+      let dt = (timestamp - this.lastTime) / 1000;
+      if (dt < 0) dt = 0;
+      if (dt > 0.05) dt = 0.05;
 
-window.onload = () => { window.game = new Game(); };
+      this.lastTime = timestamp;
+
+      this.update(dt);
+      this.draw();
+
+      requestAnimationFrame(this.loop);
+    }
+  }
+
+  window.onload = () => {
+    window.game = new Game();
+  };
 </script>
+
 </body>
 </html>
