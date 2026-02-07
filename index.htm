@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bubble Shot - Ebi Edition</title>
+    <title>Bubble Shot - Burst Edition</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #1a1a2e; /* 深い宇宙/サイバー色 */
+            background-color: #050510; /* より深い宇宙の色 */
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            touch-action: none; /* スマホでのスクロール防止 */
+            touch-action: none;
         }
         canvas {
             display: block;
@@ -30,10 +30,11 @@
             padding: 20px;
             display: flex;
             justify-content: space-between;
-            color: #fff;
+            color: #00d4ff;
             text-shadow: 0 0 10px #00d4ff;
             font-size: 24px;
             font-weight: bold;
+            font-family: 'Courier New', Courier, monospace; /* メカニックなフォント */
         }
         .hud-bottom {
             padding: 20px;
@@ -44,27 +45,35 @@
         }
         /* 必殺技ボタン */
         #auto-lock-btn {
-            background: linear-gradient(135deg, #ff00cc, #3333ff);
-            border: 2px solid #fff;
-            color: white;
+            background: rgba(0, 20, 40, 0.8);
+            border: 2px solid #00d4ff;
+            color: #00d4ff;
             padding: 15px 40px;
-            border-radius: 50px;
-            font-size: 20px;
+            border-radius: 5px; /* 角ばらせてメカっぽく */
+            font-size: 18px;
             font-weight: bold;
-            box-shadow: 0 0 20px rgba(255, 0, 204, 0.6);
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
             cursor: pointer;
-            transition: transform 0.1s;
             text-transform: uppercase;
             letter-spacing: 2px;
+            position: relative;
+            overflow: hidden;
         }
-        #auto-lock-btn:active {
-            transform: scale(0.95);
+        #auto-lock-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.5), transparent);
+            transition: 0.5s;
+        }
+        #auto-lock-btn:hover::before {
+            left: 100%;
         }
         #auto-lock-btn:disabled {
-            background: #555;
+            border-color: #555;
+            color: #555;
             box-shadow: none;
-            cursor: not-allowed;
-            opacity: 0.5;
         }
     </style>
 </head>
@@ -72,19 +81,18 @@
 
     <div id="ui-layer">
         <div class="hud-top">
-            <div id="score">SCORE: 0</div>
-            <div id="target">TARGET: ?</div>
+            <div id="score">SCORE: 00000</div>
+            <div id="target">TARGET: --</div>
         </div>
         <div class="hud-bottom">
-            <button id="auto-lock-btn">AUTO LOCK (3)</button>
+            <button id="auto-lock-btn">AUTO LOCK [READY]</button>
         </div>
     </div>
     <canvas id="gameCanvas"></canvas>
 
 <script>
 /**
- * Bubble Shot Ver 3.0
- * Developed by Gemmy & Master (with advice from Buzzy)
+ * Bubble Shot Ver 3.1 - Hi-MAT Full Burst Edition
  */
 
 const canvas = document.getElementById('gameCanvas');
@@ -93,40 +101,40 @@ const scoreEl = document.getElementById('score');
 const targetEl = document.getElementById('target');
 const autoBtn = document.getElementById('auto-lock-btn');
 
-// --- ゲーム設定 ---
+// --- 設定 ---
 const COLS = 6;
-const ROWS = 7; // ヘックス配置のため少し多めに
-const BUBBLE_RADIUS_RATIO = 0.8; // グリッドに対するバブルの大きさ
+const ROWS = 7;
+const BUBBLE_RADIUS_RATIO = 0.8;
 let BUBBLE_SIZE = 0;
 let OFFSET_X = 0;
 let OFFSET_Y = 0;
 
-// --- 状態管理 ---
+// --- 状態 ---
 let score = 0;
 let targetNumber = 10;
 let autoLockCharges = 3;
-let bubbles = []; // 盤面のバブル {x, y, value, type, id, removing}
-let selectedBubbles = []; // 選択中のバブル
-let particles = []; // エフェクト用
-let floatingTexts = []; // 称号テキスト用
+let bubbles = [];
+let selectedBubbles = [];
+let particles = [];
+let floatingTexts = [];
+let lasers = []; // レーザー描画用配列
 let isDragging = false;
 let dpr = 1;
 
-// オートロック演出用ステート
-let autoLockState = 'idle'; // idle, scanning, locking
-let scanTimer = 0;
+// 演出用ステート
+let autoLockState = 'idle'; // idle, scanning, locking, firing
 let scanRadius = 0;
+let shakeIntensity = 0; // 画面振動の強さ
+let lockOnTargets = []; // オートロック対象
 
-// バブルの種類
 const TYPES = ['number', 'operator'];
-const OPERATORS = ['+', '-', '×']; // 単純化のため
+const OPERATORS = ['+', '-', '×']; 
 
-// --- 初期化処理 ---
+// --- 初期化 ---
 function init() {
     resize();
     window.addEventListener('resize', resize);
     
-    // 入力イベント
     canvas.addEventListener('mousedown', handleStart);
     canvas.addEventListener('mousemove', handleMove);
     canvas.addEventListener('mouseup', handleEnd);
@@ -140,84 +148,71 @@ function init() {
     loop();
 }
 
-// --- 画面リサイズ（バジィ修正版） ---
 function resize() {
     dpr = window.devicePixelRatio || 1;
-    // CSSサイズ設定
     const width = window.innerWidth;
     const height = window.innerHeight;
     canvas.style.width = width + 'px';
     canvas.style.height = height + 'px';
-    
-    // 実画素数設定
     canvas.width = width * dpr;
     canvas.height = height * dpr;
+    // setTransformはdrawループ内で毎回リセットしつつshakeを適用するため、ここでは計算用変数のみ更新
     
-    // ★修正点：累積拡大を防ぐため setTransform を使用
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    // グリッド計算
     BUBBLE_SIZE = Math.min(width / (COLS + 1), height / (ROWS + 3));
     OFFSET_X = (width - (BUBBLE_SIZE * COLS)) / 2 + BUBBLE_SIZE / 2;
     OFFSET_Y = (height - (BUBBLE_SIZE * ROWS * 0.9)) / 2 + BUBBLE_SIZE;
 
-    // リサイズ時にバブル位置を再計算
     if(bubbles.length > 0) updateBubblePositions();
 }
 
-// --- ゲームロジック ---
-
+// --- ゲーム進行 ---
 function resetGame() {
     score = 0;
     autoLockCharges = 3;
-    scoreEl.innerText = `SCORE: ${score}`;
-    autoBtn.innerText = `AUTO LOCK (${autoLockCharges})`;
-    autoBtn.disabled = false;
+    scoreEl.innerText = `SCORE: ${score.toString().padStart(5, '0')}`;
+    updateAutoBtn();
     
-    // ターゲット設定 (ランダム)
-    targetNumber = Math.floor(Math.random() * 10) + 5; // 5~14
+    targetNumber = Math.floor(Math.random() * 10) + 5;
     targetEl.innerText = `TARGET: ${targetNumber}`;
 
     initBoard();
 }
 
-// 盤面生成とデッドロックチェック（バジィ修正版）
+function updateAutoBtn() {
+    if (autoLockCharges > 0) {
+        autoBtn.innerText = `AUTO LOCK [${autoLockCharges}]`;
+        autoBtn.disabled = false;
+    } else {
+        autoBtn.innerText = `RECHARGING...`;
+        autoBtn.disabled = true;
+    }
+}
+
 function initBoard(retry = 0) {
     bubbles = [];
     for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
-            // ヘックス配置（奇数行をずらす）
             let cx = c * BUBBLE_SIZE + OFFSET_X;
             if (r % 2 !== 0) cx += BUBBLE_SIZE / 2;
-            // 右端のはみ出し防止
             if (r % 2 !== 0 && c === COLS - 1) continue;
-
             let cy = r * (BUBBLE_SIZE * 0.9) + OFFSET_Y;
-
             bubbles.push(createRandomBubble(cx, cy, c, r));
         }
     }
-    
-    // ★修正点：再帰的にチェック（最大2回リトライ）
-    if (!checkSolvability() && retry < 2) {
-        console.log("Deadlock detected, regenerating... Retry:", retry + 1);
-        initBoard(retry + 1);
-    }
+    if (!checkSolvability() && retry < 2) initBoard(retry + 1);
 }
 
 function createRandomBubble(x, y, col, row) {
-    const isOp = Math.random() < 0.3; // 30%の確率で演算子
+    const isOp = Math.random() < 0.3;
     return {
         id: Math.random().toString(36).substr(2, 9),
-        col: col,
-        row: row,
-        x: x,
-        y: y,
+        col: col, row: row, x: x, y: y,
         type: isOp ? 'operator' : 'number',
         value: isOp ? OPERATORS[Math.floor(Math.random() * OPERATORS.length)] : Math.floor(Math.random() * 9) + 1,
         color: isOp ? '#ff0055' : '#00aaff',
         scale: 1,
-        removing: false
+        removing: false,
+        lockScale: 0 // ロックオンサイトのアニメーション用
     };
 }
 
@@ -231,19 +226,17 @@ function updateBubblePositions() {
     });
 }
 
-// --- 入力処理 ---
+// --- 入力 ---
 function handleStart(pos) {
     if (autoLockState !== 'idle') return;
     isDragging = true;
     selectedBubbles = [];
     checkHit(pos.clientX, pos.clientY);
 }
-
 function handleMove(pos) {
     if (!isDragging) return;
     checkHit(pos.clientX, pos.clientY);
 }
-
 function handleEnd() {
     if (!isDragging) return;
     isDragging = false;
@@ -251,243 +244,198 @@ function handleEnd() {
 }
 
 function checkHit(tx, ty) {
-    // Canvas座標系への変換は不要（CSSと解像度合わせているため）
-    // ただし、タッチ座標はクライアント座標なのでそのままでOK
-    
     for (let b of bubbles) {
         if (b.removing) continue;
         const dx = tx - b.x;
         const dy = ty - b.y;
         if (dx * dx + dy * dy < (BUBBLE_SIZE / 2) ** 2) {
-            // 選択追加ロジック
             if (selectedBubbles.length === 0) {
                 if (b.type === 'number') selectedBubbles.push(b);
             } else {
                 const last = selectedBubbles[selectedBubbles.length - 1];
-                // 既に選択済みなら戻る処理（Undo）
                 if (selectedBubbles.length > 1 && selectedBubbles[selectedBubbles.length - 2] === b) {
                     selectedBubbles.pop();
                     return;
                 }
-                // 未選択 かつ 隣接している かつ ルール適合
                 if (!selectedBubbles.includes(b) && isAdjacent(last, b) && isValidNext(last, b)) {
                     selectedBubbles.push(b);
-                    // 演出：バブルが少し跳ねる
-                    b.scale = 1.3;
+                    b.scale = 1.2; 
                 }
             }
         }
     }
 }
 
-// ヘックス隣接判定
 function isAdjacent(b1, b2) {
     const dist = Math.sqrt((b1.x - b2.x)**2 + (b1.y - b2.y)**2);
     return dist < BUBBLE_SIZE * 1.2;
 }
 
-// 数式ルール判定 (数字 -> 演算子 -> 数字)
 function isValidNext(prev, current) {
     if (prev.type === 'number' && current.type === 'operator') return true;
     if (prev.type === 'operator' && current.type === 'number') return true;
     return false;
 }
 
-// --- 計算と判定 ---
+// --- 判定・計算 ---
 function submitSelection() {
-    if (selectedBubbles.length < 3) {
-        selectedBubbles = [];
-        return;
-    }
+    if (selectedBubbles.length < 3) { selectedBubbles = []; return; }
+    if (selectedBubbles[selectedBubbles.length - 1].type === 'operator') { selectedBubbles = []; return; }
 
-    // 末尾が演算子なら無効
-    if (selectedBubbles[selectedBubbles.length - 1].type === 'operator') {
-        selectedBubbles = [];
-        return;
-    }
-
-    // 計算
     let expression = "";
-    let displayExp = "";
     selectedBubbles.forEach(b => {
         let val = b.value;
         if (val === '×') val = '*';
         expression += val;
-        displayExp += b.value;
     });
 
     try {
-        // 安全なeval代替 (簡易)
         const result = new Function('return ' + expression)();
-        
         if (result === targetNumber) {
-            // 正解！
             handleSuccess(result);
         } else {
-            // 不正解演出
-            createFloatingText(selectedBubbles[selectedBubbles.length-1].x, selectedBubbles[selectedBubbles.length-1].y, `${result} != ${targetNumber}`, '#ff5555');
+            createFloatingText(selectedBubbles[selectedBubbles.length-1].x, selectedBubbles[selectedBubbles.length-1].y, "MISS", '#ff5555');
+            selectedBubbles = [];
         }
-    } catch (e) {
-        // 計算不能
-    }
-    
-    selectedBubbles = [];
+    } catch (e) { selectedBubbles = []; }
 }
 
 function handleSuccess(result) {
-    // スコア加算 (長さボーナス)
-    const lengthBonus = selectedBubbles.length * 10;
-    const addedScore = 100 + lengthBonus;
-    score += addedScore;
-    scoreEl.innerText = `SCORE: ${score}`;
+    const lengthBonus = selectedBubbles.length * 100;
+    score += lengthBonus;
+    scoreEl.innerText = `SCORE: ${score.toString().padStart(5, '0')}`;
 
-    // ★演出強化：称号システム
     const lastBubble = selectedBubbles[selectedBubbles.length - 1];
-    let title = "GOOD!";
+    let title = "HIT";
     let color = "#fff";
-    
-    if (selectedBubbles.length >= 9) { title = "GODLIKE!!"; color = "#ff00ff"; }
-    else if (selectedBubbles.length >= 7) { title = "UNBELIEVABLE!"; color = "#00ffff"; }
-    else if (selectedBubbles.length >= 5) { title = "EXCELLENT!"; color = "#ffff00"; }
+    if (selectedBubbles.length >= 7) { title = "FULL BURST!"; color = "#ff00ff"; }
+    else if (selectedBubbles.length >= 5) { title = "SENSATIONAL!"; color = "#00ffff"; }
     
     createFloatingText(lastBubble.x, lastBubble.y, title, color, 30);
 
-    // バブル消去 & パーティクル
     selectedBubbles.forEach(b => {
         b.removing = true;
         createParticles(b.x, b.y, b.color);
     });
 
-    // 盤面補充（少し遅延させて降らせる）
+    selectedBubbles = [];
+    
     setTimeout(() => {
         fillBoard();
-        // ターゲット変更
         targetNumber = Math.floor(Math.random() * 10) + 5;
         targetEl.innerText = `TARGET: ${targetNumber}`;
-        
-        // 詰みチェック（再生成はしないが、ログに出す）
-        if (!checkSolvability()) {
-             // 厳密にはここでリシャッフルなどが必要だが、
-             // ゲームフローを止めないため今回は「No Moves」表示などの拡張余地とする
-             createFloatingText(canvas.width/2/dpr, canvas.height/2/dpr, "NO MOVES? USE AUTO!", "#ff8800");
-        }
-    }, 300);
+    }, 400);
 }
 
 function fillBoard() {
-    // 消えたバブルの列に新しいバブルを補充
-    // 今回は簡易的に「消えた場所」に即座に新しいものを生成
-    // （本来は上から落ちてくるが、コード量削減のため）
     bubbles = bubbles.map(b => {
-        if (b.removing) {
-            return createRandomBubble(b.x, b.y, b.col, b.row);
-        }
+        if (b.removing) return createRandomBubble(b.x, b.y, b.col, b.row);
         return b;
     });
 }
 
-// --- オートロック（必殺技） ---
+// --- オートロック（ハイマットフルバースト） ---
 function triggerAutoLock() {
     if (autoLockCharges <= 0 || autoLockState !== 'idle') return;
     
-    // 経路探索 (DFS)
     const path = findBestPath(targetNumber);
-    
     if (path) {
         autoLockCharges--;
-        autoBtn.innerText = `AUTO LOCK (${autoLockCharges})`;
-        if (autoLockCharges === 0) autoBtn.disabled = true;
-
-        startAutoLockSequence(path);
+        updateAutoBtn();
+        startBurstSequence(path);
     } else {
-        createFloatingText(canvas.width/2/dpr, canvas.height/2/dpr, "CANNOT LOCK...", "#888");
+        createFloatingText(canvas.width/2/dpr, canvas.height/2/dpr, "NO TARGET", "#888");
     }
 }
 
-// DFSで解を探す (簡易版：深さ制限あり)
 function findBestPath(target) {
     let bestPath = null;
     let maxLength = 0;
-
-    // 全バブル始点で探索
-    // ※パフォーマンスのため、全ての数字バブルから探索
     const numbers = bubbles.filter(b => b.type === 'number');
     
     for (let startNode of numbers) {
-        // 再帰探索
         dfs(startNode, [startNode]);
     }
-
     function dfs(current, path) {
-        // 枝刈り：長すぎるパスは無視
         if (path.length > 9) return;
-        
-        // 終了条件：数字で終わっていること
         if (current.type === 'number' && path.length >= 3) {
             let exp = "";
-            path.forEach(b => {
-                let v = b.value;
-                if (v === '×') v = '*';
-                exp += v;
-            });
+            path.forEach(b => { let v = b.value; if (v === '×') v = '*'; exp += v; });
             try {
                 if (new Function('return ' + exp)() === target) {
-                    // 長いパスを優先
-                    if (path.length > maxLength) {
-                        maxLength = path.length;
-                        bestPath = [...path];
-                    }
+                    if (path.length > maxLength) { maxLength = path.length; bestPath = [...path]; }
                 }
             } catch(e){}
         }
-
-        // 次のステップ
         bubbles.forEach(next => {
             if (!path.includes(next) && isAdjacent(current, next) && isValidNext(current, next)) {
                 dfs(next, [...path, next]);
             }
         });
     }
-
     return bestPath;
 }
+function checkSolvability() { return findBestPath(targetNumber) !== null; }
 
-// 簡易解チェック（初期化時用）
-function checkSolvability() {
-    return findBestPath(targetNumber) !== null;
-}
-
-// ★演出強化：3段階オートロック
-function startAutoLockSequence(path) {
+// ★演出シーケンス
+function startBurstSequence(path) {
     autoLockState = 'scanning';
-    scanTimer = 0;
     scanRadius = 0;
+    lockOnTargets = path; // パスを保存
     
-    // Phase 1: 解析 (0.8秒)
-    // レーダーが広がる演出（drawで処理）
-    
+    // Phase 1: Scan (0.6s)
     setTimeout(() => {
-        // Phase 2: ロックオン (0.5秒)
         autoLockState = 'locking';
-        // パスを一気に追加するのではなく、順次追加
+        
+        // Phase 2: Multi-Lock (Seqential)
         let i = 0;
         const interval = setInterval(() => {
             if (i < path.length) {
-                selectedBubbles.push(path[i]);
-                // 効果音的な演出（振動など）
-                path[i].scale = 1.5;
+                // ロックオンアニメーション開始
+                path[i].lockScale = 2.0; // 最初大きく
+                // ここで音を鳴らしたい (ピピッ)
                 i++;
             } else {
                 clearInterval(interval);
-                // Phase 3: 発射
+                
+                // Phase 3: Full Burst (Wait a bit then fire)
                 setTimeout(() => {
-                    autoLockState = 'idle';
-                    submitSelection();
-                }, 300);
+                    autoLockState = 'firing';
+                    shakeIntensity = 15; // 画面を揺らす
+                    
+                    // レーザー生成
+                    path.forEach(b => {
+                        lasers.push({
+                            tx: b.x, ty: b.y,
+                            life: 1.0,
+                            color: `hsl(${Math.random()*360}, 100%, 70%)`
+                        });
+                        b.removing = true; // 内部的には消去フラグ
+                        createParticles(b.x, b.y, b.color); // 爆発
+                    });
+                    
+                    // 終了処理
+                    setTimeout(() => {
+                        autoLockState = 'idle';
+                        handleSuccessAuto(path.length); // スコア処理のみ
+                        fillBoard();
+                        targetNumber = Math.floor(Math.random() * 10) + 5;
+                        targetEl.innerText = `TARGET: ${targetNumber}`;
+                    }, 800);
+                    
+                }, 400); // 全ロック完了から発射までの溜め
             }
-        }, 100); // 0.1秒ごとにロック
+        }, 80); // ロックオン速度
         
-    }, 800);
+    }, 600); // スキャン時間
+}
+
+// オート用成功処理（重複を避けるため簡易化）
+function handleSuccessAuto(len) {
+    const lengthBonus = len * 150;
+    score += lengthBonus;
+    scoreEl.innerText = `SCORE: ${score.toString().padStart(5, '0')}`;
+    createFloatingText(canvas.width/2/dpr, canvas.height/2/dpr, "TARGET DESTROYED", "#00ffff", 40);
 }
 
 
@@ -499,113 +447,130 @@ function loop() {
 }
 
 function update() {
-    // バブルのアニメーション（バウンド）
+    // 画面揺れの減衰
+    if (shakeIntensity > 0) shakeIntensity *= 0.9;
+    if (shakeIntensity < 0.5) shakeIntensity = 0;
+
     bubbles.forEach(b => {
         if (b.scale > 1) b.scale -= 0.05;
-        else b.scale = 1;
+        // ロックオンサイトのアニメーション（縮小しながらフィット）
+        if (b.lockScale > 1) b.lockScale -= 0.1;
+        if (b.lockScale < 1 && b.lockScale > 0) b.lockScale = 1;
     });
 
-    // エフェクト更新
     particles.forEach((p, index) => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life -= 0.05;
+        p.x += p.vx; p.y += p.vy; p.life -= 0.05;
         if (p.life <= 0) particles.splice(index, 1);
     });
-
+    
     floatingTexts.forEach((t, index) => {
-        t.y -= 1;
-        t.life -= 0.02;
+        t.y -= 1; t.life -= 0.02;
         if (t.life <= 0) floatingTexts.splice(index, 1);
     });
 
-    // オートロック演出更新
+    lasers.forEach((l, index) => {
+        l.life -= 0.1;
+        if (l.life <= 0) lasers.splice(index, 1);
+    });
+
     if (autoLockState === 'scanning') {
-        scanRadius += 10;
-        if (scanRadius > Math.max(canvas.width, canvas.height)) scanRadius = 0;
+        scanRadius += 25;
     }
 }
 
 function draw() {
-    ctx.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr); // Transformしてるので座標系注意
-
-    // 背景グリッド（薄く）
-    // ...省略（シンプルにするため）
-
-    // ライン描画
-    if (selectedBubbles.length > 1) {
-        // ★演出強化：LOCK数に応じた輝き
-        const chainLevel = selectedBubbles.length;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        
-        // 光彩（Glow）
-        ctx.shadowBlur = 10 + chainLevel * 2;
-        ctx.shadowColor = '#fff';
-        
-        // 太さ
-        ctx.lineWidth = 5 + chainLevel; 
-        ctx.strokeStyle = `hsl(${(Date.now() / 10) % 360}, 100%, 70%)`; // 虹色に光る
-        
-        ctx.beginPath();
-        ctx.moveTo(selectedBubbles[0].x, selectedBubbles[0].y);
-        for (let i = 1; i < selectedBubbles.length; i++) {
-            ctx.lineTo(selectedBubbles[i].x, selectedBubbles[i].y);
-        }
-        ctx.stroke();
-        
-        ctx.shadowBlur = 0; // リセット
+    // 画面揺れ適用
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // リセット
+    if (shakeIntensity > 0) {
+        const dx = (Math.random() - 0.5) * shakeIntensity;
+        const dy = (Math.random() - 0.5) * shakeIntensity;
+        ctx.translate(dx, dy);
     }
+    
+    ctx.clearRect(-50, -50, canvas.width/dpr + 100, canvas.height/dpr + 100);
 
     // バブル描画
     bubbles.forEach(b => {
-        if (b.removing) return;
+        // 発射フェーズでremovingになっても、レーザー消えるまでは少し残すか、即消して爆発させるか
+        // ここでは即消えるがパーティクルが出る
+        if (b.removing && autoLockState !== 'firing') return; 
+        if (b.removing && autoLockState === 'firing' && lasers.length === 0) return;
 
-        // 選択中は強調
         const isSelected = selectedBubbles.includes(b);
+        // オートロック中のターゲット判定
+        const isLocked = (autoLockState === 'locking' || autoLockState === 'firing') && lockOnTargets.includes(b);
+        
         const size = (BUBBLE_SIZE / 2 * BUBBLE_RADIUS_RATIO) * b.scale;
         
         ctx.beginPath();
         ctx.arc(b.x, b.y, size, 0, Math.PI * 2);
-        
-        // 色設定（選択中は白っぽく）
-        ctx.fillStyle = isSelected ? '#fff' : b.color;
-        
-        // 影
-        ctx.shadowBlur = isSelected ? 20 : 5;
-        ctx.shadowColor = b.color;
+        ctx.fillStyle = b.color;
+        // 選択中は少し明るく
+        if (isSelected) ctx.fillStyle = adjustColor(b.color, 40);
         
         ctx.fill();
-        ctx.shadowBlur = 0;
-
+        
         // 枠線
         ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1;
         ctx.stroke();
 
-        // テキスト
-        ctx.fillStyle = isSelected ? b.color : '#fff';
+        // 文字
+        ctx.fillStyle = '#fff';
         ctx.font = `bold ${size}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(b.value, b.x, b.y + size * 0.1);
+
+        // ★修正点：円形ターゲットスコープ（手動選択時 & オートロック時）
+        if (isSelected || (isLocked && b.lockScale > 0)) {
+            const scale = isLocked ? b.lockScale : 1;
+            drawReticle(b.x, b.y, size * 1.3 * scale, isLocked ? '#ff0055' : '#00ffaa');
+        }
     });
     
-    // オートロック：スキャン演出
+    // スキャン演出
     if (autoLockState === 'scanning') {
-        ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(0, 255, 100, 0.5)';
+        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(canvas.width/2/dpr, canvas.height/2/dpr, scanRadius, 0, Math.PI * 2);
         ctx.stroke();
-        
-        // 解析中の文字
-        ctx.fillStyle = '#0f0';
-        ctx.font = '20px Courier New';
-        ctx.fillText("ANALYZING...", canvas.width/2/dpr, canvas.height/2/dpr + scanRadius + 30);
     }
 
-    // パーティクル
+    // レーザー演出 (Full Burst)
+    if (autoLockState === 'firing') {
+        ctx.globalCompositeOperation = 'lighter'; // 加算合成で光らせる
+        lasers.forEach(l => {
+            // 画面下中央から発射
+            const startX = canvas.width / 2 / dpr;
+            const startY = canvas.height / dpr;
+            
+            // ビーム本体
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(l.tx, l.ty);
+            ctx.lineWidth = 15 * l.life; // 徐々に細くなる
+            ctx.strokeStyle = l.color;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+            
+            // 芯（白）
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(l.tx, l.ty);
+            ctx.lineWidth = 5 * l.life;
+            ctx.strokeStyle = '#fff';
+            ctx.stroke();
+        });
+        ctx.globalCompositeOperation = 'source-over'; // 戻す
+        
+        // フラッシュ
+        ctx.fillStyle = `rgba(255, 255, 255, ${shakeIntensity * 0.02})`;
+        ctx.fillRect(0, 0, canvas.width/dpr, canvas.height/dpr);
+    }
+
+    // パーティクル & テキスト
     particles.forEach(p => {
         ctx.globalAlpha = p.life;
         ctx.fillStyle = p.color;
@@ -615,47 +580,68 @@ function draw() {
         ctx.globalAlpha = 1.0;
     });
 
-    // フローティングテキスト
     floatingTexts.forEach(t => {
         ctx.globalAlpha = Math.min(1, t.life);
         ctx.fillStyle = t.color;
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 3;
         ctx.font = `bold ${t.size}px Arial Black`;
         ctx.textAlign = 'center';
-        ctx.strokeText(t.text, t.x, t.y);
         ctx.fillText(t.text, t.x, t.y);
         ctx.globalAlpha = 1.0;
     });
 }
 
-// --- エフェクト関数 ---
+// ★スコープ描画関数
+function drawReticle(x, y, radius, color) {
+    ctx.save();
+    ctx.translate(x, y);
+    // 回転させる
+    ctx.rotate(Date.now() / 200);
+    
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 5;
+    ctx.shadowColor = color;
+    
+    // 外円
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // 内側のカギカッコ的なやつ
+    const innerR = radius * 0.7;
+    ctx.beginPath();
+    ctx.arc(0, 0, innerR, 0, Math.PI * 1.5); // 欠けた円
+    ctx.stroke();
+    
+    // 十字線
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-radius * 1.2, 0); ctx.lineTo(radius * 1.2, 0);
+    ctx.moveTo(0, -radius * 1.2); ctx.lineTo(0, radius * 1.2);
+    ctx.stroke();
+    
+    ctx.restore();
+}
+
+function adjustColor(hex, amount) {
+    return hex; // 簡易版につきそのまま返す（本来は色調整）
+}
+
 function createParticles(x, y, color) {
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 15; i++) {
         particles.push({
-            x: x,
-            y: y,
-            vx: (Math.random() - 0.5) * 10,
-            vy: (Math.random() - 0.5) * 10,
-            life: 1.0,
-            color: color,
-            size: Math.random() * 5 + 2
+            x: x, y: y,
+            vx: (Math.random() - 0.5) * 15,
+            vy: (Math.random() - 0.5) * 15,
+            life: 1.0, color: color, size: Math.random() * 6 + 2
         });
     }
 }
 
 function createFloatingText(x, y, text, color, size = 20) {
-    floatingTexts.push({
-        x: x,
-        y: y,
-        text: text,
-        color: color,
-        life: 2.0, // 2秒
-        size: size
-    });
+    floatingTexts.push({ x: x, y: y, text: text, color: color, life: 2.0, size: size });
 }
 
-// ゲーム開始
 init();
 
 </script>
