@@ -3,35 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Bubble Shot: Radar Burst - Undefined Blue</title>
+    <title>Bubble Shot: Full Burst - Undefined Blue</title>
     <style>
-        /* --- 伝統のUIスタイルを完全維持 --- */
         body { margin: 0; overflow: hidden; background-color: #111; color: white; font-family: 'Helvetica Neue', Arial, sans-serif; touch-action: none; user-select: none; }
         #game-container { position: relative; width: 100vw; height: 100dvh; background-color: #050510; }
         canvas { display: block; width: 100%; height: 100%; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
 
-        #top-area { height: 180px; display: flex; flex-direction: column; align-items: center; background: linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0)); z-index: 10; padding-top: 10px; box-sizing: border-box; position: relative; }
-        #commander-window { position: absolute; top: 10px; left: 10px; width: 70px; height: 70px; background: rgba(0, 20, 40, 0.6); border: 2px solid #00FFFF; border-radius: 10px; clip-path: polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%); pointer-events: auto; display: flex; justify-content: center; align-items: center; z-index: 25; backdrop-filter: blur(2px); }
+        #top-area { height: 180px; display: flex; flex-direction: column; align-items: center; background: linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0)); z-index: 10; padding-top: 10px; position: relative; }
+        #commander-window { position: absolute; top: 10px; left: 10px; width: 70px; height: 70px; background: rgba(0, 20, 40, 0.6); border: 2px solid #00FFFF; border-radius: 10px; clip-path: polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%); display: flex; justify-content: center; align-items: center; }
         #comm-canvas { width: 100%; height: 100%; }
         
-        /* ミッション表示（ターゲットの代わり） */
         #mission-label { font-size: 10px; color: #00FFFF; letter-spacing: 4px; margin-top: 5px; opacity: 0.8;}
-        #mission-display { font-size: 42px; font-weight: 900; color: #FFDC00; line-height: 1.0; margin: 0; text-shadow: 0 0 20px rgba(255, 220, 0, 0.8); font-family: 'Arial Black', sans-serif; letter-spacing: -1px; text-align: center; }
-        #mission-sub { font-size: 14px; color: #00FFFF; font-weight: bold; margin-top: 5px; text-shadow: 0 0 5px #00FFFF; }
+        #mission-display { font-size: 42px; font-weight: 900; color: #FFDC00; line-height: 1.0; margin: 0; text-shadow: 0 0 20px rgba(255, 220, 0, 0.8); font-family: 'Arial Black', sans-serif; }
+        #mission-sub { font-size: 14px; color: #00FFFF; font-weight: bold; margin-top: 5px; }
 
-        #sync-ratio-label { font-size: 10px; color: #888; margin-top: 10px; letter-spacing: 2px;}
-        #sync-gauge-container { width: 200px; height: 6px; background: #333; border-radius: 3px; overflow: hidden; margin-top: 2px; border: 1px solid #555; }
-        #sync-gauge { width: 0%; height: 100%; background: linear-gradient(90deg, #00FFFF, #FF00FF); transition: width 0.2s; box-shadow: 0 0 10px #00FFFF; }
+        #sync-gauge-container { width: 220px; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-top: 10px; border: 1px solid #444; }
+        #sync-gauge { width: 0%; height: 100%; background: linear-gradient(90deg, #00FFFF, #FF00FF); transition: width 0.3s; }
 
-        #auto-lock-btn { position: absolute; bottom: 120px; right: 20px; width: 65px; height: 65px; border-radius: 50%; background: rgba(255, 215, 0, 0.2); border: 2px solid #FFD700; color: #FFD700; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 10px; font-weight: 900; box-shadow: 0 0 15px #FFD700; cursor: pointer; pointer-events: auto; z-index: 30; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); } }
+        /* 操作系 */
+        #bottom-area { height: 150px; display: flex; justify-content: center; align-items: center; gap: 20px; padding-bottom: 20px; }
+        #fire-btn {
+            width: 160px; height: 60px; background: rgba(255, 65, 54, 0.1); border: 2px solid #555;
+            color: #555; font-size: 24px; font-weight: 900; letter-spacing: 4px; display: flex;
+            justify-content: center; align-items: center; clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
+            pointer-events: auto; transition: 0.2s; cursor: pointer;
+        }
+        #fire-btn.ready { background: rgba(255, 65, 54, 0.8); border: none; color: white; box-shadow: 0 0 30px #FF4136; text-shadow: 0 0 10px white; }
+        
+        #auto-lock-btn { position: absolute; bottom: 100px; right: 20px; width: 60px; height: 60px; border-radius: 50%; border: 2px solid #FFD700; color: #FFD700; background: rgba(255, 215, 0, 0.1); display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 9px; font-weight: bold; pointer-events: auto; }
 
-        #status-bar { color: #aaa; font-family: monospace; font-size: 16px; display: flex; gap: 20px; font-weight: bold; margin-top: 5px; }
+        #status-bar { color: #aaa; font-family: monospace; font-size: 16px; display: flex; gap: 30px; margin-top: 5px; }
         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 10, 15, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; pointer-events: auto; text-align: center; }
         .hidden { display: none !important; }
-        .btn { padding: 15px 40px; font-size: 18px; background: transparent; border: 2px solid #FFDC00; color: #FFDC00; cursor: pointer; font-weight: bold; box-shadow: 0 0 10px #FFDC00; transition: 0.2s; }
-        .btn:hover { background: #FFDC00; color: #000; }
+        .btn-start { padding: 15px 50px; font-size: 20px; background: transparent; border: 2px solid #FFDC00; color: #FFDC00; cursor: pointer; font-weight: bold; box-shadow: 0 0 15px #FFDC00; }
     </style>
 </head>
 <body>
@@ -41,48 +46,42 @@
     
     <div id="ui-layer">
         <div id="top-area">
-            <div id="commander-window">
-                <canvas id="comm-canvas" width="70" height="70"></canvas>
-            </div>
-            <div id="mission-label">MISSION</div>
+            <div id="commander-window"><canvas id="comm-canvas" width="70" height="70"></canvas></div>
+            <div id="mission-label">MISSION TARGET</div>
             <div id="mission-display">READY</div>
-            <div id="mission-sub">PLEASE WAIT...</div>
+            <div id="mission-sub">SCANNING...</div>
             
             <div id="status-bar">
                 <span>SCORE: <span id="score">0</span></span>
                 <span>TIME: <span id="timer">90</span></span>
             </div>
-            
-            <div id="sync-ratio-label">SYNC RATIO</div>
             <div id="sync-gauge-container"><div id="sync-gauge"></div></div>
         </div>
 
-        <div id="auto-lock-btn" onclick="game.autoLock()">
-            AUTO<br>LOCK
+        <div id="bottom-area">
+            <div id="fire-btn" onclick="game.fire()">FIRE</div>
         </div>
-
-        <div style="height: 100px;"></div> </div>
+        
+        <div id="auto-lock-btn" onclick="game.autoLock()">AUTO<br>LOCK</div>
+    </div>
 
     <div id="menu-screen" class="overlay">
-        <h1 style="color: #00FFFF; font-size: 36px;">BUBBLE SHOT</h1>
-        <p>RADAR BURST MODE</p>
-        <button class="btn" onclick="game.start()">ENGAGE</button>
+        <h1 style="color: #00FFFF; letter-spacing: 5px;">BUBBLE SHOT</h1>
+        <p style="color: #888;">UNDEFINED BLUE PROJECT</p>
+        <button class="btn-start" onclick="game.start()">ALL SYSTEMS GO</button>
     </div>
 
     <div id="gameover-screen" class="overlay hidden">
         <h1 style="color: #FF4136;">MISSION OVER</h1>
-        <p style="font-size: 24px;">SCORE: <span id="final-score">0</span></p>
-        <button class="btn" onclick="location.reload()">RETURN</button>
+        <p style="font-size: 28px;">SCORE: <span id="final-score">0</span></p>
+        <button class="btn-start" onclick="location.reload()">RE-ENGAGE</button>
     </div>
 </div>
 
 <script>
-// ミッション定義（重複排除とスピード感重視）
 const MISSIONS = [
-    { id: 'odd', title: 'ODD', sub: '奇数を狙え', check: (v) => v % 2 !== 0 },
-    { id: 'even', title: 'EVEN', sub: '偶数を狙え', check: (v) => v % 2 === 0 },
-    { id: 'asc', title: 'ASCEND', sub: '小さい順に狙え', check: (v, all) => v === Math.min(...all) },
-    { id: 'desc', title: 'DESCEND', sub: '大きい順に狙え', check: (v, all) => v === Math.max(...all) }
+    { id: 'odd', title: 'ODD', sub: '奇数をロックせよ', check: (v) => v % 2 !== 0 },
+    { id: 'even', title: 'EVEN', sub: '偶数をロックせよ', check: (v) => v % 2 === 0 }
 ];
 
 class Game {
@@ -101,7 +100,6 @@ class Game {
         this.state = 'menu';
         this.lastTime = 0;
         this.scanAngle = 0;
-        this.bgScroll = 0;
 
         this.resize();
         window.addEventListener('resize', () => this.resize());
@@ -119,8 +117,8 @@ class Game {
         this.canvas.height = this.height * dpr;
         this.ctx.scale(dpr, dpr);
         this.centerX = this.width / 2;
-        this.centerY = 180 + (this.height - 180 - 100) / 2;
-        this.radarRadius = Math.min(this.width, this.height - 280) / 2 - 10;
+        this.centerY = 180 + (this.height - 180 - 150) / 2;
+        this.radarRadius = Math.min(this.width, this.height - 330) / 2 - 10;
     }
 
     start() {
@@ -142,7 +140,7 @@ class Game {
     }
 
     replenish() {
-        const targetCount = 18;
+        const targetCount = 20;
         while (this.entities.length < targetCount) {
             this.spawnEntity();
         }
@@ -150,12 +148,12 @@ class Game {
 
     spawnEntity() {
         const r = 22;
-        let x, y, val, attempts = 0;
+        let x, y, val;
         const currentVals = this.entities.map(e => e.val);
 
-        // 重複排除ロジック
+        let attempts = 0;
         while(attempts < 100) {
-            val = Math.floor(Math.random() * 31);
+            val = Math.floor(Math.random() * 50); // 0-49
             if (!currentVals.includes(val)) break;
             attempts++;
         }
@@ -168,10 +166,10 @@ class Game {
             y = this.centerY + Math.sin(angle) * dist;
             let safe = true;
             for(let e of this.entities) {
-                if(Math.hypot(e.x - x, e.y - y) < r * 2.2) { safe = false; break; }
+                if(Math.hypot(e.x - x, e.y - y) < r * 2.3) { safe = false; break; }
             }
             if(safe) {
-                this.entities.push({ x, y, r, val, scale: 0, lockTime: 0 });
+                this.entities.push({ x, y, r, val, scale: 0, locked: false });
                 return;
             }
             attempts++;
@@ -184,56 +182,85 @@ class Game {
         const tx = e.clientX - rect.left;
         const ty = e.clientY - rect.top;
 
-        for(let i = this.entities.length - 1; i >= 0; i--) {
-            const ent = this.entities[i];
+        for(let ent of this.entities) {
             if(Math.hypot(ent.x - tx, ent.y - ty) < ent.r + 15) {
-                this.checkHit(ent, i);
+                ent.locked = !ent.locked;
+                this.updateFireButton();
                 return;
             }
         }
     }
 
+    updateFireButton() {
+        const hasLocked = this.entities.some(e => e.locked);
+        const btn = document.getElementById('fire-btn');
+        if(hasLocked) btn.classList.add('ready'); else btn.classList.remove('ready');
+    }
+
     autoLock() {
         if(this.state !== 'playing') return;
-        const targets = this.entities.filter(e => this.currentMission.check(e.val, this.entities.map(ev => ev.val)));
-        if(targets.length > 0) {
-            this.updateCommander('happy');
-            const target = targets[0];
-            const idx = this.entities.indexOf(target);
-            this.addEffect("AUTO LOCK", target.x, target.y, "#FFD700", 15);
-            setTimeout(() => this.checkHit(target, idx), 100);
+        const correctOnes = this.entities.filter(e => !e.locked && this.currentMission.check(e.val));
+        if(correctOnes.length > 0) {
+            correctOnes[0].locked = true;
+            this.updateFireButton();
         }
     }
 
-    checkHit(ent, index) {
-        const allVals = this.entities.map(e => e.val);
-        if(this.currentMission.check(ent.val, allVals)) {
-            this.score += 150;
-            this.syncRatio = Math.min(100, this.syncRatio + 8);
-            this.addEffect("HIT!!", ent.x, ent.y, "#00FFFF", 25);
-            this.entities.splice(index, 1);
-            this.replenish();
-            this.updateCommander('happy');
-            if(this.syncRatio >= 100) this.fullBurst();
-            
-            const remaining = this.entities.some(e => this.currentMission.check(e.val, this.entities.map(ev => ev.val)));
-            if(!remaining) this.nextMission();
-        } else {
-            this.syncRatio = Math.max(0, this.syncRatio - 12);
-            this.addEffect("MISS", ent.x, ent.y, "#FF4136", 20);
-            this.updateCommander('panic');
+    fire() {
+        if(this.state !== 'playing') return;
+        const lockedEntities = this.entities.filter(e => e.locked);
+        if(lockedEntities.length === 0) return;
+
+        let hitCount = 0;
+        let missCount = 0;
+
+        lockedEntities.forEach(ent => {
+            if(this.currentMission.check(ent.val)) {
+                hitCount++;
+                this.addEffect("HIT", ent.x, ent.y, "#00FFFF", 20);
+            } else {
+                missCount++;
+                this.addEffect("MISS", ent.x, ent.y, "#FF4136", 20);
+            }
+        });
+
+        // スコア計算：同時撃破ボーナス
+        if(hitCount > 0) {
+            const base = hitCount * 100;
+            const bonus = Math.pow(hitCount, 2) * 50; // 同時撃破ほど高い
+            this.score += (base + bonus);
+            this.syncRatio = Math.min(100, this.syncRatio + (hitCount * 5) - (missCount * 10));
+            this.updateCommander(hitCount >= 3 ? 'happy' : 'normal');
         }
+        
+        if(missCount > 0) {
+            this.updateCommander('panic');
+            this.syncRatio = Math.max(0, this.syncRatio - 15);
+        }
+
+        // 撃破したエンティティを除去
+        this.entities = this.entities.filter(e => !e.locked);
+        this.replenish();
+        this.updateFireButton();
         this.updateUI();
+
+        if(this.syncRatio >= 100) this.fullBurst();
+
+        // 画面に対象がいなくなったら次のミッションへ
+        const anyLeft = this.entities.some(e => this.currentMission.check(e.val));
+        if(!anyLeft) this.nextMission();
     }
 
     fullBurst() {
         this.state = 'burst';
         this.updateCommander('fever');
-        this.addEffect("HYMAT FULL BURST!!", this.centerX, this.centerY, "#FF00FF", 40);
+        this.addEffect("HYMAT FULL BURST!!", this.centerX, this.centerY, "#FF00FF", 45);
         
         setTimeout(() => {
-            this.score += this.entities.length * 600;
-            this.entities.forEach(ent => this.addEffect("LOCK ON", ent.x, ent.y, "magenta", 12));
+            const targets = this.entities.filter(e => this.currentMission.check(e.val));
+            this.score += targets.length * 1000;
+            targets.forEach(ent => this.addEffect("LOCK ON", ent.x, ent.y, "magenta", 15));
+            
             setTimeout(() => {
                 this.entities = [];
                 this.syncRatio = 0;
@@ -241,8 +268,8 @@ class Game {
                 this.replenish();
                 this.nextMission();
                 this.updateUI();
-            }, 600);
-        }, 500);
+            }, 800);
+        }, 600);
     }
 
     updateUI() {
@@ -265,9 +292,11 @@ class Game {
         ctx.fillStyle = '#000';
         ctx.beginPath(); ctx.arc(x-size*0.3, y+size*0.1, size*0.1, 0, Math.PI*2); ctx.fill();
         ctx.beginPath(); ctx.arc(x+size*0.3, y+size*0.1, size*0.1, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.lineWidth = 2;
-        if(mood==='happy'||mood==='fever') ctx.arc(x, y+size*0.1, size*0.3, 0, Math.PI); else ctx.arc(x, y+size*0.2, size*0.3, 0.2*Math.PI, 0.8*Math.PI);
-        ctx.stroke();
+        if(mood==='happy'||mood==='fever') {
+            ctx.beginPath(); ctx.arc(x, y+size*0.1, size*0.3, 0, Math.PI); ctx.stroke();
+        } else {
+            ctx.beginPath(); ctx.arc(x, y+size*0.2, size*0.3, 0.2*Math.PI, 0.8*Math.PI); ctx.stroke();
+        }
     }
 
     loop(t) {
@@ -283,7 +312,6 @@ class Game {
             this.updateUI();
         }
         this.scanAngle += dt * 2;
-        this.bgScroll += dt * 30;
         this.draw();
         requestAnimationFrame((t) => this.loop(t));
     }
@@ -291,32 +319,38 @@ class Game {
     draw() {
         this.ctx.fillStyle = '#050510'; this.ctx.fillRect(0, 0, this.width, this.height);
         
-        // レーダー背景描画
+        // レーダー背景
         const ctx = this.ctx;
         ctx.save(); ctx.translate(this.centerX, this.centerY);
         ctx.strokeStyle = 'rgba(0, 255, 255, 0.1)';
         for(let i=0; i<this.radarRadius; i+=50) { ctx.beginPath(); ctx.arc(0,0,i,0,Math.PI*2); ctx.stroke(); }
-        ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)'; ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
         ctx.beginPath(); ctx.arc(0,0,this.radarRadius,0,Math.PI*2); ctx.stroke();
         ctx.save(); ctx.rotate(this.scanAngle);
-        const g = ctx.createLinearGradient(0,0,this.radarRadius,0); g.addColorStop(0,'transparent'); g.addColorStop(1,'rgba(0,255,255,0.2)');
+        const g = ctx.createLinearGradient(0,0,this.radarRadius,0); g.addColorStop(0,'transparent'); g.addColorStop(1,'rgba(0,255,255,0.15)');
         ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,this.radarRadius,-0.2,0.2); ctx.fill();
         ctx.restore(); ctx.restore();
 
-        // バブル描画
+        // バブルとロックオン演出
         this.entities.forEach(ent => {
             if(ent.scale < 1) ent.scale += 0.1;
             const s = ent.r * ent.scale;
+            
+            // 本体
             ctx.beginPath(); ctx.arc(ent.x, ent.y, s, 0, Math.PI*2);
-            ctx.fillStyle = this.state === 'burst' ? 'rgba(255,0,255,0.5)' : 'rgba(0,255,255,0.1)';
-            ctx.fill(); ctx.strokeStyle = this.state === 'burst' ? 'magenta' : 'cyan';
-            ctx.lineWidth = 2; ctx.stroke();
-            // ターゲットロック表示
-            if(this.currentMission.check(ent.val, this.entities.map(ev => ev.val))) {
-                ctx.strokeStyle = 'rgba(255, 220, 0, 0.5)';
-                ctx.beginPath(); ctx.arc(ent.x, ent.y, s + 5, 0, Math.PI*2); ctx.stroke();
+            ctx.fillStyle = ent.locked ? 'rgba(255, 0, 255, 0.2)' : 'rgba(0, 255, 255, 0.05)';
+            ctx.fill();
+            ctx.strokeStyle = ent.locked ? '#FF00FF' : '#00FFFF';
+            ctx.lineWidth = ent.locked ? 3 : 1;
+            ctx.stroke();
+
+            // ロックオン角
+            if(ent.locked) {
+                this.drawLockBracket(ent.x, ent.y, s + 8);
             }
-            ctx.fillStyle = 'white'; ctx.font = 'bold 18px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+            ctx.fillStyle = ent.locked ? '#FF00FF' : 'white';
+            ctx.font = 'bold 18px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText(ent.val, ent.x, ent.y);
         });
 
@@ -328,6 +362,21 @@ class Game {
             eff.y -= 1; eff.life -= 0.02; if(eff.life <= 0) this.effects.splice(i, 1);
         }
         ctx.globalAlpha = 1;
+    }
+
+    drawLockBracket(x, y, r) {
+        const ctx = this.ctx;
+        ctx.strokeStyle = '#FF00FF';
+        ctx.lineWidth = 2;
+        const len = 10;
+        // 左上
+        ctx.beginPath(); ctx.moveTo(x-r, y-r+len); ctx.lineTo(x-r, y-r); ctx.lineTo(x-r+len, y-r); ctx.stroke();
+        // 右上
+        ctx.beginPath(); ctx.moveTo(x+r-len, y-r); ctx.lineTo(x+r, y-r); ctx.lineTo(x+r, y-r+len); ctx.stroke();
+        // 左下
+        ctx.beginPath(); ctx.moveTo(x-r, y+r-len); ctx.lineTo(x-r, y+r); ctx.lineTo(x-r+len, y+r); ctx.stroke();
+        // 右下
+        ctx.beginPath(); ctx.moveTo(x+r-len, y+r); ctx.lineTo(x+r, y+r); ctx.lineTo(x+r, y+r-len); ctx.stroke();
     }
 
     addEffect(text, x, y, color, size) { this.effects.push({ text, x, y, color, size, life: 1 }); }
