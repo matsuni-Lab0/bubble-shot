@@ -3,35 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Bubble Shot: Auto-Lock - Undefined Blue</title>
+    <title>Bubble Shot: Fix Edition - Undefined Blue</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #111; color: white; font-family: 'Helvetica Neue', Arial, sans-serif; touch-action: none; user-select: none; }
         #game-container { position: relative; width: 100vw; height: 100dvh; background-color: #050510; }
         canvas { display: block; width: 100%; height: 100%; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
-        
         #top-area { height: 220px; display: flex; flex-direction: column; align-items: center; background: linear-gradient(to bottom, rgba(0,0,0,0.9), rgba(0,0,0,0)); z-index: 10; padding-top: 10px; position: relative; }
         #commander-window { position: absolute; top: 10px; left: 10px; width: 70px; height: 70px; background: rgba(0, 20, 40, 0.6); border: 2px solid #00FFFF; border-radius: 10px; clip-path: polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%); display: flex; justify-content: center; align-items: center; }
         #comm-canvas { width: 100%; height: 100%; }
-        
         #mission-timer-wrapper { width: 200px; height: 4px; background: #222; margin-top: 5px; border-radius: 2px; overflow: hidden; border: 1px solid #444; }
         #mission-timer-bar { width: 100%; height: 100%; background: #FF4136; transition: width 0.1s linear; }
-        
+        #mission-label { font-size: 10px; color: #00FFFF; letter-spacing: 4px; margin-top: 5px; opacity: 0.8;}
         #mission-method-box { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
         .method-tag { font-size: 12px; color: #aaa; }
         #mission-op-display { font-size: 32px; font-weight: 900; color: #FF4136; text-shadow: 0 0 10px #FF4136; border: 2px solid #FF4136; padding: 0 15px; border-radius: 8px; background: rgba(255, 65, 54, 0.1); }
         #mission-target-display { font-size: 56px; font-weight: 900; color: #FFDC00; line-height: 1.0; text-shadow: 0 0 20px rgba(255, 220, 0, 0.8); font-family: 'Arial Black', sans-serif; }
-        
+        #mission-sub { font-size: 14px; color: #00FFFF; font-weight: bold; margin-top: 8px; letter-spacing: 1px; }
         #sync-gauge-container { width: 240px; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-top: 15px; border: 1px solid #444; }
         #sync-gauge { width: 0%; height: 100%; background: linear-gradient(90deg, #00FFFF, #FF00FF); transition: width 0.3s; }
-
         #bottom-area { height: 150px; display: flex; justify-content: center; align-items: center; padding-bottom: 20px; }
         #fire-btn { width: 160px; height: 60px; background: rgba(255, 65, 54, 0.1); border: 2px solid #555; color: #555; font-size: 24px; font-weight: 900; letter-spacing: 4px; display: flex; justify-content: center; align-items: center; clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%); pointer-events: auto; transition: 0.2s; cursor: pointer; }
         #fire-btn.ready { background: rgba(255, 65, 54, 0.8); border: none; color: white; box-shadow: 0 0 30px #FF4136; text-shadow: 0 0 10px white; }
-        
-        #auto-lock-btn { position: absolute; bottom: 120px; right: 20px; width: 65px; height: 65px; border-radius: 50%; border: 2px solid #FFD700; color: #FFD700; background: rgba(255, 215, 0, 0.1); display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 10px; font-weight: bold; pointer-events: auto; cursor: pointer; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); } }
-
+        #auto-lock-btn { position: absolute; bottom: 120px; right: 20px; width: 65px; height: 65px; border-radius: 50%; border: 2px solid #FFD700; color: #FFD700; background: rgba(255, 215, 0, 0.1); display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 10px; font-weight: bold; pointer-events: auto; cursor: pointer; }
         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 10, 15, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; pointer-events: auto; text-align: center; }
         .hidden { display: none !important; }
         .btn-start { padding: 15px 50px; font-size: 20px; background: transparent; border: 2px solid #FFDC00; color: #FFDC00; cursor: pointer; font-weight: bold; box-shadow: 0 0 15px #FFDC00; }
@@ -43,7 +37,7 @@
     <div id="ui-layer">
         <div id="top-area">
             <div id="commander-window"><canvas id="comm-canvas" width="70" height="70"></canvas></div>
-            <div id="mission-label">FCS: ACTIVE</div>
+            <div id="mission-label">FCS: ONLINE</div>
             <div id="mission-timer-wrapper"><div id="mission-timer-bar"></div></div>
             <div id="mission-method-box">
                 <span class="method-tag">USE</span>
@@ -107,7 +101,8 @@ class Game {
 
     start() {
         this.state = 'playing'; this.score = 0; this.timeLeft = 90;
-        this.entities = []; this.nextMission(); this.replenish();
+        this.entities = []; 
+        this.nextMission(); 
         document.getElementById('menu-screen').classList.add('hidden');
     }
 
@@ -122,16 +117,18 @@ class Game {
             document.getElementById('mission-op-display').style.color = OPS[this.targetOp].color;
             document.getElementById('mission-op-display').style.borderColor = OPS[this.targetOp].color;
             document.getElementById('mission-target-display').innerText = this.targetNum;
-            this.ensureSolutionExists();
         } else {
             this.isCalcMission = false;
             this.targetOp = (Math.random() < 0.5) ? 'even' : 'odd';
             document.getElementById('mission-op-display').innerText = (this.targetOp === 'even' ? '2n' : '2n+1');
             document.getElementById('mission-op-display').style.color = "#FFDC00";
+            document.getElementById('mission-op-display').style.borderColor = "#FFDC00";
             document.getElementById('mission-target-display').innerText = (this.targetOp === 'even' ? 'EVEN' : 'ODD');
         }
         this.missionTimeLeft = 10.0;
         this.entities.forEach(e => { e.locked = false; e.order = 0; });
+        this.replenish(); // ミッション更新時に確実に補充
+        this.ensureSolutionExists();
         this.updateFireButton();
         this.updateCommander('normal');
     }
@@ -163,13 +160,22 @@ class Game {
         }
     }
 
+    replenish() { 
+        const targetCount = 20;
+        while (this.entities.length < targetCount) { this.spawnEntity(); } 
+    }
+
+    spawnEntity() {
+        const r = 22; 
+        const type = (this.isCalcMission && Math.random() < 0.3) ? 'op' : 'num';
+        let val = type === 'num' ? Math.floor(Math.random() * 30) + 1 : Object.keys(OPS)[Math.floor(Math.random() * 4)];
+        this.spawnEntityFixed(val, type);
+    }
+
     autoLock() {
         if(this.state !== 'playing') return;
-        // 現在のロックを解除
         this.entities.forEach(e => { e.locked = false; e.order = 0; });
-        
         if(this.isCalcMission) {
-            // 正解を探す
             for(let i=0; i<this.entities.length; i++) {
                 if(this.entities[i].type !== 'num') continue;
                 for(let j=0; j<this.entities.length; j++) {
@@ -177,39 +183,30 @@ class Game {
                     for(let k=0; k<this.entities.length; k++) {
                         if(this.entities[k].type !== 'num' || i === k) continue;
                         if(OPS[this.targetOp].calc(this.entities[i].val, this.entities[k].val) === this.targetNum) {
-                            // 発見！1→2→3の順でロック
                             this.entities[i].locked = true; this.entities[i].order = 1;
                             this.entities[j].locked = true; this.entities[j].order = 2;
                             this.entities[k].locked = true; this.entities[k].order = 3;
                             this.updateFireButton();
-                            this.addEffect("AUTO ACQUIRED", this.centerX, this.centerY, "#FFD700", 20);
+                            this.addEffect("FCS TARGET ACQUIRED", this.centerX, this.centerY, "#FFD700", 20);
                             return;
                         }
                     }
                 }
             }
         } else {
-            // 偶数・奇数ミッション
             const targets = this.entities.filter(e => (this.targetOp === 'even' ? e.val % 2 === 0 : e.val % 2 !== 0));
             if(targets.length > 0) {
                 targets.forEach((t, idx) => { t.locked = true; t.order = idx + 1; });
                 this.updateFireButton();
-                this.addEffect("MULTI LOCK", this.centerX, this.centerY, "#FFD700", 20);
+                this.addEffect("MULTI LOCK ON", this.centerX, this.centerY, "#FFD700", 20);
             }
         }
-    }
-
-    replenish() { while (this.entities.length < 20) { this.spawnEntity(); } }
-    spawnEntity() {
-        const r = 22; const type = (this.isCalcMission && Math.random() < 0.3) ? 'op' : 'num';
-        let val = type === 'num' ? Math.floor(Math.random() * 25) + 1 : Object.keys(OPS)[Math.floor(Math.random() * 4)];
-        this.spawnEntityFixed(val, type);
     }
 
     handleClick(e) {
         if(this.state !== 'playing') return;
         const rect = this.canvas.getBoundingClientRect();
-        const tx = e.clientX - rect.left; const ty = e.clientY - rect.top;
+        const tx = (e.clientX - rect.left); const ty = (e.clientY - rect.top);
         for(let ent of this.entities) {
             if(Math.hypot(ent.x - tx, ent.y - ty) < ent.r + 15) {
                 if(!ent.locked) {
@@ -258,7 +255,9 @@ class Game {
             this.addEffect(`HIT! +${totalGain}`, this.centerX, this.centerY - 40, "#00FFFF", 28);
             this.updateCommander('happy');
         } else { this.syncRatio = Math.max(0, this.syncRatio - 15); this.updateCommander('panic'); }
-        this.entities = this.entities.filter(e => e.alive); this.replenish(); this.updateFireButton();
+        this.entities = this.entities.filter(e => e.alive); 
+        this.replenish(); 
+        this.updateFireButton();
         if(this.syncRatio >= 100) this.fullBurst(); else setTimeout(() => this.nextMission(), 400);
     }
 
@@ -271,7 +270,8 @@ class Game {
         document.getElementById('score').innerText = this.score;
         document.getElementById('timer').innerText = Math.floor(this.timeLeft);
         document.getElementById('sync-gauge').style.width = this.syncRatio + '%';
-        document.getElementById('mission-timer-bar').style.width = (this.missionTimeLeft / 10 * 100) + '%';
+        const timerBar = document.getElementById('mission-timer-bar');
+        timerBar.style.width = (this.missionTimeLeft / 10 * 100) + '%';
     }
 
     loop(t) {
