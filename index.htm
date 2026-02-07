@@ -3,22 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Bubble Shot: Laser Burst - Undefined Blue</title>
+    <title>Bubble Shot: High-Mat Burst - Undefined Blue</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #111; color: white; font-family: 'Helvetica Neue', Arial, sans-serif; touch-action: none; user-select: none; }
         #game-container { position: relative; width: 100vw; height: 100dvh; background-color: #050510; }
         canvas { display: block; width: 100%; height: 100%; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
 
-        #top-area { height: 180px; display: flex; flex-direction: column; align-items: center; background: linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0)); z-index: 10; padding-top: 10px; position: relative; }
+        #top-area { height: 200px; display: flex; flex-direction: column; align-items: center; background: linear-gradient(to bottom, rgba(0,0,0,0.9), rgba(0,0,0,0)); z-index: 10; padding-top: 10px; position: relative; }
         #commander-window { position: absolute; top: 10px; left: 10px; width: 70px; height: 70px; background: rgba(0, 20, 40, 0.6); border: 2px solid #00FFFF; border-radius: 10px; clip-path: polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%); display: flex; justify-content: center; align-items: center; }
         #comm-canvas { width: 100%; height: 100%; }
         
+        /* ミッションタイマー */
+        #mission-timer-wrapper { width: 150px; height: 4px; background: #222; margin-top: 5px; border-radius: 2px; overflow: hidden; }
+        #mission-timer-bar { width: 100%; height: 100%; background: #FF4136; transition: width 0.1s linear; }
+
         #mission-label { font-size: 10px; color: #00FFFF; letter-spacing: 4px; margin-top: 5px; opacity: 0.8;}
         #mission-display { font-size: 42px; font-weight: 900; color: #FFDC00; line-height: 1.0; margin: 0; text-shadow: 0 0 20px rgba(255, 220, 0, 0.8); font-family: 'Arial Black', sans-serif; }
         #mission-sub { font-size: 14px; color: #00FFFF; font-weight: bold; margin-top: 5px; }
 
-        #sync-gauge-container { width: 220px; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-top: 10px; border: 1px solid #444; }
+        #sync-gauge-container { width: 220px; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-top: 15px; border: 1px solid #444; }
         #sync-gauge { width: 0%; height: 100%; background: linear-gradient(90deg, #00FFFF, #FF00FF); transition: width 0.3s; }
 
         #bottom-area { height: 150px; display: flex; justify-content: center; align-items: center; padding-bottom: 20px; }
@@ -44,26 +48,27 @@
     <div id="ui-layer">
         <div id="top-area">
             <div id="commander-window"><canvas id="comm-canvas" width="70" height="70"></canvas></div>
-            <div id="mission-label">MISSION TARGET</div>
+            <div id="mission-label">MISSION WINDOW</div>
+            <div id="mission-timer-wrapper"><div id="mission-timer-bar"></div></div>
             <div id="mission-display">READY</div>
-            <div id="mission-sub">SCANNING...</div>
+            <div id="mission-sub">INITIALIZING...</div>
             
             <div id="status-bar">
                 <span>SCORE: <span id="score">0</span></span>
-                <span>TIME: <span id="timer">90</span></span>
+                <span>TOTAL TIME: <span id="timer">90</span></span>
             </div>
             <div id="sync-gauge-container"><div id="sync-gauge"></div></div>
         </div>
 
         <div id="bottom-area">
-            <div id="fire-btn" onclick="game.fire()">FIRE</div>
+            <div id="fire-btn" onclick="game.fire()">SHOT</div>
         </div>
     </div>
 
     <div id="menu-screen" class="overlay">
         <h1 style="color: #00FFFF; letter-spacing: 5px;">BUBBLE SHOT</h1>
         <p style="color: #888;">UNDEFINED BLUE PROJECT</p>
-        <button class="btn-start" onclick="game.start()">ALL SYSTEMS GO</button>
+        <button class="btn-start" onclick="game.start()">ENGAGE</button>
     </div>
 
     <div id="gameover-screen" class="overlay hidden">
@@ -88,9 +93,11 @@ class Game {
         
         this.entities = [];
         this.effects = [];
-        this.lasers = []; // レーザー描画用
+        this.lasers = [];
         this.score = 0;
         this.timeLeft = 90;
+        this.missionTimeMax = 5.0; // ミッション制限時間
+        this.missionTimeLeft = this.missionTimeMax;
         this.syncRatio = 0;
         this.currentMission = null;
         this.state = 'menu';
@@ -113,16 +120,15 @@ class Game {
         this.canvas.height = this.height * dpr;
         this.ctx.scale(dpr, dpr);
         this.centerX = this.width / 2;
-        this.centerY = 180 + (this.height - 180 - 150) / 2;
-        this.radarRadius = Math.min(this.width, this.height - 330) / 2 - 10;
-        this.shipPos = { x: this.width / 2, y: this.height - 50 }; // 自機位置（発射点）
+        this.centerY = 200 + (this.height - 200 - 150) / 2;
+        this.radarRadius = Math.min(this.width, this.height - 350) / 2 - 10;
+        this.shipPos = { x: this.width / 2, y: this.height - 50 };
     }
 
     start() {
         this.state = 'playing';
         this.score = 0;
         this.timeLeft = 90;
-        this.syncRatio = 0;
         this.entities = [];
         this.nextMission();
         this.replenish();
@@ -131,8 +137,13 @@ class Game {
 
     nextMission() {
         this.currentMission = MISSIONS[Math.floor(Math.random() * MISSIONS.length)];
+        this.missionTimeLeft = this.missionTimeMax;
         document.getElementById('mission-display').innerText = this.currentMission.title;
         document.getElementById('mission-sub').innerText = this.currentMission.sub;
+        
+        // 未発射のロック解除
+        this.entities.forEach(e => e.locked = false);
+        this.updateFireButton();
         this.updateCommander('normal');
     }
 
@@ -199,8 +210,12 @@ class Game {
         const lockedEntities = this.entities.filter(e => e.locked && e.alive);
         if(lockedEntities.length === 0) return;
 
-        lockedEntities.forEach((ent, index) => {
-            // レーザー生成
+        // 残り時間ボーナス
+        const bonus = Math.floor(this.missionTimeLeft * 100);
+        if(bonus > 0) this.addEffect(`TIME BONUS +${bonus}`, this.centerX, this.centerY - 50, "#FFD700", 24);
+        this.score += bonus;
+
+        lockedEntities.forEach(ent => {
             this.lasers.push({
                 x: this.shipPos.x, y: this.shipPos.y,
                 targetX: ent.x, targetY: ent.y,
@@ -209,11 +224,14 @@ class Game {
                 entity: ent
             });
             ent.locked = false;
-            ent.alive = false; // 先にフラグを立てて二重発射防止
+            ent.alive = false;
         });
 
         this.updateFireButton();
         this.updateCommander('happy');
+        
+        // 数秒待たずに即座に次のお題へ（レーザー中に次が出る）
+        setTimeout(() => this.nextMission(), 300);
     }
 
     processLaserHit(laser) {
@@ -225,16 +243,15 @@ class Game {
             this.syncRatio = Math.min(100, this.syncRatio + 6);
             this.addEffect("HIT", ent.x, ent.y, "#00FFFF", 24);
         } else {
-            this.syncRatio = Math.max(0, this.syncRatio - 10);
+            this.syncRatio = Math.max(0, this.syncRatio - 12);
             this.addEffect("MISS", ent.x, ent.y, "#FF4136", 20);
             this.updateCommander('panic');
         }
 
-        // 爆発エフェクト
         for(let i=0; i<8; i++) {
             this.effects.push({
                 x: ent.x, y: ent.y,
-                vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10,
+                vx: (Math.random()-0.5)*12, vy: (Math.random()-0.5)*12,
                 life: 1, color: laser.color, type: 'particle'
             });
         }
@@ -244,7 +261,6 @@ class Game {
         this.updateUI();
 
         if(this.syncRatio >= 100) this.fullBurst();
-        if(!this.entities.some(e => this.currentMission.check(e.val))) this.nextMission();
     }
 
     fullBurst() {
@@ -262,11 +278,11 @@ class Game {
                 });
                 ent.alive = false;
             });
-            
             setTimeout(() => {
                 this.syncRatio = 0;
                 this.state = 'playing';
                 this.updateUI();
+                this.nextMission();
             }, 800);
         }, 600);
     }
@@ -275,6 +291,9 @@ class Game {
         document.getElementById('score').innerText = this.score;
         document.getElementById('timer').innerText = Math.floor(this.timeLeft);
         document.getElementById('sync-gauge').style.width = this.syncRatio + '%';
+        const timerBar = document.getElementById('mission-timer-bar');
+        const timerPct = (this.missionTimeLeft / this.missionTimeMax) * 100;
+        timerBar.style.width = timerPct + '%';
     }
 
     updateCommander(mood) {
@@ -291,9 +310,11 @@ class Game {
         ctx.fillStyle = '#000';
         ctx.beginPath(); ctx.arc(x-size*0.3, y+size*0.1, size*0.1, 0, Math.PI*2); ctx.fill();
         ctx.beginPath(); ctx.arc(x+size*0.3, y+size*0.1, size*0.1, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.lineWidth = 2;
-        if(mood==='happy'||mood==='fever') ctx.arc(x, y+size*0.1, size*0.3, 0, Math.PI); else ctx.arc(x, y+size*0.2, size*0.3, 0.2*Math.PI, 0.8*Math.PI);
-        ctx.stroke();
+        if(mood==='happy'||mood==='fever') {
+            ctx.beginPath(); ctx.arc(x, y+size*0.1, size*0.3, 0, Math.PI); ctx.stroke();
+        } else {
+            ctx.beginPath(); ctx.arc(x, y+size*0.2, size*0.3, 0.2*Math.PI, 0.8*Math.PI); ctx.stroke();
+        }
     }
 
     loop(t) {
@@ -301,6 +322,13 @@ class Game {
         this.lastTime = t;
         if(this.state === 'playing') {
             this.timeLeft -= dt;
+            this.missionTimeLeft -= dt;
+            
+            if(this.missionTimeLeft <= 0) {
+                this.addEffect("TIMEOUT", this.centerX, this.centerY, "#888", 30);
+                this.nextMission();
+            }
+
             if(this.timeLeft <= 0) {
                 this.state = 'gameover';
                 document.getElementById('gameover-screen').classList.remove('hidden');
@@ -317,7 +345,7 @@ class Game {
     updateLasers(dt) {
         for(let i = this.lasers.length - 1; i >= 0; i--) {
             const l = this.lasers[i];
-            l.progress += dt * 5; // レーザーの速度
+            l.progress += dt * 6;
             if(l.progress >= 1) {
                 this.processLaserHit(l);
                 this.lasers.splice(i, 1);
@@ -327,24 +355,31 @@ class Game {
 
     draw() {
         this.ctx.fillStyle = '#050510'; this.ctx.fillRect(0, 0, this.width, this.height);
-        
-        // レーダー背景
         const ctx = this.ctx;
+        
+        // レーダー最外枠を「濃く」強調
         ctx.save(); ctx.translate(this.centerX, this.centerY);
-        ctx.strokeStyle = 'rgba(0, 255, 255, 0.1)';
+        ctx.strokeStyle = '#00FFFF'; ctx.lineWidth = 5; // 太く
+        ctx.shadowBlur = 15; ctx.shadowColor = '#00FFFF';
+        ctx.beginPath(); ctx.arc(0,0,this.radarRadius,0,Math.PI*2); ctx.stroke();
+        ctx.shadowBlur = 0;
+        
+        // 内部グリッド
+        ctx.strokeStyle = 'rgba(0, 255, 255, 0.1)'; ctx.lineWidth = 1;
         for(let i=0; i<this.radarRadius; i+=50) { ctx.beginPath(); ctx.arc(0,0,i,0,Math.PI*2); ctx.stroke(); }
+        
+        // スキャンライン
         ctx.save(); ctx.rotate(this.scanAngle);
-        const g = ctx.createLinearGradient(0,0,this.radarRadius,0); g.addColorStop(0,'transparent'); g.addColorStop(1,'rgba(0,255,255,0.15)');
+        const g = ctx.createLinearGradient(0,0,this.radarRadius,0); g.addColorStop(0,'transparent'); g.addColorStop(1,'rgba(0,255,255,0.2)');
         ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,this.radarRadius,-0.2,0.2); ctx.fill();
         ctx.restore(); ctx.restore();
 
-        // レーザー描画
+        // レーザー
         this.lasers.forEach(l => {
             const curX = l.x + (l.targetX - l.x) * l.progress;
             const curY = l.y + (l.targetY - l.y) * l.progress;
-            ctx.strokeStyle = l.color;
-            ctx.lineWidth = 4;
-            ctx.shadowBlur = 15; ctx.shadowColor = l.color;
+            ctx.strokeStyle = l.color; ctx.lineWidth = 4;
+            ctx.shadowBlur = 10; ctx.shadowColor = l.color;
             ctx.beginPath(); ctx.moveTo(l.x, l.y); ctx.lineTo(curX, curY); ctx.stroke();
             ctx.shadowBlur = 0;
         });
@@ -369,15 +404,14 @@ class Game {
             const eff = this.effects[i];
             ctx.globalAlpha = eff.life;
             if(eff.type === 'particle') {
-                ctx.fillStyle = eff.color;
-                ctx.beginPath(); ctx.arc(eff.x, eff.y, 2, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = eff.color; ctx.beginPath(); ctx.arc(eff.x, eff.y, 2, 0, Math.PI*2); ctx.fill();
                 eff.x += eff.vx; eff.y += eff.vy;
             } else {
                 ctx.fillStyle = eff.color; ctx.font = `bold ${eff.size}px Arial`;
                 ctx.fillText(eff.text, eff.x, eff.y);
                 eff.y -= 1;
             }
-            eff.life -= 0.03; if(eff.life <= 0) this.effects.splice(i, 1);
+            eff.life -= 0.02; if(eff.life <= 0) this.effects.splice(i, 1);
         }
         ctx.globalAlpha = 1;
     }
