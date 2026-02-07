@@ -3,26 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Bubble Shot: Tactical Math - Undefined Blue</title>
+    <title>Bubble Shot: Tactical Command - Undefined Blue</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #111; color: white; font-family: 'Helvetica Neue', Arial, sans-serif; touch-action: none; user-select: none; }
         #game-container { position: relative; width: 100vw; height: 100dvh; background-color: #050510; }
         canvas { display: block; width: 100%; height: 100%; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
 
-        #top-area { height: 210px; display: flex; flex-direction: column; align-items: center; background: linear-gradient(to bottom, rgba(0,0,0,0.9), rgba(0,0,0,0)); z-index: 10; padding-top: 10px; position: relative; }
+        #top-area { height: 220px; display: flex; flex-direction: column; align-items: center; background: linear-gradient(to bottom, rgba(0,0,0,0.9), rgba(0,0,0,0)); z-index: 10; padding-top: 10px; position: relative; }
         #commander-window { position: absolute; top: 10px; left: 10px; width: 70px; height: 70px; background: rgba(0, 20, 40, 0.6); border: 2px solid #00FFFF; border-radius: 10px; clip-path: polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%); display: flex; justify-content: center; align-items: center; }
         #comm-canvas { width: 100%; height: 100%; }
         
-        #mission-timer-wrapper { width: 150px; height: 4px; background: #222; margin-top: 5px; border-radius: 2px; overflow: hidden; }
+        /* ミッションタイマー */
+        #mission-timer-wrapper { width: 200px; height: 4px; background: #222; margin-top: 5px; border-radius: 2px; overflow: hidden; border: 1px solid #444; }
         #mission-timer-bar { width: 100%; height: 100%; background: #FF4136; transition: width 0.1s linear; }
 
+        /* 指示表示の強化 */
         #mission-label { font-size: 10px; color: #00FFFF; letter-spacing: 4px; margin-top: 5px; opacity: 0.8;}
-        #mission-display { font-size: 42px; font-weight: 900; color: #FFDC00; line-height: 1.0; margin: 0; text-shadow: 0 0 20px rgba(255, 220, 0, 0.8); font-family: 'Arial Black', sans-serif; }
-        #mission-sub { font-size: 14px; color: #00FFFF; font-weight: bold; margin-top: 5px; }
-        #mission-method { font-size: 16px; color: #FF4136; font-weight: 900; background: rgba(255,255,255,0.1); padding: 2px 10px; border-radius: 4px; margin-top: 5px; border: 1px solid #FF4136; }
+        #mission-method-box { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
+        .method-tag { font-size: 12px; color: #aaa; }
+        #mission-op-display { font-size: 32px; font-weight: 900; color: #FF4136; text-shadow: 0 0 10px #FF4136; border: 2px solid #FF4136; padding: 0 15px; border-radius: 8px; background: rgba(255, 65, 54, 0.1); }
+        #mission-target-display { font-size: 56px; font-weight: 900; color: #FFDC00; line-height: 1.0; text-shadow: 0 0 20px rgba(255, 220, 0, 0.8); font-family: 'Arial Black', sans-serif; }
+        
+        #mission-sub { font-size: 14px; color: #00FFFF; font-weight: bold; margin-top: 8px; letter-spacing: 1px; }
 
-        #sync-gauge-container { width: 220px; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-top: 15px; border: 1px solid #444; }
+        #sync-gauge-container { width: 240px; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-top: 15px; border: 1px solid #444; }
         #sync-gauge { width: 0%; height: 100%; background: linear-gradient(90deg, #00FFFF, #FF00FF); transition: width 0.3s; }
 
         #bottom-area { height: 150px; display: flex; justify-content: center; align-items: center; padding-bottom: 20px; }
@@ -34,7 +39,7 @@
         }
         #fire-btn.ready { background: rgba(255, 65, 54, 0.8); border: none; color: white; box-shadow: 0 0 30px #FF4136; text-shadow: 0 0 10px white; }
         
-        #status-bar { color: #aaa; font-family: monospace; font-size: 16px; display: flex; gap: 30px; margin-top: 5px; }
+        #status-bar { color: #aaa; font-family: monospace; font-size: 14px; display: flex; gap: 30px; margin-top: 8px; }
         .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 10, 15, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; pointer-events: auto; text-align: center; }
         .hidden { display: none !important; }
         .btn-start { padding: 15px 50px; font-size: 20px; background: transparent; border: 2px solid #FFDC00; color: #FFDC00; cursor: pointer; font-weight: bold; box-shadow: 0 0 15px #FFDC00; }
@@ -48,10 +53,16 @@
     <div id="ui-layer">
         <div id="top-area">
             <div id="commander-window"><canvas id="comm-canvas" width="70" height="70"></canvas></div>
-            <div id="mission-label">CALCULATION MISSION</div>
+            <div id="mission-label">WEAPON & TARGET</div>
             <div id="mission-timer-wrapper"><div id="mission-timer-bar"></div></div>
-            <div id="mission-display">??</div>
-            <div id="mission-method">METHOD: ???</div>
+            
+            <div id="mission-method-box">
+                <span class="method-tag">USE</span>
+                <div id="mission-op-display">?</div>
+                <span class="method-tag">TO MAKE</span>
+                <div id="mission-target-display">0</div>
+            </div>
+            
             <div id="mission-sub">数値を計算せよ</div>
             
             <div id="status-bar">
@@ -81,10 +92,10 @@
 
 <script>
 const OPS = {
-    add: { label: '+', calc: (a, b) => a + b },
-    sub: { label: '-', calc: (a, b) => a - b },
-    mul: { label: '×', calc: (a, b) => a * b },
-    div: { label: '÷', calc: (a, b) => (b !== 0 && a % b === 0) ? a / b : null }
+    add: { label: '+', calc: (a, b) => a + b, color: '#00FF66' },
+    sub: { label: '-', calc: (a, b) => a - b, color: '#FF8800' },
+    mul: { label: '×', calc: (a, b) => a * b, color: '#FF00FF' },
+    div: { label: '÷', calc: (a, b) => (b !== 0 && a % b === 0) ? a / b : null, color: '#00FFFF' }
 };
 
 class Game {
@@ -95,10 +106,10 @@ class Game {
         this.commCtx = this.commCanvas.getContext('2d');
         
         this.entities = []; this.effects = []; this.lasers = [];
-        this.score = 0; this.timeLeft = 90; this.missionTimeMax = 5.0; // 計算ミッションは5秒
+        this.score = 0; this.timeLeft = 90; this.missionTimeMax = 10.0; // 10秒に延長
         this.missionTimeLeft = this.missionTimeMax;
         this.syncRatio = 0; this.state = 'menu'; this.lastTime = 0; this.scanAngle = 0;
-        this.targetNum = 0; this.targetOp = null;
+        this.targetNum = 0; this.targetOp = null; this.burstWave = 0;
 
         this.resize();
         window.addEventListener('resize', () => this.resize());
@@ -113,8 +124,8 @@ class Game {
         this.canvas.width = this.width * dpr; this.canvas.height = this.height * dpr;
         this.ctx.scale(dpr, dpr);
         this.centerX = this.width / 2;
-        this.centerY = 210 + (this.height - 210 - 150) / 2;
-        this.radarRadius = Math.min(this.width, this.height - 400) / 2 - 10;
+        this.centerY = 220 + (this.height - 220 - 150) / 2;
+        this.radarRadius = Math.min(this.width, this.height - 420) / 2 - 10;
         this.shipPos = { x: this.width / 2, y: this.height - 50 };
     }
 
@@ -125,31 +136,46 @@ class Game {
     }
 
     nextMission() {
-        // ターゲット数値を 2～20 くらいで生成
-        this.targetNum = Math.floor(Math.random() * 19) + 2;
-        // 演算子をランダム決定
-        const opKeys = Object.keys(OPS);
-        this.targetOp = opKeys[Math.floor(Math.random() * opKeys.length)];
+        // ミッションの多様化（偶数・奇数と計算を混ぜる）
+        const mode = Math.random();
+        if(mode < 0.6) { // 計算ミッション
+            this.isCalcMission = true;
+            this.targetNum = Math.floor(Math.random() * 19) + 2;
+            const opKeys = Object.keys(OPS);
+            this.targetOp = opKeys[Math.floor(Math.random() * opKeys.length)];
+            
+            document.getElementById('mission-op-display').innerText = OPS[this.targetOp].label;
+            document.getElementById('mission-op-display').style.color = OPS[this.targetOp].color;
+            document.getElementById('mission-op-display').style.borderColor = OPS[this.targetOp].color;
+            document.getElementById('mission-target-display').innerText = this.targetNum;
+            document.getElementById('mission-sub').innerText = "数値を計算せよ";
+        } else { // 偶数・奇数ミッション
+            this.isCalcMission = false;
+            this.targetOp = (Math.random() < 0.5) ? 'even' : 'odd';
+            document.getElementById('mission-op-display').innerText = (this.targetOp === 'even' ? '2n' : '2n+1');
+            document.getElementById('mission-op-display').style.color = "#FFDC00";
+            document.getElementById('mission-op-display').style.borderColor = "#FFDC00";
+            document.getElementById('mission-target-display').innerText = (this.targetOp === 'even' ? 'EVEN' : 'ODD');
+            document.getElementById('mission-sub').innerText = "条件に合う数字を撃て";
+        }
         
-        this.missionTimeLeft = 5.0; // 制限時間5秒
-        document.getElementById('mission-display').innerText = this.targetNum;
-        document.getElementById('mission-method').innerText = `METHOD: ${OPS[this.targetOp].label}`;
-        
-        this.entities.forEach(e => e.locked = false);
+        this.missionTimeLeft = 10.0;
+        this.entities.forEach(e => { e.locked = false; e.order = 0; });
         this.updateFireButton();
         this.updateCommander('normal');
     }
 
     replenish() {
-        while (this.entities.length < 22) { this.spawnEntity(); }
+        while (this.entities.length < 20) { this.spawnEntity(); }
     }
 
     spawnEntity() {
         const r = 22;
-        const type = Math.random() < 0.3 ? 'op' : 'num';
+        // 演算子が出る確率は計算ミッションの時だけ高くする
+        const type = (this.isCalcMission && Math.random() < 0.35) ? 'op' : 'num';
         let val;
         if(type === 'num') {
-            val = Math.floor(Math.random() * 15) + 1;
+            val = Math.floor(Math.random() * 20) + 1;
         } else {
             val = Object.keys(OPS)[Math.floor(Math.random() * 4)];
         }
@@ -162,7 +188,7 @@ class Game {
             const y = this.centerY + Math.sin(angle) * dist;
             let safe = true;
             for(let e of this.entities) {
-                if(Math.hypot(e.x - x, e.y - y) < r * 2.5) { safe = false; break; }
+                if(Math.hypot(e.x - x, e.y - y) < r * 2.6) { safe = false; break; }
             }
             if(safe) {
                 this.entities.push({ x, y, r, val, type, scale: 0, locked: false, alive: true, order: 0 });
@@ -181,15 +207,17 @@ class Game {
         for(let ent of this.entities) {
             if(Math.hypot(ent.x - tx, ent.y - ty) < ent.r + 15) {
                 if(!ent.locked) {
-                    // ロックの順番管理
                     const lockedCount = this.entities.filter(e => e.locked).length;
-                    if(lockedCount < 3) {
-                        ent.locked = true;
-                        ent.order = lockedCount + 1;
-                    }
+                    // 計算モードは3つまで、それ以外は制限なし
+                    if(this.isCalcMission && lockedCount >= 3) return;
+                    ent.locked = true;
+                    ent.order = lockedCount + 1;
                 } else {
                     ent.locked = false;
                     ent.order = 0;
+                    // 他のロック番号を振り直し
+                    let count = 1;
+                    this.entities.filter(e => e.locked).sort((a,b)=>a.order-b.order).forEach(e => e.order = count++);
                 }
                 this.updateFireButton();
                 return;
@@ -200,38 +228,58 @@ class Game {
     updateFireButton() {
         const locked = this.entities.filter(e => e.locked).sort((a,b) => a.order - b.order);
         const btn = document.getElementById('fire-btn');
-        // [数字] [記号] [数字] の3つがロックされているか
-        const ready = locked.length === 3 && locked[0].type === 'num' && locked[1].type === 'op' && locked[2].type === 'num';
+        let ready = false;
+        if(this.isCalcMission) {
+            ready = (locked.length === 3 && locked[0].type === 'num' && locked[1].type === 'op' && locked[2].type === 'num');
+        } else {
+            ready = locked.length > 0;
+        }
         if(ready) btn.classList.add('ready'); else btn.classList.remove('ready');
     }
 
     fire() {
+        if(this.state !== 'playing') return;
         const locked = this.entities.filter(e => e.locked).sort((a,b) => a.order - b.order);
-        if(locked.length < 3) return;
+        if(locked.length === 0) return;
 
-        const n1 = locked[0], op = locked[1], n2 = locked[2];
-        const result = OPS[op.val].calc(n1.val, n2.val);
-        const isCorrectResult = (result === this.targetNum);
-        const isCorrectOp = (op.val === this.targetOp);
-        const isHit = isCorrectResult && isCorrectOp;
+        let hitAll = true;
+        let totalGain = 0;
+
+        if(this.isCalcMission) {
+            const n1 = locked[0], op = locked[1], n2 = locked[2];
+            const result = OPS[op.val].calc(n1.val, n2.val);
+            const isCorrectResult = (result === this.targetNum);
+            const isCorrectOp = (op.val === this.targetOp);
+            hitAll = isCorrectResult && isCorrectOp;
+            totalGain = hitAll ? (500 + Math.floor(this.missionTimeLeft * 100)) : 0;
+            
+            if(!hitAll) {
+                const msg = !isCorrectResult ? "RESULT MISS" : "OPERATOR MISS";
+                this.addEffect(msg, this.centerX, this.centerY, "#FF4136", 24);
+            }
+        } else {
+            locked.forEach(ent => {
+                const isCorrect = (this.targetOp === 'even' ? ent.val % 2 === 0 : ent.val % 2 !== 0);
+                if(isCorrect) { totalGain += 150; } else { hitAll = false; }
+            });
+            if(hitAll) totalGain += Math.floor(this.missionTimeLeft * 50); // スピードボーナス
+        }
 
         locked.forEach(ent => {
             this.lasers.push({
                 x1: this.shipPos.x, y1: this.shipPos.y, x2: ent.x, y2: ent.y,
-                life: 0.2, color: isHit ? '#00FFFF' : '#FF4136', ent: ent
+                life: 0.2, color: hitAll ? '#00FFFF' : '#FF4136', ent: ent
             });
             ent.alive = false;
         });
 
-        if(isHit) {
-            const timeBonus = Math.floor(this.missionTimeLeft * 150);
-            this.score += 500 + timeBonus;
-            this.syncRatio = Math.min(100, this.syncRatio + 15);
-            this.addEffect(`PERFECT HIT! +${500+timeBonus}`, this.centerX, this.centerY - 50, "#00FFFF", 24);
+        if(hitAll) {
+            this.score += totalGain;
+            this.syncRatio = Math.min(100, this.syncRatio + (this.isCalcMission ? 20 : locked.length * 5));
+            this.addEffect(`HIT! +${totalGain}`, this.centerX, this.centerY - 40, "#00FFFF", 28);
+            this.updateCommander('happy');
         } else {
-            const msg = !isCorrectResult ? "RESULT MISS" : "OPERATOR MISS";
-            this.addEffect(msg, this.centerX, this.centerY - 50, "#FF4136", 24);
-            this.syncRatio = Math.max(0, this.syncRatio - 10);
+            this.syncRatio = Math.max(0, this.syncRatio - 15);
             this.updateCommander('panic');
         }
 
@@ -249,7 +297,7 @@ class Game {
         document.getElementById('score').innerText = this.score;
         document.getElementById('timer').innerText = Math.floor(this.timeLeft);
         document.getElementById('sync-gauge').style.width = this.syncRatio + '%';
-        document.getElementById('mission-timer-bar').style.width = (this.missionTimeLeft / 5 * 100) + '%';
+        document.getElementById('mission-timer-bar').style.width = (this.missionTimeLeft / 10 * 100) + '%';
     }
 
     loop(t) {
@@ -273,8 +321,13 @@ class Game {
 
     draw() {
         const ctx = this.ctx; ctx.fillStyle = '#050510'; ctx.fillRect(0, 0, this.width, this.height);
+        
+        // レーダー最外枠
         ctx.save(); ctx.translate(this.centerX, this.centerY);
-        ctx.strokeStyle = '#00FFFF'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(0,0,this.radarRadius,0,Math.PI*2); ctx.stroke();
+        ctx.strokeStyle = '#00FFFF'; ctx.lineWidth = 5; 
+        ctx.shadowBlur = 15; ctx.shadowColor = '#00FFFF';
+        ctx.beginPath(); ctx.arc(0,0,this.radarRadius,0,Math.PI*2); ctx.stroke();
+        ctx.shadowBlur = 0;
         ctx.strokeStyle = 'rgba(0, 255, 255, 0.1)'; ctx.lineWidth = 1;
         for(let i=0; i<this.radarRadius; i+=50) { ctx.beginPath(); ctx.arc(0,0,i,0,Math.PI*2); ctx.stroke(); }
         ctx.restore();
@@ -295,7 +348,7 @@ class Game {
             const s = ent.r * ent.scale;
             ctx.beginPath(); ctx.arc(ent.x, ent.y, s, 0, Math.PI*2);
             ctx.fillStyle = ent.locked ? 'rgba(255, 0, 255, 0.2)' : (ent.type === 'op' ? 'rgba(0, 255, 100, 0.05)' : 'rgba(0, 255, 255, 0.05)');
-            ctx.fill(); ctx.strokeStyle = ent.locked ? '#FF00FF' : (ent.type === 'op' ? '#00FF66' : '#00FFFF');
+            ctx.fill(); ctx.strokeStyle = ent.locked ? '#FF00FF' : (ent.type === 'op' ? OPS[ent.val].color : '#00FFFF');
             ctx.lineWidth = ent.locked ? 3 : 1; ctx.stroke();
             if(ent.locked) this.drawLockBracket(ent.x, ent.y, s + 8, ent.order);
             ctx.fillStyle = ent.locked ? '#FF00FF' : 'white';
