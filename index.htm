@@ -5,239 +5,155 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Bubble Shot: Shrimp Edition (RUSH + MISSION)</title>
   <style>
-    body {
-      margin: 0; overflow: hidden; background-color: #111; color: white;
-      font-family: 'Helvetica Neue', 'Arial', sans-serif;
-      touch-action: none; user-select: none; -webkit-user-select: none;
-    }
-    #game-container {
-      position: relative; width: 100vw; height: 100dvh; overflow: hidden;
-      background-color: #050510;
-    }
+    body { margin: 0; overflow: hidden; background-color: #111; color: white; font-family: 'Helvetica Neue','Arial',sans-serif; touch-action: none; user-select: none; -webkit-user-select: none; }
+    #game-container { position: relative; width: 100vw; height: 100dvh; overflow: hidden; background-color: #050510; }
     canvas { display: block; width: 100%; height: 100%; }
 
-    #ui-layer {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      pointer-events: none; display: flex; flex-direction: column; justify-content: space-between;
-    }
+    #ui-layer { position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; display:flex; flex-direction:column; justify-content:space-between; }
 
     /* --- 上部 --- */
     #top-area {
-      height: 180px; display: flex; flex-direction: column; align-items: center;
-      justify-content: flex-start;
+      height: 180px; display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
       background: linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0));
-      z-index: 10; padding-top: 10px; box-sizing: border-box; position: relative;
+      z-index:10; padding-top:10px; box-sizing:border-box; position:relative;
     }
 
     #commander-window {
-      position: absolute; top: 10px; left: 10px;
-      width: 70px; height: 70px;
+      position:absolute; top:10px; left:10px;
+      width:70px; height:70px;
       background: rgba(0, 20, 40, 0.6);
       border: 2px solid #00FFFF; border-radius: 10px;
       clip-path: polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%);
-      pointer-events: auto; display: flex; justify-content: center; align-items: center;
+      pointer-events:auto; display:flex; justify-content:center; align-items:center;
       box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
-      z-index: 25; backdrop-filter: blur(2px);
+      z-index:25; backdrop-filter: blur(2px);
     }
-    #comm-canvas { width: 100%; height: 100%; }
-    #comm-label {
-      position: absolute; bottom: 2px; right: 4px;
-      font-size: 8px; color: #00FFFF; font-family: monospace; opacity: 0.8;
-    }
+    #comm-canvas { width:100%; height:100%; }
+    #comm-label { position:absolute; bottom:2px; right:4px; font-size:8px; color:#00FFFF; font-family: monospace; opacity:0.8; }
 
     #manual-shuffle-btn {
-      position: absolute; top: 15px; left: 90px;
-      width: 40px; height: 40px; border-radius: 50%;
-      background: rgba(255, 165, 0, 0.1); border: 2px solid #FFA500;
-      color: #FFA500; box-shadow: 0 0 10px rgba(255, 165, 0, 0.2); font-size: 18px;
-      display: flex; justify-content: center; align-items: center;
-      pointer-events: auto; cursor: pointer; z-index: 20;
-      backdrop-filter: blur(4px);
+      position:absolute; top:15px; left:90px;
+      width:40px; height:40px; border-radius:50%;
+      background: rgba(255,165,0,0.1); border:2px solid #FFA500;
+      color:#FFA500; box-shadow:0 0 10px rgba(255,165,0,0.2); font-size:18px;
+      display:flex; justify-content:center; align-items:center;
+      pointer-events:auto; cursor:pointer; z-index:20; backdrop-filter: blur(4px);
     }
     #manual-shuffle-btn:active { transform: scale(0.9); }
 
     #mode-display {
-      position: absolute; top: 20px; right: 15px;
-      font-size: 12px; font-weight: bold; color: #888; letter-spacing: 1px;
-      border: 1px solid #444; padding: 2px 6px; border-radius: 4px;
+      position:absolute; top:20px; right:15px;
+      font-size:12px; font-weight:bold; color:#888; letter-spacing:1px;
+      border:1px solid #444; padding:2px 6px; border-radius:4px;
       background: rgba(0,0,0,0.2);
     }
 
-    #time-bar-wrapper {
-      width: 55%; height: 6px; background: #222; border-radius: 4px;
-      margin-top: 10px; border: 1px solid #555; position: relative; overflow: hidden;
-    }
-    #time-bar { width: 100%; height: 100%; background: #0074D9; transition: width 0.1s linear, background 0.3s; box-shadow: 0 0 10px currentColor; }
+    #time-bar-wrapper { width:55%; height:6px; background:#222; border-radius:4px; margin-top:10px; border:1px solid #555; position:relative; overflow:hidden; }
+    #time-bar { width:100%; height:100%; background:#0074D9; transition: width 0.1s linear, background 0.3s; box-shadow:0 0 10px currentColor; }
 
-    #target-label { font-size: 10px; color: #00FFFF; letter-spacing: 4px; margin-top: 5px; opacity: 0.8;}
+    #target-label { font-size:10px; color:#00FFFF; letter-spacing:4px; margin-top:5px; opacity:0.8; }
     #target-display {
-      font-size: 54px; font-weight: 900; color: #FFDC00; line-height: 1.0; margin: 0;
-      text-shadow: 0 0 20px rgba(255, 220, 0, 0.8);
-      font-family: 'Arial Black', sans-serif; letter-spacing: -2px;
-      text-align: center;
+      font-size:54px; font-weight:900; color:#FFDC00; line-height:1.0; margin:0;
+      text-shadow:0 0 20px rgba(255,220,0,0.8); font-family:'Arial Black',sans-serif; letter-spacing:-2px; text-align:center;
     }
     #sub-display {
-      margin-top: 6px;
-      font-family: monospace;
-      font-size: 12px;
-      color: #aaa;
-      text-shadow: 0 0 2px #000;
-      text-align: center;
-      padding: 2px 8px;
-      border: 1px solid #333;
-      border-radius: 6px;
-      max-width: 92%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      background: rgba(0,0,0,0.2);
+      margin-top:6px; font-family: monospace; font-size:12px; color:#aaa; text-shadow:0 0 2px #000;
+      text-align:center; padding:2px 8px; border:1px solid #333; border-radius:6px;
+      max-width:92%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; background: rgba(0,0,0,0.2);
     }
 
-    #status-bar {
-      color: #aaa; font-family: monospace; font-size: 16px; display: flex; gap: 18px;
-      font-weight: bold; margin-top: 6px; text-shadow: 0 0 2px #000;
-    }
+    #status-bar { color:#aaa; font-family: monospace; font-size:16px; display:flex; gap:18px; font-weight:bold; margin-top:6px; text-shadow:0 0 2px #000; }
 
-    /* AUTO LOCK（MISSION用） */
+    /* AUTO LOCK */
     #auto-lock-btn {
-      position: absolute; bottom: 100px; right: 20px;
-      width: 62px; height: 62px; border-radius: 50%;
+      position:absolute; bottom: 100px; right: 20px;
+      width: 64px; height: 64px; border-radius: 50%;
       background: rgba(255, 215, 0, 0.18); border: 2px solid #FFD700; color: #FFD700;
-      display: flex; flex-direction: column; justify-content: center; align-items: center;
-      font-size: 10px; font-weight: 900; text-align: center;
-      box-shadow: 0 0 15px #FFD700; cursor: pointer; pointer-events: auto; z-index: 30;
-      animation: pulse 2s infinite; line-height: 1.1;
+      display:flex; flex-direction:column; justify-content:center; align-items:center;
+      font-size:10px; font-weight:900; text-align:center;
+      box-shadow: 0 0 15px #FFD700; cursor:pointer; pointer-events:auto; z-index:30;
+      animation: pulse 2s infinite; line-height:1.1;
     }
-    #auto-lock-btn.hidden { display: none !important; }
+    #auto-lock-btn.hidden { display:none !important; }
     .ja-sub { font-size: 8px; font-weight: normal; opacity: 0.8; }
-    .trial-badge {
-      position: absolute; top: -5px; right: -5px; background: #FF4136; color: #fff;
-      font-size: 8px; padding: 2px 4px; border-radius: 4px; font-weight: bold;
-    }
-    @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); }
-      70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
-    }
+    .trial-badge { position:absolute; top:-5px; right:-5px; background:#FF4136; color:#fff; font-size:8px; padding:2px 4px; border-radius:4px; font-weight:bold; }
+    @keyframes pulse { 0% { box-shadow:0 0 0 0 rgba(255,215,0,0.7);} 70% { box-shadow:0 0 0 10px rgba(255,215,0,0);} 100% { box-shadow:0 0 0 0 rgba(255,215,0,0);} }
 
     /* --- 下部 --- */
     #bottom-area {
-      height: 190px; display: flex; flex-direction: column; align-items: center;
-      justify-content: flex-end; padding-bottom: 28px;
+      height:190px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding-bottom:28px;
       background: linear-gradient(to top, rgba(0,20,30,0.95) 60%, rgba(0,0,0,0));
-      z-index: 10;
+      z-index:10;
     }
-
     #guide-msg {
-      color: #00FFFF; font-size: 14px; margin-bottom: 6px; min-height: 42px;
-      text-shadow: 0 0 5px #00FFFF; letter-spacing: 1px; text-align: center; line-height: 1.3;
-      transition: all 0.3s;
-      padding: 0 12px;
+      color:#00FFFF; font-size:14px; margin-bottom:6px; min-height:42px;
+      text-shadow:0 0 5px #00FFFF; letter-spacing:1px; text-align:center; line-height:1.3;
+      transition: all 0.3s; padding:0 12px;
     }
-    #guide-msg .sub { font-size: 10px; color: #aaa; display: block; margin-top: 2px; transition: all 0.3s;}
-
-    #guide-msg.fever-mode-text {
-      font-size: 22px; color: #FF4136; font-weight: 900; text-shadow: 0 0 10px #FF4136;
-    }
-    #guide-msg.fever-mode-text .sub {
-      font-size: 13px; color: #FFD700; font-weight: bold;
-    }
-
+    #guide-msg .sub { font-size:10px; color:#aaa; display:block; margin-top:2px; transition: all 0.3s; }
     #formula-bar {
-      min-height: 30px; margin-bottom: 14px; font-size: 22px; color: #FFF; font-family: monospace;
-      font-weight: bold; text-shadow: 0 0 5px #00FFFF, 0 0 10px #00FFFF;
-      white-space: nowrap; max-width: 90%; overflow: hidden; text-overflow: ellipsis;
+      min-height:30px; margin-bottom:14px; font-size:22px; color:#FFF; font-family: monospace; font-weight:bold;
+      text-shadow:0 0 5px #00FFFF, 0 0 10px #00FFFF; white-space:nowrap; max-width:90%; overflow:hidden; text-overflow:ellipsis;
     }
-
-    #btn-group { display: flex; gap: 18px; align-items: center; }
+    #btn-group { display:flex; gap:18px; align-items:center; }
     #fire-btn {
-      width: 150px; height: 60px; background: rgba(255, 65, 54, 0.1); border: 2px solid #555;
-      color: #555; font-size: 24px; font-weight: 900; letter-spacing: 4px; display: flex;
-      justify-content: center; align-items: center;
+      width:150px; height:60px; background: rgba(255,65,54,0.1); border:2px solid #555;
+      color:#555; font-size:24px; font-weight:900; letter-spacing:4px; display:flex;
+      justify-content:center; align-items:center;
       clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
-      transition: all 0.2s; cursor: pointer; pointer-events: none;
+      transition: all 0.2s; cursor:pointer; pointer-events:none;
     }
-    #fire-btn.ready {
-      background: rgba(255, 65, 54, 0.85); border: none; color: white; box-shadow: 0 0 30px #FF4136;
-      pointer-events: auto; transform: scale(1.05); text-shadow: 0 0 10px white;
-    }
-    #fire-btn:active { transform: scale(0.95); background: #fff; color: #FF4136; }
+    #fire-btn.ready { background: rgba(255,65,54,0.85); border:none; color:white; box-shadow:0 0 30px #FF4136; pointer-events:auto; transform: scale(1.05); text-shadow:0 0 10px white; }
+    #fire-btn:active { transform: scale(0.95); background:#fff; color:#FF4136; }
     #clear-btn {
-      width: 50px; height: 50px; border-radius: 50%; border: 1px solid #00FFFF; color: #00FFFF;
-      display: flex; justify-content: center; align-items: center; font-size: 10px; cursor: pointer;
-      background: rgba(0, 255, 255, 0.05); pointer-events: auto; box-shadow: 0 0 5px rgba(0, 255, 255, 0.2);
+      width:50px; height:50px; border-radius:50%; border:1px solid #00FFFF; color:#00FFFF;
+      display:flex; justify-content:center; align-items:center; font-size:10px; cursor:pointer;
+      background: rgba(0,255,255,0.05); pointer-events:auto; box-shadow:0 0 5px rgba(0,255,255,0.2);
     }
 
     /* --- 画面 --- */
     #menu-screen, #gameover-screen {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(5, 10, 15, 0.95);
-      display: flex; flex-direction: column;
-      justify-content: flex-start; align-items: center; pointer-events: auto; z-index: 50;
-      text-align: center; box-sizing: border-box; padding: 40px 20px; overflow-y: auto;
+      position:absolute; top:0; left:0; width:100%; height:100%;
+      background: rgba(5,10,15,0.95);
+      display:flex; flex-direction:column; justify-content:flex-start; align-items:center;
+      pointer-events:auto; z-index:50; text-align:center; box-sizing:border-box; padding:40px 20px; overflow-y:auto;
     }
-    #menu-screen { justify-content: center; }
-
-    h1 {
-      color: #00FFFF; font-size: 34px; font-weight: 900;
-      text-shadow: 0 0 10px #00FFFF, 0 0 30px #00FFFF;
-      margin: 10px 0; letter-spacing: 4px; font-style: italic; font-family: 'Arial Black', sans-serif;
-    }
-
+    #menu-screen { justify-content:center; }
+    h1 { color:#00FFFF; font-size:34px; font-weight:900; text-shadow:0 0 10px #00FFFF, 0 0 30px #00FFFF; margin:10px 0; letter-spacing:4px; font-style: italic; font-family:'Arial Black',sans-serif; }
     .btn {
-      padding: 14px 26px; font-size: 16px; background: transparent; border: 2px solid #FFDC00;
-      color: #FFDC00; cursor: pointer; font-weight: bold;
-      box-shadow: 0 0 10px #FFDC00, inset 0 0 10px #FFDC00;
-      transition: all 0.2s; margin-top: 12px; text-transform: uppercase; letter-spacing: 2px;
-      width: 100%; max-width: 340px;
+      padding:14px 26px; font-size:16px; background: transparent; border:2px solid #FFDC00;
+      color:#FFDC00; cursor:pointer; font-weight:bold;
+      box-shadow:0 0 10px #FFDC00, inset 0 0 10px #FFDC00;
+      transition: all 0.2s; margin-top:12px; text-transform: uppercase; letter-spacing:2px;
+      width:100%; max-width:340px;
     }
-    .btn:hover { background: #FFDC00; color: #000; box-shadow: 0 0 30px #FFDC00; }
+    .btn:hover { background:#FFDC00; color:#000; box-shadow:0 0 30px #FFDC00; }
+    .btn-blue { border-color:#00FFFF; color:#00FFFF; box-shadow:0 0 8px #00FFFF, inset 0 0 8px #00FFFF; }
+    .btn-blue:hover { background:#00FFFF; color:#000; box-shadow:0 0 28px #00FFFF; }
+    .btn-red { border-color:#FF4136; color:#FF4136; box-shadow:0 0 8px #FF4136, inset 0 0 8px #FF4136; }
+    .btn-red:hover { background:#FF4136; color:#000; box-shadow:0 0 28px #FF4136; }
+    .btn-link { border-color:#AAAAAA; color:#AAAAAA; box-shadow:none; border-style:dashed; font-size:12px; }
+    .btn-link:hover { background:#555; color:#fff; }
 
-    .btn-blue { border-color: #00FFFF; color: #00FFFF; box-shadow: 0 0 8px #00FFFF, inset 0 0 8px #00FFFF; }
-    .btn-blue:hover { background: #00FFFF; color: #000; box-shadow: 0 0 28px #00FFFF; }
+    .rule-box { font-size:13px; color:#ccc; line-height:1.6; margin-bottom:18px; text-align:left; display:inline-block; max-width:360px; }
+    .rule-box .en { color:#fff; font-weight:bold; display:block; margin-bottom:2px; }
+    .rule-box .ja { color:#888; font-size:11px; display:block; margin-bottom:10px; }
 
-    .btn-red { border-color: #FF4136; color: #FF4136; box-shadow: 0 0 8px #FF4136, inset 0 0 8px #FF4136; }
-    .btn-red:hover { background: #FF4136; color: #000; box-shadow: 0 0 28px #FF4136; }
+    .hidden { display:none !important; }
 
-    .btn-link {
-      border-color: #AAAAAA; color: #AAAAAA; box-shadow: none; border-style: dashed; font-size: 12px;
-    }
-    .btn-link:hover { background: #555; color: #fff; }
+    #mascot-canvas-menu, #mascot-canvas-over { width:100px; height:100px; margin-bottom:10px; }
 
-    .rule-box {
-      font-size: 13px; color: #ccc; line-height: 1.6; margin-bottom: 18px; text-align: left; display: inline-block;
-      max-width: 360px;
-    }
-    .rule-box .en { color: #fff; font-weight: bold; display: block; margin-bottom: 2px;}
-    .rule-box .ja { color: #888; font-size: 11px; display: block; margin-bottom: 10px;}
-
-    .hidden { display: none !important; }
-
-    #mascot-canvas-menu, #mascot-canvas-over {
-      width: 100px; height: 100px; margin-bottom: 10px;
-    }
-
-    #rank-list-container {
-      width: 100%; max-width: 360px; margin-bottom: 20px; text-align: left;
-      border-top: 1px solid #333; margin-top: 16px;
-    }
-    .rank-item {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 8px 6px; border-bottom: 1px solid #222; font-family: monospace;
-    }
-    .rank-item.active {
-      color: #FFDC00;
-      background: linear-gradient(90deg, transparent, rgba(255, 220, 0, 0.12), transparent);
-      font-weight: bold; text-shadow: 0 0 5px #FFDC00;
-    }
-    .rank-name-col { flex-grow: 1; padding-left: 10px; display: flex; flex-direction: column;}
-    .rank-name-en { font-size: 14px; color: #ccc; }
-    .rank-name-ja { font-size: 10px; color: #666; }
-    .active .rank-name-en { color: #FFDC00; }
-    .active .rank-name-ja { color: #AA8800; }
-    .rank-score { width: 70px; text-align: right; font-size: 14px; color: #888; }
-    .rank-arrow { width: 52px; color: #FF4136; text-align: right; font-weight: bold; font-size: 12px; animation: blink 0.5s infinite alternate; }
-    @keyframes blink { from { opacity: 1; } to { opacity: 0.3; } }
+    #rank-list-container { width:100%; max-width:360px; margin-bottom:20px; text-align:left; border-top:1px solid #333; margin-top:16px; }
+    .rank-item { display:flex; justify-content:space-between; align-items:center; padding:8px 6px; border-bottom:1px solid #222; font-family: monospace; }
+    .rank-item.active { color:#FFDC00; background: linear-gradient(90deg, transparent, rgba(255,220,0,0.12), transparent); font-weight:bold; text-shadow:0 0 5px #FFDC00; }
+    .rank-name-col { flex-grow:1; padding-left:10px; display:flex; flex-direction:column; }
+    .rank-name-en { font-size:14px; color:#ccc; }
+    .rank-name-ja { font-size:10px; color:#666; }
+    .active .rank-name-en { color:#FFDC00; }
+    .active .rank-name-ja { color:#AA8800; }
+    .rank-score { width:70px; text-align:right; font-size:14px; color:#888; }
+    .rank-arrow { width:52px; color:#FF4136; text-align:right; font-weight:bold; font-size:12px; animation: blink 0.5s infinite alternate; }
+    @keyframes blink { from { opacity:1; } to { opacity:0.3; } }
   </style>
 </head>
 
@@ -251,7 +167,6 @@
         <canvas id="comm-canvas" width="70" height="70"></canvas>
         <div id="comm-label">CMD</div>
       </div>
-
       <div id="manual-shuffle-btn" onclick="game.manualShuffle()">↻</div>
       <div id="mode-display">MODE: MENU</div>
 
@@ -269,10 +184,11 @@
 
     <div style="flex-grow: 1;"></div>
 
+    <!-- ★RUSH/MISSION 共通で表示する（プレイ中のみ） -->
     <div id="auto-lock-btn" onclick="game.autoLock()">
       <div class="trial-badge">FREE</div>
-      AUTO<br>LOCK
-      <span class="ja-sub">自動</span>
+      <span id="auto-lock-title">AUTO<br>LOCK</span>
+      <span class="ja-sub" id="auto-lock-sub">自動ロック</span>
     </div>
 
     <div id="bottom-area">
@@ -297,28 +213,16 @@
 
     <div class="rule-box">
       <span class="en">RUSH MODE (Main)</span>
-      <span class="ja">奇数/偶数/昇順/降順の「ロックオン・ラッシュ」。テンポ重視で中毒性寄り。</span>
+      <span class="ja">奇数/偶数/昇順/降順の「ロックオン・ラッシュ」。AUTO LOCK対応。</span>
       <span class="en">MISSION MODE (Sub)</span>
-      <span class="ja">ターゲット数字を「指示つき（×のみ等）」で作る。脳トレ寄り。</span>
-      <span class="en">Hint</span>
-      <span class="ja">昇順/降順は数字が重複しない盤面。迷いを減らし気持ちよさ優先。</span>
+      <span class="ja">ターゲット数字を「指示つき（×のみ等）」で作る。AUTO LOCKで解ける式を自動ロック。</span>
     </div>
 
-    <button class="btn btn-blue" onclick="game.startRush('normal')">
-      START: RUSH (NORMAL)<br><span style="font-size:11px">20秒 / 0-30</span>
-    </button>
+    <button class="btn btn-blue" onclick="game.startRush('normal')">START: RUSH (NORMAL)<br><span style="font-size:11px">20秒 / 0-30</span></button>
+    <button class="btn btn-blue" onclick="game.startRush('hard')">START: RUSH (HARD)<br><span style="font-size:11px">20秒 / 0-50</span></button>
 
-    <button class="btn btn-blue" onclick="game.startRush('hard')">
-      START: RUSH (HARD)<br><span style="font-size:11px">20秒 / 0-50</span>
-    </button>
-
-    <button class="btn btn-red" onclick="game.startMission('normal')">
-      START: MISSION (NORMAL)<br><span style="font-size:11px">90秒 / 0-30</span>
-    </button>
-
-    <button class="btn btn-red" onclick="game.startMission('hard')">
-      START: MISSION (HARD)<br><span style="font-size:11px">90秒 / 0-50</span>
-    </button>
+    <button class="btn btn-red" onclick="game.startMission('normal')">START: MISSION (NORMAL)<br><span style="font-size:11px">90秒 / 0-30</span></button>
+    <button class="btn btn-red" onclick="game.startMission('hard')">START: MISSION (HARD)<br><span style="font-size:11px">90秒 / 0-50</span></button>
 
     <div style="margin-top: 10px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px;">
       <button class="btn btn-link" onclick="alert('Coming Soon!\\n準備中です。')">LINE STICKERS (Coming Soon)</button>
@@ -339,7 +243,6 @@
 /** =========================
  * 設定
  * ========================= */
-
 const OPS = {
   add: { label: '+', op: '+' },
   sub: { label: '-', op: '-' },
@@ -363,7 +266,6 @@ const MISSION_RULES = [
   { id: 'no_repeat', label: '同じ数字は禁止',         allowedOps: ['add','sub','mul','div'], requireOp: null, requireNums: 0, noRepeat: true }
 ];
 
-// ランク（適当に調整OK）
 const RANKS = [
   { min: 50000, nameEn: "WHITE SHRIMP",   nameJa: "シロエビ" },
   { min: 35000, nameEn: "ISE LOBSTER",    nameJa: "伊勢海老" },
@@ -377,7 +279,6 @@ const RANKS = [
 /** =========================
  * ユーティリティ
  * ========================= */
-
 function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
 function randInt(a, b){ return Math.floor(Math.random() * (b - a + 1)) + a; }
 function shuffle(arr){
@@ -387,10 +288,7 @@ function shuffle(arr){
   }
   return arr;
 }
-
-function opSymbol(opKey){
-  return OPS[opKey]?.label ?? '?';
-}
+function opSymbol(opKey){ return OPS[opKey]?.label ?? '?'; }
 function opExec(opKey, a, b){
   if(opKey === 'add') return a + b;
   if(opKey === 'sub') return a - b;
@@ -419,8 +317,8 @@ class Game {
     this.centerX = 0; this.centerY = 0; this.radarRadius = 0;
 
     // 状態
-    this.state = 'menu'; // menu | rush | mission | gameover
-    this.mode = 'menu';  // rush | mission
+    this.state = 'menu';
+    this.mode = 'menu';
     this.difficulty = 'normal';
     this.maxNum = 30;
 
@@ -435,15 +333,14 @@ class Game {
     this.bestCombo = 0;
 
     // ボード
-    this.entities = []; // {type:'num'|'op', val, x,y,r, selected, order, scale}
+    this.entities = [];
     this.formulaStack = [];
 
-    // ラッシュのルール
-    this.rushType = null;        // {id,label...}
-    this.rushExpected = null;    // asc/desc用 次の数字
-    this.rushNumbersUnique = []; // asc/desc用（重複なし）
+    // ラッシュ
+    this.rushType = null;
+    this.rushExpected = null;
 
-    // ミッションのルール
+    // ミッション
     this.targetNum = 0;
     this.missionRule = null;
 
@@ -453,7 +350,11 @@ class Game {
     this.bgScroll = 0;
     this.lastTime = 0;
 
-    // 初期描画
+    // ★ロックオン演出（司令→ターゲット）
+    this.lockAim = null; // {x,y,life,alpha}
+    this.lockFrom = { x: 45, y: 45 }; // 司令窓の概算位置
+    this.autoBusy = false;
+
     setTimeout(() => this.resize(), 60);
     window.addEventListener('resize', () => this.resize());
 
@@ -471,16 +372,9 @@ class Game {
   }
 
   /* ---------- UI ---------- */
-  setModeLabel(text){
-    document.getElementById('mode-display').innerText = text;
-  }
-  setTarget(label, value){
-    document.getElementById('target-label').innerText = label;
-    document.getElementById('target-display').innerText = value;
-  }
-  setSub(text){
-    document.getElementById('sub-display').innerText = text;
-  }
+  setModeLabel(text){ document.getElementById('mode-display').innerText = text; }
+  setTarget(label, value){ document.getElementById('target-label').innerText = label; document.getElementById('target-display').innerText = value; }
+  setSub(text){ document.getElementById('sub-display').innerText = text; }
   setGuide(main, sub, color){
     const msg = document.getElementById('guide-msg');
     msg.innerHTML = `${main}<span class="sub">${sub}</span>`;
@@ -496,6 +390,20 @@ class Game {
     if(isVisible) btn.classList.remove('hidden');
     else btn.classList.add('hidden');
   }
+  setAutoLockLabel(mode){
+    const title = document.getElementById('auto-lock-title');
+    const sub = document.getElementById('auto-lock-sub');
+    if(mode === 'rush'){
+      title.innerHTML = "AUTO<br>LOCK";
+      sub.textContent = "連続ロック";
+    } else if(mode === 'mission'){
+      title.innerHTML = "AUTO<br>LOCK";
+      sub.textContent = "式を自動";
+    } else {
+      title.innerHTML = "AUTO<br>LOCK";
+      sub.textContent = "—";
+    }
+  }
 
   updateUI(){
     document.getElementById('score-display').innerText = `SCORE: ${this.score}`;
@@ -503,7 +411,6 @@ class Game {
     document.getElementById('combo-display').innerText = `COMBO: ${this.combo}`;
     this.updateTimeBar();
   }
-
   updateTimeBar(){
     const bar = document.getElementById('time-bar');
     const maxT = (this.mode === 'rush') ? this.rushMaxTime : this.missionMaxTime;
@@ -523,6 +430,7 @@ class Game {
     this.setGuide('LOCK: [NUM]', '数字をロックせよ', '#00FFFF');
     this.setFormulaText('READY...', '#666');
     this.setAutoLockVisible(false);
+    this.setAutoLockLabel('menu');
 
     document.getElementById('menu-screen').classList.remove('hidden');
     document.getElementById('gameover-screen').classList.add('hidden');
@@ -534,7 +442,6 @@ class Game {
     this.width = window.innerWidth;
     this.height = window.innerHeight;
 
-    // reset transform (重要：リサイズでscaleが累積しないように)
     this.canvas.width = Math.floor(this.width * this.dpr);
     this.canvas.height = Math.floor(this.height * this.dpr);
     this.canvas.style.width = this.width + 'px';
@@ -556,25 +463,21 @@ class Game {
     this.difficulty = diff;
     this.maxNum = (diff === 'hard') ? 50 : 30;
 
-    this.score = 0;
-    this.combo = 0;
-    this.bestCombo = 0;
-
+    this.score = 0; this.combo = 0; this.bestCombo = 0;
     this.timeLeft = this.rushMaxTime;
 
-    this.entities = [];
-    this.formulaStack = [];
-    this.effects = [];
+    this.entities = []; this.formulaStack = []; this.effects = [];
+    this.autoBusy = false;
 
     this.setModeLabel(`MODE: RUSH / ${diff.toUpperCase()} (0-${this.maxNum})`);
-    this.setAutoLockVisible(false);
+    this.setAutoLockVisible(true);      // ★RUSHでも表示
+    this.setAutoLockLabel('rush');      // ★RUSH用ラベル
     this.setFormulaText('RUSH MODE', '#00FFFF');
 
     document.getElementById('menu-screen').classList.add('hidden');
     document.getElementById('gameover-screen').classList.add('hidden');
 
     this.updateCommander('normal');
-
     this.startRushRound(true);
     this.updateUI();
   }
@@ -585,18 +488,15 @@ class Game {
     this.difficulty = diff;
     this.maxNum = (diff === 'hard') ? 50 : 30;
 
-    this.score = 0;
-    this.combo = 0;
-    this.bestCombo = 0;
-
+    this.score = 0; this.combo = 0; this.bestCombo = 0;
     this.timeLeft = this.missionMaxTime;
 
-    this.entities = [];
-    this.formulaStack = [];
-    this.effects = [];
+    this.entities = []; this.formulaStack = []; this.effects = [];
+    this.autoBusy = false;
 
     this.setModeLabel(`MODE: MISSION / ${diff.toUpperCase()} (0-${this.maxNum})`);
     this.setAutoLockVisible(true);
+    this.setAutoLockLabel('mission');
 
     document.getElementById('menu-screen').classList.add('hidden');
     document.getElementById('gameover-screen').classList.add('hidden');
@@ -610,45 +510,45 @@ class Game {
   }
 
   /* =========================================================
+   * ロックオン演出（司令→ターゲット）
+   * ========================================================= */
+  setLockAim(x, y){
+    this.lockAim = { x, y, life: 22, alpha: 1.0 };
+  }
+
+  /* =========================================================
    * RUSH MODE
    * ========================================================= */
   startRushRound(isFirst=false){
     this.rushType = RUSH_TYPES[randInt(0, RUSH_TYPES.length - 1)];
     this.combo = 0;
     this.rushExpected = null;
-    this.rushNumbersUnique = [];
 
-    // 盤面生成
     this.entities = [];
 
     const count = (this.width < 400) ? 22 : (this.width > 800 ? 36 : 28);
     const r = Math.max(16, Math.min(24, Math.min(this.width, this.height) / 16));
 
     if(this.rushType.id === 'asc' || this.rushType.id === 'desc'){
-      // 昇順/降順：数字重複なし盤面（ここがマスター要件）
       const pool = [];
       for(let i=0; i<=this.maxNum; i++) pool.push(i);
       shuffle(pool);
       const chosen = pool.slice(0, Math.min(count, pool.length));
-      this.rushNumbersUnique = chosen.slice();
       this.rushExpected = (this.rushType.id === 'asc') ? Math.min(...chosen) : Math.max(...chosen);
-
-      for(let n of chosen){
-        this.spawnEntityNum(n, r);
-      }
+      for(let n of chosen) this.spawnEntityNum(n, r);
     } else {
-      // 奇数/偶数：通常ランダム（重複あり）
-      for(let i=0; i<count; i++){
-        this.spawnEntityNum(randInt(0, this.maxNum), r);
-      }
+      for(let i=0; i<count; i++) this.spawnEntityNum(randInt(0, this.maxNum), r);
     }
 
-    // UI
     this.setTarget('MODE', this.rushType.ui);
-    this.setSub(`${this.rushType.labelEn} / ${this.rushType.labelJa}`);
+    if(this.rushType.id === 'asc' || this.rushType.id === 'desc'){
+      this.setSub(`${this.rushType.labelEn} / NEXT: ${this.rushExpected}`);
+    } else {
+      this.setSub(`${this.rushType.labelEn} / ${this.rushType.labelJa}`);
+    }
     this.setGuide(
       `${this.rushType.labelEn}`,
-      `${this.rushType.labelJa}（MISSでCOMBOリセット）`,
+      `${this.rushType.labelJa}（AUTO LOCKで連続ロック）`,
       '#FFDC00'
     );
 
@@ -671,9 +571,7 @@ class Game {
       }
     }
     if(!safe) return;
-    this.entities.push({
-      type:'num', val:value, x, y, r, selected:false, order:null, scale:0
-    });
+    this.entities.push({ type:'num', val:value, x, y, r, selected:false, order:null, scale:0 });
   }
 
   rushIsValidHit(ent){
@@ -686,79 +584,61 @@ class Game {
     return false;
   }
 
-  rushOnHit(ent, index){
-    // 正解
+  rushOnHit(entRef){
+    // entRefは参照。今の配列内インデックスを取り直す
+    const idx = this.entities.indexOf(entRef);
+    if(idx < 0) return;
+
     this.combo++;
     this.bestCombo = Math.max(this.bestCombo, this.combo);
 
-    // スコア（シンプル＆伸びる）
     let base = 120;
-    if(this.rushType.id === 'asc' || this.rushType.id === 'desc') base = 160; // 迷いゼロの気持ちよさに報酬
+    if(this.rushType.id === 'asc' || this.rushType.id === 'desc') base = 160;
     const mult = 1 + Math.min(2.0, this.combo * 0.06);
     const add = Math.floor(base * mult);
-
     this.score += add;
 
-    this.addEffect({ text: `LOCK +${add}`, x: ent.x, y: ent.y - 25, color: '#FFDC00', size: 18, life: 40 });
+    this.addEffect({ text: `LOCK +${add}`, x: entRef.x, y: entRef.y - 25, color: '#FFDC00', size: 18, life: 40 });
     this.updateCommander('happy');
 
-    // エンティティ削除
-    this.entities.splice(index, 1);
+    this.entities.splice(idx, 1);
 
-    // asc/desc は期待値更新
     if(this.rushType.id === 'asc' || this.rushType.id === 'desc'){
       const remainVals = this.entities.map(e => e.val);
       if(remainVals.length === 0){
-        // ラウンド終了 → 次ルール
         this.startRushRound(false);
       }else{
         this.rushExpected = (this.rushType.id === 'asc') ? Math.min(...remainVals) : Math.max(...remainVals);
         this.setSub(`${this.rushType.labelEn} / NEXT: ${this.rushExpected}`);
       }
     } else {
-      // odd/even：補充してテンポ維持
       if(this.entities.length < 14){
         const r = Math.max(16, Math.min(24, Math.min(this.width, this.height) / 16));
-        for(let i=0; i<10; i++){
-          this.spawnEntityNum(randInt(0, this.maxNum), r);
-        }
+        for(let i=0; i<10; i++) this.spawnEntityNum(randInt(0, this.maxNum), r);
       }
     }
 
-    // 一定コンボで“演出強化”（軽い中毒要素）
-    if(this.combo > 0 && this.combo % 12 === 0){
-      this.addEffect({ text: 'SYNC UP', color: '#FF00FF', size: 28 });
-    }
-
     this.updateUI();
-    setTimeout(() => {
-      if(this.state === 'rush') this.updateCommander('normal');
-    }, 220);
+    setTimeout(() => { if(this.state === 'rush') this.updateCommander('normal'); }, 220);
   }
 
   rushOnMiss(ent){
-    // ミス：コンボリセット（ただし即死ではない）
     this.addEffect({ text:'MISS', x: ent.x, y: ent.y, color:'#888', size: 24, life: 35 });
     this.combo = 0;
     this.updateCommander('panic');
     this.updateUI();
-    setTimeout(() => {
-      if(this.state === 'rush') this.updateCommander('normal');
-    }, 380);
+    setTimeout(() => { if(this.state === 'rush') this.updateCommander('normal'); }, 380);
   }
 
   /* =========================================================
-   * MISSION MODE（数字を作る）
+   * MISSION MODE
    * ========================================================= */
   generateMission(isFirst=false){
-    // ターゲット
     this.targetNum = randInt(0, this.maxNum);
 
-    // ルール（「重すぎ」回避のため、たまに優しめを混ぜる）
     const pick = Math.random();
     let rule;
     if(pick < 0.35){
-      // 軽め
       rule = (Math.random() < 0.5) ? MISSION_RULES.find(r=>r.id==='mul_only') : MISSION_RULES.find(r=>r.id==='add_only');
     } else {
       rule = MISSION_RULES[randInt(0, MISSION_RULES.length - 1)];
@@ -767,25 +647,16 @@ class Game {
 
     this.setTarget('TARGET', String(this.targetNum));
     this.setSub(`MISSION: ${rule.label}`);
-
-    this.setGuide(
-      `TARGET: ${this.targetNum}`,
-      `指示：${rule.label} / 数字→記号→数字…`,
-      '#FFDC00'
-    );
+    this.setGuide(`TARGET: ${this.targetNum}`, `指示：${rule.label} / AUTO LOCKで自動ロック`, '#FFDC00');
 
     this.addEffect({ text: isFirst ? 'MISSION START' : 'NEXT TARGET', color: '#00FFFF', size: 24 });
   }
 
   replenishMissionEntities(reset=false){
     if(reset) this.entities = [];
-
     const targetCount = (this.width < 400) ? 24 : (this.width > 800 ? 38 : 30);
     const r = Math.max(16, Math.min(24, Math.min(this.width, this.height) / 16));
-
-    while(this.entities.length < targetCount){
-      this.spawnMissionEntity(r);
-    }
+    while(this.entities.length < targetCount) this.spawnMissionEntity(r);
   }
 
   spawnMissionEntity(r){
@@ -805,12 +676,10 @@ class Game {
     }
     if(!safe) return;
 
-    // num/op 混合
     const ent = { type: (Math.random() < 0.55 ? 'num' : 'op'), val: 0, x, y, r, selected:false, order:null, scale:0 };
-    if(ent.type === 'num'){
-      ent.val = randInt(0, this.maxNum);
-    } else {
-      const keys = Object.keys(OPS); // add/sub/mul/div
+    if(ent.type === 'num') ent.val = randInt(0, this.maxNum);
+    else {
+      const keys = Object.keys(OPS);
       ent.val = keys[randInt(0, keys.length - 1)];
     }
     this.entities.push(ent);
@@ -824,19 +693,18 @@ class Game {
     this.checkFireReady();
   }
 
+  allowedOpsText(){
+    const r = this.missionRule;
+    if(!r) return '—';
+    return r.allowedOps.map(k => opSymbol(k)).join(' ');
+  }
+
   updateGuideByMode(){
     if(this.mode === 'rush'){
-      // ラッシュは固定表示
       if(!this.rushType) return;
-      this.setGuide(
-        `${this.rushType.labelEn}`,
-        `${this.rushType.labelJa}（MISSでCOMBOリセット）`,
-        '#FFDC00'
-      );
+      this.setGuide(`${this.rushType.labelEn}`, `${this.rushType.labelJa}（AUTO LOCKで連続ロック）`, '#FFDC00');
       return;
     }
-
-    // ミッション（式構築）
     const msg = document.getElementById('guide-msg');
     if (this.formulaStack.length === 0) {
       msg.innerHTML = `LOCK: [NUMBER]<span class="sub">数字をロックせよ（${this.missionRule?.label ?? '—'}）</span>`;
@@ -853,12 +721,6 @@ class Game {
     }
   }
 
-  allowedOpsText(){
-    const r = this.missionRule;
-    if(!r) return '—';
-    return r.allowedOps.map(k => opSymbol(k)).join(' ');
-  }
-
   updateFormulaBar(){
     const bar = document.getElementById('formula-bar');
     if (this.mode !== 'mission'){
@@ -866,22 +728,16 @@ class Game {
       bar.style.color = "#00FFFF";
       return;
     }
-
     if (this.formulaStack.length === 0) { bar.innerText = "STANDBY..."; bar.style.color = "#666"; return; }
 
-    let displayStr = "";
-    if (this.formulaStack.length >= 1) {
-      displayStr = `${this.formulaStack[0].entity.val}`;
-    }
+    let displayStr = `${this.formulaStack[0].entity.val}`;
     for (let i = 1; i < this.formulaStack.length; i += 2) {
       const opEnt = this.formulaStack[i].entity;
       const opStr = opSymbol(opEnt.val);
       if (i + 1 < this.formulaStack.length) {
         const numEnt = this.formulaStack[i+1].entity;
         displayStr = `${displayStr} ${opStr} ${numEnt.val}`;
-      } else {
-        displayStr = `${displayStr} ${opStr} ?`;
-      }
+      } else displayStr = `${displayStr} ${opStr} ?`;
     }
     bar.innerText = displayStr;
     bar.style.color = "#00FFFF";
@@ -889,66 +745,49 @@ class Game {
 
   checkFireReady(){
     const btn = document.getElementById('fire-btn');
-
     if(this.mode !== 'mission'){
-      // ラッシュはFIRE無効
       btn.classList.remove('ready');
       btn.style.pointerEvents = 'none';
       return;
     }
-
     const len = this.formulaStack.length;
-    if (len >= 1 && this.formulaStack[len-1].entity.type === 'num') {
-      btn.classList.add('ready');
-    } else {
-      btn.classList.remove('ready');
-    }
+    if (len >= 1 && this.formulaStack[len-1].entity.type === 'num') btn.classList.add('ready');
+    else btn.classList.remove('ready');
   }
 
   trySelectMission(ent){
     if (ent.selected) return;
-
     const lastItem = this.formulaStack[this.formulaStack.length - 1];
 
     if (!lastItem) {
-      if (ent.type !== 'num') {
-        this.addEffect({text: "Select NUMBER!", x: ent.x, y: ent.y, color: '#FF4136', size: 16});
-        return;
-      }
+      if (ent.type !== 'num') { this.addEffect({text: "Select NUMBER!", x: ent.x, y: ent.y, color:'#FF4136', size:16}); return; }
     } else {
-      if (lastItem.entity.type === 'num' && ent.type === 'num') {
-        this.addEffect({text: "Select SYMBOL!", x: ent.x, y: ent.y, color: '#FF4136', size: 16});
-        return;
-      }
-      if (lastItem.entity.type === 'op' && ent.type === 'op') {
-        this.addEffect({text: "Select NUMBER!", x: ent.x, y: ent.y, color: '#FF4136', size: 16});
-        return;
-      }
-      // 記号の許可チェック
+      if (lastItem.entity.type === 'num' && ent.type === 'num') { this.addEffect({text: "Select SYMBOL!", x: ent.x, y: ent.y, color:'#FF4136', size:16}); return; }
+      if (lastItem.entity.type === 'op' && ent.type === 'op') { this.addEffect({text: "Select NUMBER!", x: ent.x, y: ent.y, color:'#FF4136', size:16}); return; }
+
       if(ent.type === 'op'){
         if(this.missionRule && !this.missionRule.allowedOps.includes(ent.val)){
-          this.addEffect({text: "OP NOT ALLOWED", x: ent.x, y: ent.y, color:'#FF4136', size: 14});
+          this.addEffect({text: "OP NOT ALLOWED", x: ent.x, y: ent.y, color:'#FF4136', size:14});
           return;
         }
       }
-      // 数字重複禁止チェック（選択中の数字に同じ値があるか）
       if(ent.type === 'num' && this.missionRule?.noRepeat){
-        const usedNums = this.formulaStack
-          .filter(x => x.entity.type === 'num')
-          .map(x => x.entity.val);
+        const usedNums = this.formulaStack.filter(x => x.entity.type === 'num').map(x => x.entity.val);
         if(usedNums.includes(ent.val)){
-          this.addEffect({text: "NO REPEAT", x: ent.x, y: ent.y, color:'#FF4136', size: 14});
+          this.addEffect({text: "NO REPEAT", x: ent.x, y: ent.y, color:'#FF4136', size:14});
           return;
         }
       }
     }
 
-    // 選択確定
+    // ★ターゲットを選択していく演出
+    this.setLockAim(ent.x, ent.y);
+
     ent.selected = true;
     ent.order = this.formulaStack.length + 1;
     this.formulaStack.push({ entity: ent, time: Date.now() });
 
-    this.addEffect({text: 'LOCK', x: ent.x, y: ent.y - 28, color: '#00FFFF', life: 12, size: 12});
+    this.addEffect({text:'LOCK', x: ent.x, y: ent.y - 28, color:'#00FFFF', life:12, size:12});
     this.updateFormulaBar();
     this.updateGuideByMode();
     this.checkFireReady();
@@ -958,11 +797,10 @@ class Game {
     if (this.state !== 'mission') return;
     if (this.formulaStack.length === 0) return;
     if (this.formulaStack[this.formulaStack.length-1].entity.type === 'op') {
-      this.addEffect({text: "Finish with NUMBER!", color: '#FF4136', size: 18});
+      this.addEffect({text: "Finish with NUMBER!", color:'#FF4136', size:18});
       return;
     }
 
-    // ルールチェック用
     const usedOps = [];
     const usedNums = [];
     for(const s of this.formulaStack){
@@ -970,35 +808,20 @@ class Game {
       if(s.entity.type === 'num') usedNums.push(s.entity.val);
     }
 
-    // 数字数制約
     if(this.missionRule?.requireNums && usedNums.length < this.missionRule.requireNums){
-      this.addEffect({text: "NEED 3 NUMBERS", color:'#FF4136', size: 18});
-      this.updateCommander('panic');
-      setTimeout(()=>this.updateCommander('normal'), 450);
+      this.addEffect({text: "NEED 3 NUMBERS", color:'#FF4136', size:18});
+      this.updateCommander('panic'); setTimeout(()=>this.updateCommander('normal'), 450);
       return this.resetFormulaAfterAttempt(false);
     }
 
-    // 必須OP
     if(this.missionRule?.requireOp){
       if(!usedOps.includes(this.missionRule.requireOp)){
-        this.addEffect({text: "DIV REQUIRED", color:'#FF4136', size: 18});
-        this.updateCommander('panic');
-        setTimeout(()=>this.updateCommander('normal'), 450);
+        this.addEffect({text: "DIV REQUIRED", color:'#FF4136', size:18});
+        this.updateCommander('panic'); setTimeout(()=>this.updateCommander('normal'), 450);
         return this.resetFormulaAfterAttempt(false);
       }
     }
 
-    // 許可OPは選択時に弾いているが念のため
-    if(this.missionRule){
-      for(const op of usedOps){
-        if(!this.missionRule.allowedOps.includes(op)){
-          this.addEffect({text: "OP NOT ALLOWED", color:'#FF4136', size: 18});
-          return this.resetFormulaAfterAttempt(false);
-        }
-      }
-    }
-
-    // 計算（左結合）
     let result = this.formulaStack[0].entity.val;
     let scoreBonus = 0;
     let valid = true;
@@ -1011,7 +834,6 @@ class Game {
       if (res === null) { valid = false; break; }
       result = res;
 
-      // スコア（長い式は加点＝フリーダム感）
       if (opKey === 'mul') scoreBonus += 240;
       if (opKey === 'div') scoreBonus += 520;
       if (opKey === 'sub') scoreBonus += 120;
@@ -1020,8 +842,6 @@ class Game {
 
     if (valid && result === this.targetNum) {
       const len = this.formulaStack.length;
-
-      // 長い式ほど強い（ただし過剰にしない）
       let multiplier = 1.0;
       if (len >= 5) multiplier = 1.35;
       if (len >= 7) multiplier = 1.8;
@@ -1030,44 +850,32 @@ class Game {
       const totalScore = Math.floor((baseScore + scoreBonus) * multiplier);
 
       this.score += totalScore;
-
-      // ミッションはコンボを少し育てる
       this.combo++;
       this.bestCombo = Math.max(this.bestCombo, this.combo);
 
-      this.addEffect({text: `HIT!! +${totalScore}`, color: '#FFDC00', size: 34});
+      this.addEffect({text: `HIT!! +${totalScore}`, color:'#FFDC00', size:34});
       this.updateCommander('happy');
 
-      // 選んだものを消す→補充→次ミッション
       this.entities = this.entities.filter(e => !e.selected);
       this.replenishMissionEntities(false);
 
       this.generateMission(false);
-
-      setTimeout(() => {
-        if(this.state === 'mission') this.updateCommander('normal');
-      }, 320);
-
+      setTimeout(() => { if(this.state === 'mission') this.updateCommander('normal'); }, 320);
       this.resetFormulaAfterAttempt(true);
-
     } else {
       const disp = valid ? Math.round(result) : "INVALID";
-      this.addEffect({text: `MISS (${disp})`, color: '#888', size: 26});
+      this.addEffect({text: `MISS (${disp})`, color:'#888', size:26});
       this.combo = 0;
       this.updateCommander('panic');
-      setTimeout(() => {
-        if(this.state === 'mission') this.updateCommander('normal');
-      }, 450);
-
+      setTimeout(() => { if(this.state === 'mission') this.updateCommander('normal'); }, 450);
       this.resetFormulaAfterAttempt(false);
     }
 
     this.updateUI();
   }
 
-  resetFormulaAfterAttempt(success){
-    // 成否問わず、選択解除＆スタッククリア
-    this.entities.forEach(e => { e.selected = false; e.order = null; });
+  resetFormulaAfterAttempt(){
+    this.entities.forEach(e => { e.selected=false; e.order=null; });
     this.formulaStack = [];
     this.updateFormulaBar();
     this.updateGuideByMode();
@@ -1077,7 +885,7 @@ class Game {
   manualShuffle(){
     if(this.state !== 'rush' && this.state !== 'mission') return;
 
-    this.addEffect({text: "RESHUFFLE!", color: "#FFA500", size: 26});
+    this.addEffect({text: "RESHUFFLE!", color:"#FFA500", size:26});
     this.updateCommander('panic');
 
     if(this.mode === 'rush'){
@@ -1089,86 +897,131 @@ class Game {
       this.generateMission(false);
     }
 
-    setTimeout(()=> {
-      if(this.state === 'rush' || this.state === 'mission') this.updateCommander('normal');
-    }, 350);
+    setTimeout(()=> { if(this.state === 'rush' || this.state === 'mission') this.updateCommander('normal'); }, 350);
   }
 
   /* =========================================================
-   * AUTO LOCK（MISSION用：軽量探索で式を自動選択）
-   * - 最大「数字3つ＋記号2つ」まで（左結合のみ）
-   * - ルールを尊重
+   * AUTO LOCK（RUSH + MISSION 両対応）
    * ========================================================= */
   autoLock(){
-    if(this.state !== 'mission') return;
+    if(this.autoBusy) return;
+    if(this.state !== 'rush' && this.state !== 'mission') return;
+
+    if(this.state === 'rush') this.autoLockRush();
+    else this.autoLockMission();
+  }
+
+  autoLockRush(){
+    this.autoBusy = true;
+    this.addEffect({text:"AUTO LOCK!!", color:"#FFD700", size:30});
+    this.updateCommander('happy');
+
+    // どれをロックするかリスト化
+    const seq = [];
+
+    if(this.rushType.id === 'asc' || this.rushType.id === 'desc'){
+      // 昇順/降順：今の期待値を順に拾う
+      // ただし無限にならないよう最大8個まで
+      for(let t=0; t<8; t++){
+        const target = this.entities.find(e => e.type==='num' && e.val===this.rushExpected);
+        if(!target) break;
+        seq.push(target);
+
+        // 1個消す前提で次期待値を計算するため、擬似的に候補を作る
+        const remainVals = this.entities
+          .filter(e => e !== target)
+          .map(e => e.val);
+        if(remainVals.length === 0) break;
+        this.rushExpected = (this.rushType.id === 'asc') ? Math.min(...remainVals) : Math.max(...remainVals);
+      }
+    } else {
+      // odd/even：条件一致を最大10個
+      const candidates = this.entities.filter(e => this.rushIsValidHit(e));
+      shuffle(candidates);
+      candidates.slice(0, 10).forEach(e => seq.push(e));
+    }
+
+    let delay = 0;
+    seq.forEach((ent) => {
+      setTimeout(() => {
+        if(this.state !== 'rush') return;
+        if(!this.entities.includes(ent)) return;
+
+        // ★ターゲットを選択していく演出
+        this.setLockAim(ent.x, ent.y);
+        this.rushOnHit(ent);
+      }, delay);
+      delay += 120;
+    });
+
+    setTimeout(()=> {
+      this.autoBusy = false;
+      if(this.state === 'rush') this.updateCommander('normal');
+    }, delay + 200);
+  }
+
+  autoLockMission(){
+    this.autoBusy = true;
 
     this.clearFormula();
-
     const solution = this.findSolutionMission3Steps();
     if(!solution){
-      this.addEffect({text: "NO SOLUTION... RESHUFFLE", color:'#FF4136', size: 18});
+      this.addEffect({text:"NO SOLUTION... RESHUFFLE", color:'#FF4136', size:18});
+      this.autoBusy = false;
       this.manualShuffle();
       return;
     }
 
     this.updateCommander('happy');
-    this.addEffect({text: "AUTO LOCK!!", color:'#FFD700', size: 30});
+    this.addEffect({text:"AUTO LOCK!!", color:'#FFD700', size:30});
 
     let delay = 0;
     solution.forEach(ent => {
       setTimeout(() => {
         if(this.state !== 'mission') return;
+
+        // ★ターゲットを選択していく演出
+        this.setLockAim(ent.x, ent.y);
+
         this.trySelectMission(ent);
       }, delay);
-      delay += 80;
+      delay += 90;
     });
 
     setTimeout(()=> {
+      this.autoBusy = false;
       if(this.state === 'mission') this.updateCommander('normal');
-    }, 900);
+    }, delay + 200);
   }
 
-  // 探索：1数字 / 2数字1記号 / 3数字2記号（左結合）
   findSolutionMission3Steps(){
     const nums = this.entities.filter(e => e.type === 'num');
     const ops = this.entities.filter(e => e.type === 'op');
 
     const rule = this.missionRule || MISSION_RULES[0];
-
     const opList = rule.allowedOps.slice();
 
-    // 1数字で一致
     for(const n1 of nums){
-      if(rule.noRepeat){
-        // 1数字はOK
-      }
       if(n1.val === this.targetNum){
-        // requireNums=3 などの場合はNG
         if(rule.requireNums && rule.requireNums > 1) continue;
-        if(rule.requireOp) continue; // div必須なのに使ってない
+        if(rule.requireOp) continue;
         return [n1];
       }
     }
 
-    // 2数字 + 1記号
     for(let i=0; i<nums.length; i++){
       for(let j=0; j<nums.length; j++){
         if(i===j) continue;
         const a = nums[i], b = nums[j];
-
         if(rule.noRepeat && a.val === b.val) continue;
 
         for(const opKey of opList){
           const opEnt = ops.find(o => o.val === opKey);
           if(!opEnt) continue;
-
           const r = opExec(opKey, a.val, b.val);
           if(r === null) continue;
-
           if(r === this.targetNum){
-            // requireNums=3 はNG
             if(rule.requireNums && rule.requireNums > 2) continue;
-            // requireOpチェック
             if(rule.requireOp && ![opKey].includes(rule.requireOp)) continue;
             return [a, opEnt, b];
           }
@@ -1176,7 +1029,6 @@ class Game {
       }
     }
 
-    // 3数字 + 2記号（左結合）
     for(let i=0; i<nums.length; i++){
       for(let j=0; j<nums.length; j++){
         if(i===j) continue;
@@ -1191,21 +1043,17 @@ class Game {
           for(const op1Key of opList){
             const op1Ent = ops.find(o => o.val === op1Key);
             if(!op1Ent) continue;
-
             const r1 = opExec(op1Key, a.val, b.val);
             if(r1 === null) continue;
 
             for(const op2Key of opList){
               const op2Ent = ops.find(o => o.val === op2Key && o !== op1Ent);
               if(!op2Ent) continue;
-
               const r2 = opExec(op2Key, r1, c.val);
               if(r2 === null) continue;
 
               if(r2 === this.targetNum){
-                // requireNums=3 を満たす
                 if(rule.requireNums && rule.requireNums > 3) continue;
-                // requireOp
                 if(rule.requireOp){
                   if(!(op1Key === rule.requireOp || op2Key === rule.requireOp)) continue;
                 }
@@ -1216,15 +1064,15 @@ class Game {
         }
       }
     }
-
     return null;
   }
 
   /* =========================================================
-   * 入力（クリック）
+   * 入力
    * ========================================================= */
   handleClick(e){
     if(this.state !== 'rush' && this.state !== 'mission') return;
+    if(this.autoBusy) return; // AUTO中は手動ロックを抑止（演出が崩れないように）
 
     const rect = this.canvas.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
@@ -1235,8 +1083,10 @@ class Game {
       const dist = Math.hypot(ent.x - clickX, ent.y - clickY);
       if(dist < ent.r + 15){
         if(this.state === 'rush'){
-          if(this.rushIsValidHit(ent)) this.rushOnHit(ent, i);
-          else this.rushOnMiss(ent);
+          if(this.rushIsValidHit(ent)){
+            this.setLockAim(ent.x, ent.y);
+            this.rushOnHit(ent);
+          } else this.rushOnMiss(ent);
         } else {
           this.trySelectMission(ent);
         }
@@ -1252,13 +1102,14 @@ class Game {
     this.scanAngle += dt * 1.5;
     this.bgScroll += dt * 20;
 
-    // エンティティ出現アニメ
-    this.entities.forEach(ent => {
-      if(ent.scale < 1) ent.scale += dt * 5;
-      if(ent.scale > 1) ent.scale = 1;
-    });
+    this.entities.forEach(ent => { if(ent.scale < 1) ent.scale += dt * 5; if(ent.scale > 1) ent.scale = 1; });
 
-    // タイマー
+    if(this.lockAim){
+      this.lockAim.life -= 1;
+      this.lockAim.alpha = Math.max(0, this.lockAim.life / 22);
+      if(this.lockAim.life <= 0) this.lockAim = null;
+    }
+
     if(this.state === 'rush' || this.state === 'mission'){
       this.timeLeft -= dt;
       if(this.timeLeft <= 0){
@@ -1268,7 +1119,6 @@ class Game {
       this.updateUI();
     }
 
-    // エフェクト寿命
     for(let i=this.effects.length-1; i>=0; i--){
       const eff = this.effects[i];
       eff.y -= 0.45;
@@ -1285,25 +1135,20 @@ class Game {
     document.getElementById('menu-screen').classList.add('hidden');
     document.getElementById('result-final').innerText = this.score;
 
-    const title = (this.state === 'gameover') ? 'MISSION OVER' : 'RESULT';
-    document.getElementById('result-title').innerText = title;
+    document.getElementById('result-title').innerText = 'RESULT';
 
-    // ランク表示
     const container = document.getElementById('rank-list-container');
     container.innerHTML = '';
     let found = false;
-
     RANKS.forEach(rank => {
       const div = document.createElement('div');
       div.className = 'rank-item';
       let isMine = false;
-
       if(!found && this.score >= rank.min){
         isMine = true;
         found = true;
         div.classList.add('active');
       }
-
       div.innerHTML = `
         <div class="rank-name-col">
           <span class="rank-name-en">${rank.nameEn}</span>
@@ -1318,6 +1163,8 @@ class Game {
     this.updateCommander('panic');
     this.drawStaticMascot('mascot-canvas-over', 'panic');
     this.setAutoLockVisible(false);
+    this.setAutoLockLabel('menu');
+
     this.setModeLabel('MODE: RESULT');
     this.setTarget('SCORE', String(this.score));
     this.setSub(`BEST COMBO: ${this.bestCombo}`);
@@ -1331,9 +1178,7 @@ class Game {
   addEffect({text, x, y, color, size, life}){
     if(x === undefined) x = this.centerX + (Math.random() * 80 - 40);
     if(y === undefined) y = this.centerY + (Math.random() * 80 - 40);
-    this.effects.push({
-      text, x, y, color: color || '#FFF', size: size || 20, life: life || 50
-    });
+    this.effects.push({ text, x, y, color: color || '#FFF', size: size || 20, life: life || 50 });
   }
 
   drawSciFiRadarBackground(ctx, x, y, r){
@@ -1341,7 +1186,6 @@ class Game {
     ctx.save();
     ctx.strokeStyle = `rgba(${baseColor}, 0.1)`;
     ctx.lineWidth = 1;
-
     const gridSize = 40;
     const offset = this.bgScroll % gridSize;
     for(let i=-r; i<r; i+=gridSize){
@@ -1381,11 +1225,11 @@ class Game {
     ctx.restore();
   }
 
-  drawLockSight(x, y, r){
-    this.ctx.strokeStyle = '#FF00FF';
+  drawLockSight(x, y, r, alpha=1){
+    this.ctx.strokeStyle = `rgba(255,0,255,${alpha})`;
     this.ctx.lineWidth = 2;
     this.ctx.shadowBlur = 10;
-    this.ctx.shadowColor = '#FF00FF';
+    this.ctx.shadowColor = 'rgba(255,0,255,0.9)';
 
     const gap = Math.PI / 4;
     this.ctx.beginPath(); this.ctx.arc(x, y, r, Math.PI + gap, 1.5 * Math.PI - gap); this.ctx.stroke();
@@ -1396,15 +1240,39 @@ class Game {
     this.ctx.shadowBlur = 0;
   }
 
+  drawLockLine(){
+    if(!this.lockAim) return;
+
+    const a = this.lockAim.alpha;
+    const fromX = this.lockFrom.x;
+    const fromY = this.lockFrom.y;
+    const toX = this.lockAim.x;
+    const toY = this.lockAim.y;
+
+    this.ctx.save();
+    this.ctx.strokeStyle = `rgba(0,255,255,${0.25 * a})`;
+    this.ctx.lineWidth = 2;
+    this.ctx.setLineDash([6, 6]);
+    this.ctx.beginPath();
+    this.ctx.moveTo(fromX, fromY);
+    this.ctx.lineTo(toX, toY);
+    this.ctx.stroke();
+    this.ctx.setLineDash([]);
+
+    this.drawLockSight(toX, toY, 26, a);
+    this.ctx.restore();
+  }
+
   draw(){
-    // 背景
     this.ctx.fillStyle = '#050510';
     this.ctx.fillRect(0, 0, this.width, this.height);
 
-    // レーダー
     this.drawSciFiRadarBackground(this.ctx, this.centerX, this.centerY, this.radarRadius);
 
-    // ロック線（MISSIONだけ）
+    // ★司令→ターゲット ロックオン演出
+    this.drawLockLine();
+
+    // MISSIONの式ロック線（従来）
     if(this.mode === 'mission' && this.formulaStack.length > 0){
       const now = Date.now();
       for(let i=0; i<this.formulaStack.length - 1; i++){
@@ -1439,27 +1307,22 @@ class Game {
       const size = ent.r * ent.scale;
 
       if(this.mode === 'rush'){
-        // RUSH：数字のみ
         const isValid = (this.state === 'rush') ? this.rushIsValidHit(ent) : false;
         this.ctx.fillStyle = isValid ? '#FFDC00' : '#EEE';
       } else {
-        // MISSION：数字/記号
         if(ent.type === 'num') this.ctx.fillStyle = ent.selected ? '#FFDC00' : '#EEE';
         else this.ctx.fillStyle = ent.selected ? '#00FFFF' : '#0074D9';
       }
 
-      // 本体
       this.ctx.beginPath(); this.ctx.arc(ent.x, ent.y, size, 0, Math.PI*2); this.ctx.fill();
 
-      // ハイライト
-      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      this.ctx.fillStyle = 'rgba(255,255,255,0.3)';
       this.ctx.beginPath();
       this.ctx.ellipse(ent.x - size*0.3, ent.y - size*0.3, size*0.2, size*0.1, Math.PI/4, 0, Math.PI*2);
       this.ctx.fill();
 
-      // 選択時ロックサイト（MISSIONのみ）
       if(this.mode === 'mission' && ent.selected){
-        this.drawLockSight(ent.x, ent.y, size + 5);
+        this.drawLockSight(ent.x, ent.y, size + 5, 1);
         if(ent.order){
           this.ctx.fillStyle = '#FF4136';
           this.ctx.beginPath(); this.ctx.arc(ent.x + 12, ent.y - 12, 8, 0, Math.PI*2); this.ctx.fill();
@@ -1470,7 +1333,6 @@ class Game {
         }
       }
 
-      // ラベル
       this.ctx.fillStyle = '#000';
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
@@ -1479,7 +1341,6 @@ class Game {
       this.ctx.fillText(label, ent.x, ent.y);
     });
 
-    // エフェクト
     this.effects.forEach(eff => {
       this.ctx.fillStyle = eff.color;
       this.ctx.font = `bold ${eff.size || 20}px Arial`;
@@ -1516,20 +1377,14 @@ class Game {
 
   drawEbiGratinFace(ctx, x, y, size, mood){
     ctx.lineWidth = 2;
-
     ctx.fillStyle = '#FFDB58';
-    if(mood === 'fever') ctx.fillStyle = '#FF4136';
     if(mood === 'panic') ctx.fillStyle = '#A0A0FF';
-    if(mood === 'happy') ctx.fillStyle = '#FFDB58';
-
     ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI*2); ctx.fill();
 
-    // 焼き目
     ctx.fillStyle = '#8B4513';
     ctx.beginPath(); ctx.ellipse(x - size*0.4, y - size*0.5, size*0.2, size*0.1, 0, 0, Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.ellipse(x + size*0.3, y - size*0.4, size*0.25, size*0.15, 0, 0, Math.PI*2); ctx.fill();
 
-    // 目
     ctx.strokeStyle = '#000';
     ctx.fillStyle = '#000';
     if(mood === 'happy'){
@@ -1542,7 +1397,6 @@ class Game {
       ctx.fill();
     }
 
-    // 口
     ctx.beginPath();
     if(mood === 'happy'){
       ctx.arc(x, y + size*0.1, size*0.3, 0, Math.PI); ctx.fill();
