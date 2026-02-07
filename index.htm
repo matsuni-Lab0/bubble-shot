@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Bubble Shot: Shrimp Edition</title>
+    <title>Bubble Shot: Shrimp Edition - Undefined Blue</title>
     <style>
         /* --- CSS設定 --- */
         body {
@@ -114,11 +114,10 @@
         #guide-msg {
             color: #00FFFF; font-size: 14px; margin-bottom: 5px; min-height: 35px;
             text-shadow: 0 0 5px #00FFFF; letter-spacing: 1px; text-align: center; line-height: 1.3;
-            transition: all 0.3s; /* 文字サイズ変更用のアニメーション */
+            transition: all 0.3s;
         }
         #guide-msg .sub { font-size: 10px; color: #aaa; display: block; margin-top: 2px; transition: all 0.3s;}
         
-        /* ★フィーバー時の文字サイズ強調クラス */
         #guide-msg.fever-mode-text {
             font-size: 24px; color: #FF4136; font-weight: 900; text-shadow: 0 0 10px #FF4136;
         }
@@ -171,7 +170,6 @@
         }
         .btn:hover { background: #FFDC00; color: #000; box-shadow: 0 0 30px #FFDC00; }
 
-        /* 難易度選択ボタン */
         .diff-container {
             display: flex; flex-direction: column; gap: 15px; width: 100%; align-items: center; margin-bottom: 20px;
         }
@@ -222,7 +220,6 @@
         #mascot-canvas-menu, #mascot-canvas-over {
             width: 100px; height: 100px; margin-bottom: 10px;
         }
-
     </style>
 </head>
 <body>
@@ -334,7 +331,6 @@ const FEVER_TYPES = [
     { id: 'odd', labelEn: 'ODD NUMBERS', labelJa: '奇数を撃て' }
 ];
 
-// ★ エビランク設定（上に行くほどスコアが高い）
 const RANKS = [
     { min: 30000, nameEn: "WHITE SHRIMP",   nameJa: "シロエビ" },
     { min: 20000, nameEn: "ISE LOBSTER",    nameJa: "伊勢海老" },
@@ -415,7 +411,6 @@ class Game {
     }
 
     replenishEntities() {
-        const area = this.width * this.height;
         let targetCount = 20; 
         if (this.width < 400) targetCount = 22; else if (this.width > 800) targetCount = 35;
         let currentCount = this.entities.length;
@@ -530,9 +525,7 @@ class Game {
     autoLock() {
         if (this.state !== 'playing') return;
         this.clearFormula();
-        
         const solution = this.findSolutionDeep();
-        
         if (solution) {
             this.updateCommander('happy'); 
             let delay = 0;
@@ -624,14 +617,14 @@ class Game {
         const bar = document.getElementById('formula-bar');
         if (this.formulaStack.length === 0) { bar.innerText = "STANDBY..."; bar.style.color = "#666"; return; }
         let displayStr = "";
-        if (this.formulaStack.length >= 1) { displayStr = ${this.formulaStack[0].entity.val}; }
+        if (this.formulaStack.length >= 1) { displayStr = `${this.formulaStack[0].entity.val}`; }
         for (let i = 1; i < this.formulaStack.length; i += 2) {
             const opEnt = this.formulaStack[i].entity;
             const opStr = OPS[opEnt.val].op;
             if (i + 1 < this.formulaStack.length) {
                 const numEnt = this.formulaStack[i+1].entity;
-                displayStr = (${displayStr} ${opStr} ${numEnt.val});
-            } else { displayStr = ${displayStr} ${opStr} ?; }
+                displayStr = `(${displayStr} ${opStr} ${numEnt.val})`;
+            } else { displayStr = `${displayStr} ${opStr} ?`; }
         }
         bar.innerText = displayStr; bar.style.color = "#00FFFF";
     }
@@ -640,13 +633,13 @@ class Game {
         const msg = document.getElementById('guide-msg');
         if (this.state === 'fever') return;
         if (this.formulaStack.length === 0) {
-            msg.innerHTML = LOCK: [NUMBER]<span class="sub">数字をロックせよ</span>; msg.style.color = "#FFDC00";
+            msg.innerHTML = `LOCK: [NUMBER]<span class="sub">数字をロックせよ</span>`; msg.style.color = "#FFDC00";
         } else {
             const last = this.formulaStack[this.formulaStack.length-1].entity;
             if (last.type === 'num') {
-                msg.innerHTML = LOCK: [SYMBOL]<span class="sub">記号をロックせよ</span>; msg.style.color = "#2ECC40";
+                msg.innerHTML = `LOCK: [SYMBOL]<span class="sub">記号をロックせよ</span>`; msg.style.color = "#2ECC40";
             } else {
-                msg.innerHTML = LOCK: [NUMBER]<span class="sub">数字をロックせよ</span>; msg.style.color = "#FFDC00";
+                msg.innerHTML = `LOCK: [NUMBER]<span class="sub">数字をロックせよ</span>`; msg.style.color = "#FFDC00";
             }
         }
     }
@@ -685,7 +678,7 @@ class Game {
                 totalScore = Math.floor((baseScore + scoreBonus) * multiplier);
             }
             this.score += totalScore;
-            this.addEffect({text: HIT!! +${totalScore}, color: '#FFDC00', size: 40});
+            this.addEffect({text: `HIT!! +${totalScore}`, color: '#FFDC00', size: 40});
             this.clearCount++;
             this.updateGauge();
             this.updateCommander('happy');
@@ -699,7 +692,7 @@ class Game {
             }
         } else {
             const disp = valid ? Math.round(result) : "INVALID";
-            this.addEffect({text: MISS (${disp}), color: '#888', size: 30});
+            this.addEffect({text: `MISS (${disp})`, color: '#888', size: 30});
             this.entities.forEach(e => { e.selected = false; e.order = null; });
             this.updateCommander('panic'); 
             setTimeout(() => this.updateCommander('normal'), 800);
@@ -712,8 +705,8 @@ class Game {
     }
 
     updateUI() {
-        document.getElementById('score-display').innerText = SCORE: ${this.score};
-        document.getElementById('timer-display').innerText = TIME: ${Math.floor(this.timeLeft)};
+        document.getElementById('score-display').innerText = `SCORE: ${this.score}`;
+        document.getElementById('timer-display').innerText = `TIME: ${Math.floor(this.timeLeft)}`;
     }
 
     startFever() {
@@ -726,11 +719,8 @@ class Game {
         document.getElementById('target-display').innerText = "FEVER!!";
         document.getElementById('target-label').innerText = "MODE";
         const guideMsg = document.getElementById('guide-msg');
-        
-        // ★文字サイズアップ用クラス追加
         guideMsg.classList.add('fever-mode-text');
-        guideMsg.innerHTML = ${this.feverType.labelEn}<span class="sub">${this.feverType.labelJa}</span>;
-        
+        guideMsg.innerHTML = `${this.feverType.labelEn}<span class="sub">${this.feverType.labelJa}</span>`;
         document.getElementById('formula-bar').innerText = "DESTROY TARGETS!";
         this.updateCommander('fever');
         for(let i=0; i<30; i++) { this.spawnEntity(true); }
@@ -741,10 +731,7 @@ class Game {
     endFever() {
         this.state = 'playing';
         document.body.classList.remove('fever-mode');
-        
-        // ★文字サイズを戻す
         document.getElementById('guide-msg').classList.remove('fever-mode-text');
-        
         this.entities = [];
         this.clearCount = 0;
         this.updateGauge();
@@ -758,17 +745,17 @@ class Game {
 
     updateGauge() {
         const pct = Math.min(100, (this.clearCount / 3) * 100);
-        document.getElementById('fever-gauge').style.width = ${pct}%;
+        document.getElementById('fever-gauge').style.width = `${pct}%`;
     }
     
     updateTimeBar() {
         const bar = document.getElementById('time-bar');
         if (this.state === 'fever') {
             const pct = Math.max(0, (this.feverTimer / this.feverMaxTime) * 100);
-            bar.style.width = ${pct}%; bar.style.backgroundColor = '#FF4136'; 
+            bar.style.width = `${pct}%`; bar.style.backgroundColor = '#FF4136'; 
         } else {
             const pct = Math.max(0, (this.timeLeft / this.maxTime) * 100);
-            bar.style.width = ${pct}%;
+            bar.style.width = `${pct}%`;
             if (pct < 20) {
                 bar.style.backgroundColor = '#FF4136';
                 if(this.state === 'playing') this.updateCommander('panic');
@@ -788,7 +775,7 @@ class Game {
             if (this.timeLeft <= 0) this.gameOver();
         } else if (this.state === 'fever') {
             this.feverTimer -= dt;
-            document.getElementById('timer-display').innerText = FEVER: ${Math.ceil(this.feverTimer)};
+            document.getElementById('timer-display').innerText = `FEVER: ${Math.ceil(this.feverTimer)}`;
             this.updateTimeBar(); 
             if (this.feverTimer <= 0) { this.endFever(); }
         }
@@ -813,14 +800,14 @@ class Game {
             if (!playerRankFound && this.score >= rank.min) {
                 isMyRank = true; playerRankFound = true; div.classList.add('active');
             }
-            div.innerHTML = 
+            div.innerHTML = `
                 <div class="rank-name-col">
                     <span class="rank-name-en">${rank.nameEn}</span>
                     <span class="rank-name-ja">${rank.nameJa}</span>
                 </div>
                 <div class="rank-score">${rank.min}</div>
                 <div class="rank-arrow">${isMyRank ? '◀ YOU' : ''}</div>
-            ;
+            `;
             container.appendChild(div);
         });
         this.drawStaticMascot('mascot-canvas-over', 'panic');
@@ -839,28 +826,28 @@ class Game {
         const isFever = (this.state === 'fever');
         const baseColor = isFever ? '255, 65, 54' : '0, 255, 255';
         ctx.save(); ctx.translate(x, y);
-        ctx.strokeStyle = rgba(${baseColor}, 0.1); ctx.lineWidth = 1;
+        ctx.strokeStyle = `rgba(${baseColor}, 0.1)`; ctx.lineWidth = 1;
         const gridSize = 40; const offset = this.bgScroll % gridSize;
         for(let i = -r; i < r; i+=gridSize) {
             ctx.beginPath(); ctx.moveTo(i - offset, -r); ctx.lineTo(i - offset, r); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(-r, i + offset); ctx.lineTo(r, i + offset); ctx.stroke();
         }
         ctx.restore();
-        ctx.strokeStyle = rgba(${baseColor}, 0.3); ctx.lineWidth = 1.5;
+        ctx.strokeStyle = `rgba(${baseColor}, 0.3)`; ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.arc(x, y, r * 0.3, 0, Math.PI*2); ctx.stroke();
         ctx.beginPath(); ctx.arc(x, y, r * 0.6, 0, Math.PI*2); ctx.stroke();
-        ctx.lineWidth = 3; ctx.shadowBlur = 10; ctx.shadowColor = rgb(${baseColor});
+        ctx.lineWidth = 3; ctx.shadowBlur = 10; ctx.shadowColor = `rgb(${baseColor})`;
         ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.stroke(); ctx.shadowBlur = 0;
-        ctx.strokeStyle = rgba(${baseColor}, 0.2); ctx.lineWidth = 1;
+        ctx.strokeStyle = `rgba(${baseColor}, 0.2)`; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(x-r, y); ctx.lineTo(x+r, y); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(x, y-r); ctx.lineTo(x, y+r); ctx.stroke();
         ctx.save(); ctx.translate(x, y); ctx.rotate(this.scanAngle);
         const grad = ctx.createLinearGradient(0, 0, r, 0);
-        grad.addColorStop(0, rgba(${baseColor}, 0));
-        grad.addColorStop(1, rgba(${baseColor}, 0.15));
+        grad.addColorStop(0, `rgba(${baseColor}, 0)`);
+        grad.addColorStop(1, `rgba(${baseColor}, 0.15)`);
         ctx.fillStyle = grad; ctx.beginPath(); ctx.moveTo(0, 0);
         ctx.arc(0, 0, r, -0.3, 0.3); ctx.fill(); 
-        ctx.strokeStyle = rgba(${baseColor}, 0.8); ctx.lineWidth = 2;
+        ctx.strokeStyle = `rgba(${baseColor}, 0.8)`; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(r*Math.cos(0.3), r*Math.sin(0.3)); ctx.lineTo(0,0); ctx.stroke();
         ctx.restore();
     }
@@ -876,12 +863,12 @@ class Game {
                 const age = now - next.time; 
                 if (age < 1000) { 
                     const alpha = 1 - (age / 1000);
-                    this.ctx.strokeStyle = rgba(255, 0, 255, ${alpha}); // Pink
+                    this.ctx.strokeStyle = `rgba(255, 0, 255, ${alpha})`; 
                     this.ctx.lineWidth = 3; this.ctx.shadowBlur = 15; this.ctx.shadowColor = '#FF00FF';
                     this.ctx.beginPath(); this.ctx.moveTo(curr.entity.x, curr.entity.y);
                     this.ctx.lineTo(next.entity.x, next.entity.y); this.ctx.stroke(); this.ctx.shadowBlur = 0;
                 } else {
-                    this.ctx.strokeStyle = rgba(255, 0, 255, 0.2);
+                    this.ctx.strokeStyle = `rgba(255, 0, 255, 0.2)`;
                     this.ctx.lineWidth = 1;
                     this.ctx.beginPath(); this.ctx.moveTo(curr.entity.x, curr.entity.y);
                     this.ctx.lineTo(next.entity.x, next.entity.y); this.ctx.stroke();
@@ -917,7 +904,7 @@ class Game {
         });
 
         this.effects.forEach(eff => {
-            this.ctx.fillStyle = eff.color; this.ctx.font = bold ${eff.size || 20}px Arial;
+            this.ctx.fillStyle = eff.color; this.ctx.font = `bold ${eff.size || 20}px Arial`;
             this.ctx.textAlign = 'center'; this.ctx.fillText(eff.text, eff.x, eff.y);
         });
     }
@@ -963,7 +950,7 @@ class Game {
     }
 
     drawLockSight(x, y, r) {
-        this.ctx.strokeStyle = '#FF00FF'; this.ctx.lineWidth = 2; this.ctx.shadowBlur = 10; this.ctx.shadowColor = '#FF00FF'; // Pink
+        this.ctx.strokeStyle = '#FF00FF'; this.ctx.lineWidth = 2; this.ctx.shadowBlur = 10; this.ctx.shadowColor = '#FF00FF';
         const gap = Math.PI / 4; 
         this.ctx.beginPath(); this.ctx.arc(x, y, r, Math.PI + gap, 1.5 * Math.PI - gap); this.ctx.stroke();
         this.ctx.beginPath(); this.ctx.arc(x, y, r, 1.5 * Math.PI + gap, 2 * Math.PI - gap); this.ctx.stroke();
