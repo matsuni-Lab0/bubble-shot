@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Bubble Shot: JP Localized</title>
+    <title>Bubble Shot: Mobile Fixed</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #111; color: white; font-family: 'Helvetica Neue', Arial, sans-serif; touch-action: none; user-select: none; }
+        /* CSSは変更なし（スマホで見やすい設定のまま） */
+        body { margin: 0; overflow: hidden; background-color: #111; color: white; font-family: 'Helvetica Neue', Arial, sans-serif; touch-action: none; user-select: none; -webkit-tap-highlight-color: transparent; }
         #game-container { position: relative; width: 100vw; height: 100dvh; background-color: #050510; }
         canvas { display: block; width: 100%; height: 100%; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
         
-        /* Top Area */
         #top-area { height: 240px; display: flex; flex-direction: column; align-items: center; background: linear-gradient(to bottom, rgba(0,0,0,0.9), rgba(0,0,0,0)); z-index: 10; padding-top: 10px; position: relative; }
         #commander-window { position: absolute; top: 10px; left: 10px; width: 70px; height: 70px; background: rgba(0, 20, 40, 0.6); border: 2px solid #00FFFF; border-radius: 10px; clip-path: polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%); display: flex; justify-content: center; align-items: center; }
         #comm-canvas { width: 100%; height: 100%; }
@@ -19,12 +19,9 @@
         #mission-timer-bar { width: 100%; height: 100%; background: #FF4136; transition: width 0.1s linear; }
         
         #mission-label { font-size: 10px; color: #00FFFF; letter-spacing: 4px; margin-top: 5px; opacity: 0.8;}
-        
-        /* Mission Display Box */
         #mission-method-box { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
         .method-tag { font-size: 10px; color: #888; font-weight: bold; letter-spacing: 1px; }
         
-        /* Operator Display (Left Box) */
         #mission-op-display { 
             font-size: 28px; font-weight: 900; color: #FF4136; 
             text-shadow: 0 0 10px currentColor; 
@@ -34,7 +31,6 @@
             font-family: 'Arial', sans-serif;
         }
         
-        /* Target Display (Right Number) */
         #mission-target-display { 
             font-size: 48px; font-weight: 900; color: #FFDC00; line-height: 1.0; 
             text-shadow: 0 0 20px rgba(255, 220, 0, 0.8); 
@@ -47,11 +43,12 @@
         #sync-gauge-container { width: 240px; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-top: 10px; border: 1px solid #444; }
         #sync-gauge { width: 0%; height: 100%; background: linear-gradient(90deg, #00FFFF, #FF00FF); transition: width 0.3s; }
         
-        /* Bottom Area */
-        #bottom-area { height: 150px; display: flex; justify-content: center; align-items: center; padding-bottom: 20px; gap: 20px; }
-        #fire-btn { width: 160px; height: 60px; background: rgba(255, 65, 54, 0.1); border: 2px solid #555; color: #555; font-size: 24px; font-weight: 900; letter-spacing: 4px; display: flex; justify-content: center; align-items: center; clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%); pointer-events: auto; transition: 0.2s; cursor: pointer; }
+        #bottom-area { height: 150px; display: flex; justify-content: center; align-items: center; padding-bottom: 20px; gap: 20px; pointer-events: auto; }
+        #fire-btn { width: 160px; height: 60px; background: rgba(255, 65, 54, 0.1); border: 2px solid #555; color: #555; font-size: 24px; font-weight: 900; letter-spacing: 4px; display: flex; justify-content: center; align-items: center; clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%); pointer-events: auto; transition: 0.1s; cursor: pointer; -webkit-tap-highlight-color: transparent;}
+        #fire-btn:active { transform: scale(0.95); }
         #fire-btn.ready { background: rgba(255, 65, 54, 0.8); border: none; color: white; box-shadow: 0 0 30px #FF4136; text-shadow: 0 0 10px white; }
-        #auto-btn { width: 70px; height: 60px; background: rgba(0, 255, 255, 0.1); border: 2px solid #00FFFF; color: #00FFFF; font-size: 14px; font-weight: bold; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 8px; pointer-events: auto; cursor: pointer; box-shadow: 0 0 10px rgba(0,255,255,0.3); transition: 0.1s; }
+        
+        #auto-btn { width: 70px; height: 60px; background: rgba(0, 255, 255, 0.1); border: 2px solid #00FFFF; color: #00FFFF; font-size: 14px; font-weight: bold; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 8px; pointer-events: auto; cursor: pointer; box-shadow: 0 0 10px rgba(0,255,255,0.3); transition: 0.1s; -webkit-tap-highlight-color: transparent;}
         #auto-btn:active { transform: scale(0.95); background: #00FFFF; color: #000; }
         #auto-btn span { font-size: 10px; opacity: 0.8; }
 
@@ -82,8 +79,8 @@
             <div id="sync-gauge-container"><div id="sync-gauge"></div></div>
         </div>
         <div id="bottom-area">
-            <div id="auto-btn" onclick="game.autoLock()">AUTO<span>LOCK</span></div>
-            <div id="fire-btn" onclick="game.fire()">SHOT</div>
+            <div id="auto-btn">AUTO<span>LOCK</span></div>
+            <div id="fire-btn">SHOT</div>
         </div>
     </div>
     <div id="menu-screen" class="overlay">
@@ -99,7 +96,6 @@
 </div>
 
 <script>
-// 演算子定義：記号を明確に
 const OPS = {
     add: { label: '＋', calc: (a, b) => a + b, color: '#00FF66' },
     sub: { label: '－', calc: (a, b) => a - b, color: '#FF8800' },
@@ -120,9 +116,38 @@ class Game {
         this.targetNum = 0; this.targetOp = null; this.burstWave = 0;
         this.resize();
         window.addEventListener('resize', () => this.resize());
-        this.canvas.addEventListener('pointerdown', (e) => this.handleClick(e));
+
+        // --- ★ここがスマホ対応の重要ポイント ---
+        // タッチ操作 (スマホ用)
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // スクロール防止
+            const touch = e.touches[0];
+            this.handleInput(touch.clientX, touch.clientY);
+        }, { passive: false });
+
+        // マウス操作 (PC用)
+        this.canvas.addEventListener('mousedown', (e) => {
+            this.handleInput(e.clientX, e.clientY);
+        });
+
+        // ボタンにもタッチイベントを明示的に追加（反応を良くするため）
+        this.setupButton('fire-btn', () => this.fire());
+        this.setupButton('auto-btn', () => this.autoLock());
+
         this.updateCommander('normal');
         requestAnimationFrame((t) => this.loop(t));
+    }
+
+    setupButton(id, callback) {
+        const btn = document.getElementById(id);
+        // タッチとクリックの両方を監視し、重複実行を防ぐ
+        const handler = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if(this.state === 'playing') callback();
+        };
+        btn.addEventListener('touchstart', handler, { passive: false });
+        btn.addEventListener('mousedown', handler);
     }
 
     resize() {
@@ -144,14 +169,12 @@ class Game {
 
     nextMission() {
         const mode = Math.random();
-        // 60%の確率で計算ミッション
         if(mode < 0.6) {
             this.isCalcMission = true;
             this.targetNum = Math.floor(Math.random() * 19) + 2;
             const opKeys = Object.keys(OPS);
             this.targetOp = opKeys[Math.floor(Math.random() * opKeys.length)];
             
-            // 計算ミッション表示
             document.getElementById('mission-op-display').innerText = OPS[this.targetOp].label;
             document.getElementById('mission-op-display').style.color = OPS[this.targetOp].color;
             document.getElementById('mission-op-display').style.borderColor = OPS[this.targetOp].color;
@@ -163,14 +186,12 @@ class Game {
             this.isCalcMission = false;
             this.targetOp = (Math.random() < 0.5) ? 'even' : 'odd';
             
-            // 偶数・奇数ミッション表示（漢字対応）
             const label = (this.targetOp === 'even' ? '偶数' : '奇数');
             document.getElementById('mission-op-display').innerText = label;
             document.getElementById('mission-op-display').style.color = "#FFDC00";
             document.getElementById('mission-op-display').style.borderColor = "#FFDC00";
-            // ターゲットは「TARGET」等の汎用表記へ（USE [偶数] TO MAKE [TARGET]）
             document.getElementById('mission-target-display').innerText = "TARGET";
-            document.getElementById('mission-target-display').style.fontSize = "32px"; // 文字サイズ調整
+            document.getElementById('mission-target-display').style.fontSize = "32px";
             document.getElementById('mission-sub').innerText = label + "をすべて撃て";
         }
         this.missionTimeLeft = 10.0;
@@ -179,7 +200,6 @@ class Game {
         this.updateCommander('normal');
     }
 
-    // 必ず正解が存在するように、強制的にバブルを配置する
     ensureSolutionExists() {
         if(!this.isCalcMission) return;
         let n1, n2;
@@ -194,7 +214,6 @@ class Game {
             n1 = divisors[Math.floor(Math.random() * divisors.length)]; n2 = target / n1;
         } else if(op === 'div') { n2 = Math.floor(Math.random() * 5) + 1; n1 = target * n2; }
 
-        // 第3引数 true で、場所がなくても強制配置（古いバブルを上書き）
         this.spawnEntityFixed(n1, 'num', true);
         this.spawnEntityFixed(op, 'op', true);
         this.spawnEntityFixed(n2, 'num', true);
@@ -217,7 +236,6 @@ class Game {
             attempts++;
         }
         if(force) {
-            // 場所がない場合、配列の先頭（古いもの）を削除して場所を確保
             if(this.entities.length > 0) {
                 const old = this.entities.shift();
                 this.entities.push({ x: old.x, y: old.y, r, val, type, scale: 0, locked: false, alive: true, order: 0 });
@@ -236,15 +254,18 @@ class Game {
         this.spawnEntityFixed(val, type, false);
     }
 
-    handleClick(e) {
+    // ★ 共通入力ハンドラ (x, yを受け取る)
+    handleInput(tx, ty) {
         if(this.state !== 'playing') return;
         const rect = this.canvas.getBoundingClientRect();
-        const tx = e.clientX - rect.left; const ty = e.clientY - rect.top;
+        const x = tx - rect.left;
+        const y = ty - rect.top;
+
         for(let ent of this.entities) {
-            if(Math.hypot(ent.x - tx, ent.y - ty) < ent.r + 15) {
+            if(Math.hypot(ent.x - x, ent.y - y) < ent.r + 15) {
                 if(!ent.locked) {
                     const lockedCount = this.entities.filter(e => e.locked).length;
-                    if(this.isCalcMission && lockedCount >= 3) return; // 計算時は3つまで
+                    if(this.isCalcMission && lockedCount >= 3) return;
                     ent.locked = true; ent.order = lockedCount + 1;
                 } else {
                     ent.locked = false; ent.order = 0;
@@ -264,7 +285,6 @@ class Game {
             const ops = this.entities.filter(e => e.type === 'op' && e.val === this.targetOp);
             const nums = this.entities.filter(e => e.type === 'num');
             let found = false;
-            // 総当たりで正解ペアを探す
             for (let op of ops) {
                 for (let n1 of nums) {
                     for (let n2 of nums) {
@@ -278,9 +298,8 @@ class Game {
                 }
                 if(found) break;
             }
-            if(found) this.addEffect("TARGET LOCKED", this.centerX, this.centerY, "#00FFFF", 20);
+            if(found) this.addEffect("LOCKED", this.centerX, this.centerY, "#00FFFF", 20);
         } else {
-            // 偶数・奇数：条件に合うものを全選択
             let count = 1;
             this.entities.forEach(e => {
                 if(e.type === 'num') {
@@ -309,7 +328,6 @@ class Game {
         if(ready) btn.classList.add('ready'); else btn.classList.remove('ready');
     }
 
-    // 判定ロジック：順序不問で計算成立すればOK
     fire() {
         if(this.state !== 'playing') return;
         const locked = this.entities.filter(e => e.locked);
@@ -323,7 +341,6 @@ class Game {
             if (opEntity && nums.length === 2) {
                 const n1 = nums[0].val;
                 const n2 = nums[1].val;
-                // n1 op n2 または n2 op n1 どちらかが正解ならOK
                 const res1 = OPS[opEntity.val].calc(n1, n2);
                 const res2 = OPS[opEntity.val].calc(n2, n1);
                 
@@ -337,7 +354,6 @@ class Game {
                 hitAll = false;
             }
         } else {
-            // 偶数奇数判定
             locked.forEach(ent => {
                 const isCorrect = (this.targetOp === 'even' ? ent.val % 2 === 0 : ent.val % 2 !== 0);
                 if(isCorrect) totalGain += 150; else hitAll = false;
