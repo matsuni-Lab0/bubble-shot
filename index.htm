@@ -3,13 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Bubble Shot: Legacy Fix</title>
+    <title>Bubble Shot: Absolute Legacy</title>
     <style>
+        /* --- CSSは安全な記述のみ使用 --- */
         body { 
             margin: 0; overflow: hidden; background-color: #000; color: white; 
-            font-family: Arial, sans-serif; 
-            touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none;
-            user-select: none; -webkit-tap-highlight-color: transparent;
+            font-family: sans-serif; 
+            touch-action: none; 
+            -webkit-touch-callout: none; 
+            -webkit-user-select: none;
+            user-select: none; 
+            -webkit-tap-highlight-color: transparent;
         }
         #game-container { position: absolute; top:0; left:0; width: 100%; height: 100%; background: #050510; }
         canvas { display: block; width: 100%; height: 100%; }
@@ -19,7 +23,6 @@
             pointer-events: none; display: flex; flex-direction: column; 
         }
 
-        /* 上部エリア */
         #top-area { 
             height: 260px; display: flex; flex-direction: column; align-items: center; 
             background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent); 
@@ -31,7 +34,6 @@
         }
         #comm-canvas { width: 100%; height: 100%; border-radius: 50%; }
 
-        /* ミッション情報 */
         #mission-panel { text-align: center; width: 100%; margin-top: 5px; }
         #timer-bg { width: 60%; height: 4px; background: #333; margin: 0 auto 5px; }
         #timer-fill { width: 100%; height: 100%; background: #FF4136; }
@@ -51,18 +53,18 @@
         #gauge-box { width: 80%; height: 6px; background: #222; margin: 8px auto; border:1px solid #444; }
         #gauge-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #00FFFF, #FF00FF); }
 
-        /* 下部ボタンエリア */
         #bottom-area { 
-            position: absolute; bottom: 0; width: 100%; height: 120px;
+            position: absolute; bottom: 0; width: 100%; height: 140px;
             display: flex; justify-content: center; align-items: center; gap: 20px; 
             padding-bottom: 20px; pointer-events: none;
         }
         
+        /* ボタン設定：z-indexを上げて確実に押せるように */
         .game-btn {
             pointer-events: auto; cursor: pointer; display: flex; justify-content: center; align-items: center;
-            user-select: none; transition: transform 0.1s;
+            user-select: none; z-index: 50; position: relative;
         }
-        .game-btn:active { transform: scale(0.92); opacity: 0.8; }
+        .game-btn:active { opacity: 0.7; transform: scale(0.95); }
 
         #btn-auto {
             width: 70px; height: 70px; border-radius: 50%; 
@@ -79,22 +81,34 @@
             box-shadow: 0 0 20px #FF4136; 
         }
 
-        /* 全画面オーバーレイ（これをタップすると開始） */
         .overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); z-index: 100;
+            background: rgba(0,0,0,0.95); z-index: 9999; /* 最前面 */
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            pointer-events: auto; cursor: pointer;
+            pointer-events: auto;
         }
         .hidden { display: none !important; }
         
-        .big-text { font-size: 24px; color: #FFDC00; margin-top: 30px; border: 2px solid #FFDC00; padding: 10px 30px; }
-        .blink { animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0.5; } }
+        /* 巨大で押しやすいスタートボタン */
+        .big-text { 
+            font-size: 24px; color: #FFDC00; margin-top: 30px; 
+            border: 4px solid #FFDC00; padding: 20px 50px; border-radius: 10px;
+            background: #000; cursor: pointer;
+        }
+        .big-text:active { background: #FFDC00; color: #000; }
+
+        /* エラー表示用 */
+        #error-log {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 100px;
+            background: rgba(255,0,0,0.8); color: white; font-size: 10px;
+            overflow: scroll; z-index: 10000; display: none; padding: 5px;
+        }
 
     </style>
 </head>
 <body>
+
+<div id="error-log"></div>
 
 <div id="game-container">
     <canvas id="main-canvas"></canvas>
@@ -116,26 +130,34 @@
             </div>
         </div>
         <div id="bottom-area">
-            <div id="btn-auto" class="game-btn" ontouchstart="game.autoLock(); event.preventDefault();" onmousedown="game.autoLock()">AUTO<br><span>LOCK</span></div>
-            <div id="btn-fire" class="game-btn" ontouchstart="game.fire(); event.preventDefault();" onmousedown="game.fire()">SHOT</div>
+            <div id="btn-auto" class="game-btn" onclick="game.autoLock()" ontouchstart="game.autoLock()">AUTO<br><span>LOCK</span></div>
+            <div id="btn-fire" class="game-btn" onclick="game.fire()" ontouchstart="game.fire()">SHOT</div>
         </div>
     </div>
 
-    <div id="screen-start" class="overlay" onclick="game.startGame()" ontouchstart="game.startGame()">
+    <div id="screen-start" class="overlay">
         <h1 style="color:#00FFFF; letter-spacing:4px;">BUBBLE SHOT</h1>
-        <p style="color:#888;">LEGACY COMPATIBLE</p>
-        <div class="big-text blink">TAP SCREEN TO START</div>
+        <p style="color:#888;">LEGACY v8.0</p>
+        <div class="big-text" onclick="game.startGame()" ontouchstart="game.startGame()">START</div>
     </div>
 
-    <div id="screen-over" class="overlay hidden" onclick="location.reload()" ontouchstart="location.reload()">
+    <div id="screen-over" class="overlay hidden">
         <h1 style="color:#FF4136;">MISSION OVER</h1>
         <p style="font-size:24px; color:white;">SCORE: <span id="result-score">0</span></p>
-        <div class="big-text">TAP TO RETRY</div>
+        <div class="big-text" onclick="location.reload()" ontouchstart="location.reload()">RETRY</div>
     </div>
 </div>
 
 <script>
-// --- 古いスマホ対応のため、const/let/classを使わない書き方 ---
+// --- エラーハンドリング ---
+window.onerror = function(msg, url, line) {
+    var log = document.getElementById('error-log');
+    log.style.display = 'block';
+    log.innerHTML += "Error: " + msg + " (Line: " + line + ")<br>";
+    return false;
+};
+
+// --- 古いスマホ対応 (var, functionのみ使用) ---
 
 var OPS = {
     add: { label: '＋', color: '#00FF66', calc: function(a,b){ return a+b; } },
@@ -144,7 +166,6 @@ var OPS = {
     div: { label: '÷', color: '#00FFFF', calc: function(a,b){ return (b!==0 && a%b===0)?a/b:null; } }
 };
 
-// ゲーム管理オブジェクト
 var game = {
     canvas: null, ctx: null, commCanvas: null, commCtx: null,
     width: 0, height: 0, cx: 0, cy: 0, radius: 0,
@@ -154,27 +175,31 @@ var game = {
     sync: 0, burstWave: 0, missionTimeLeft: 0,
 
     init: function() {
-        this.canvas = document.getElementById('main-canvas');
-        this.ctx = this.canvas.getContext('2d');
-        this.commCanvas = document.getElementById('comm-canvas');
-        this.commCtx = this.commCanvas.getContext('2d');
-        
-        this.resize();
-        window.addEventListener('resize', function(){ game.resize(); });
-        
-        // ゲーム画面のタッチ処理
-        this.canvas.addEventListener('touchstart', function(e) {
-            e.preventDefault();
-            var t = e.touches[0];
-            game.handleInput(t.clientX, t.clientY);
-        }, {passive: false});
+        try {
+            this.canvas = document.getElementById('main-canvas');
+            this.ctx = this.canvas.getContext('2d');
+            this.commCanvas = document.getElementById('comm-canvas');
+            this.commCtx = this.commCanvas.getContext('2d');
+            
+            this.resize();
+            window.addEventListener('resize', function(){ game.resize(); });
+            
+            // タッチとマウスの両対応
+            this.canvas.addEventListener('touchstart', function(e) {
+                e.preventDefault(); // スクロール防止
+                var t = e.touches[0];
+                game.handleInput(t.clientX, t.clientY);
+            }, {passive: false});
 
-        this.canvas.addEventListener('mousedown', function(e) {
-            game.handleInput(e.clientX, e.clientY);
-        });
+            this.canvas.addEventListener('mousedown', function(e) {
+                game.handleInput(e.clientX, e.clientY);
+            });
 
-        this.updateCommander('normal');
-        this.loop();
+            this.updateCommander('normal');
+            this.loop();
+        } catch(e) {
+            alert("INIT ERROR: " + e.message);
+        }
     },
 
     resize: function() {
@@ -186,8 +211,8 @@ var game = {
         this.ctx.scale(dpr, dpr);
         
         this.cx = this.width / 2;
-        this.cy = 260 + (this.height - 260 - 120) / 2;
-        this.radius = Math.min(this.width, this.height - 400) / 2 - 10;
+        this.cy = 260 + (this.height - 260 - 140) / 2;
+        this.radius = Math.min(this.width, this.height - 420) / 2 - 10;
         if(this.radius < 50) this.radius = 50;
 
         this.commCanvas.width = 60 * dpr; 
@@ -198,7 +223,7 @@ var game = {
 
     startGame: function() {
         if(this.state === 'playing') return;
-        document.getElementById('screen-start').classList.add('hidden');
+        document.getElementById('screen-start').style.display = 'none'; // hiddenクラスではなく直接操作
         this.state = 'playing';
         this.score = 0;
         this.timeLeft = 90;
@@ -224,7 +249,6 @@ var game = {
             this.updateMissionUI(label, "#FFDC00", "TARGET", label + "をすべて撃て");
         }
         this.missionTimeLeft = 10.0;
-        // リセット
         for(var i=0; i<this.bubbles.length; i++) {
             this.bubbles[i].locked = false;
             this.bubbles[i].order = 0;
@@ -452,7 +476,13 @@ var game = {
         } else {
             ready = locked.length > 0;
         }
-        if(ready) btn.classList.add('ready'); else btn.classList.remove('ready');
+        if(ready) {
+            btn.classList.add('ready');
+            btn.style.opacity = '1';
+        } else {
+            btn.classList.remove('ready');
+            btn.style.opacity = '0.5';
+        }
     },
 
     loop: function() {
@@ -554,9 +584,7 @@ var game = {
     addEffect: function(text, x, y, color) { this.effects.push({ text:text, x:x, y:y, color:color, life:1 }); }
 };
 
-// 起動
-game.init();
-
+window.onload = function() { game.init(); };
 </script>
 </body>
 </html>
