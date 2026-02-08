@@ -3,179 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Bubble Shot: Hi-MAT Final</title>
+    <title>Bubble Shot: JP Localized</title>
     <style>
-        /* --- CSS: 重厚なコックピット風UI --- */
-        body {
-            margin: 0; overflow: hidden; background-color: #020205; color: white;
-            font-family: 'Segoe UI', sans-serif;
-            touch-action: none; user-select: none; -webkit-user-select: none;
-        }
-        #game-container {
-            position: relative; width: 100vw; height: 100dvh; overflow: hidden;
-            background: radial-gradient(circle at center, #1a1a2e 0%, #000000 100%);
-        }
+        body { margin: 0; overflow: hidden; background-color: #111; color: white; font-family: 'Helvetica Neue', Arial, sans-serif; touch-action: none; user-select: none; }
+        #game-container { position: relative; width: 100vw; height: 100dvh; background-color: #050510; }
         canvas { display: block; width: 100%; height: 100%; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
+        
+        /* Top Area */
+        #top-area { height: 240px; display: flex; flex-direction: column; align-items: center; background: linear-gradient(to bottom, rgba(0,0,0,0.9), rgba(0,0,0,0)); z-index: 10; padding-top: 10px; position: relative; }
+        #commander-window { position: absolute; top: 10px; left: 10px; width: 70px; height: 70px; background: rgba(0, 20, 40, 0.6); border: 2px solid #00FFFF; border-radius: 10px; clip-path: polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%); display: flex; justify-content: center; align-items: center; }
+        #comm-canvas { width: 100%; height: 100%; }
+        
+        #mission-timer-wrapper { width: 200px; height: 4px; background: #222; margin-top: 5px; border-radius: 2px; overflow: hidden; border: 1px solid #444; }
+        #mission-timer-bar { width: 100%; height: 100%; background: #FF4136; transition: width 0.1s linear; }
+        
+        #mission-label { font-size: 10px; color: #00FFFF; letter-spacing: 4px; margin-top: 5px; opacity: 0.8;}
+        
+        /* Mission Display Box */
+        #mission-method-box { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
+        .method-tag { font-size: 10px; color: #888; font-weight: bold; letter-spacing: 1px; }
+        
+        /* Operator Display (Left Box) */
+        #mission-op-display { 
+            font-size: 28px; font-weight: 900; color: #FF4136; 
+            text-shadow: 0 0 10px currentColor; 
+            border: 2px solid #FF4136; padding: 0 10px; border-radius: 8px; 
+            background: rgba(255, 65, 54, 0.1); 
+            min-width: 40px; text-align: center;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        /* Target Display (Right Number) */
+        #mission-target-display { 
+            font-size: 48px; font-weight: 900; color: #FFDC00; line-height: 1.0; 
+            text-shadow: 0 0 20px rgba(255, 220, 0, 0.8); 
+            font-family: 'Arial Black', sans-serif; 
+        }
+        
+        #mission-sub { font-size: 14px; color: #00FFFF; font-weight: bold; margin-top: 8px; letter-spacing: 1px; }
+        
+        #status-bar { color: #aaa; font-family: monospace; font-size: 14px; display: flex; gap: 30px; margin-top: 8px; }
+        #sync-gauge-container { width: 240px; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-top: 10px; border: 1px solid #444; }
+        #sync-gauge { width: 0%; height: 100%; background: linear-gradient(90deg, #00FFFF, #FF00FF); transition: width 0.3s; }
+        
+        /* Bottom Area */
+        #bottom-area { height: 150px; display: flex; justify-content: center; align-items: center; padding-bottom: 20px; gap: 20px; }
+        #fire-btn { width: 160px; height: 60px; background: rgba(255, 65, 54, 0.1); border: 2px solid #555; color: #555; font-size: 24px; font-weight: 900; letter-spacing: 4px; display: flex; justify-content: center; align-items: center; clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%); pointer-events: auto; transition: 0.2s; cursor: pointer; }
+        #fire-btn.ready { background: rgba(255, 65, 54, 0.8); border: none; color: white; box-shadow: 0 0 30px #FF4136; text-shadow: 0 0 10px white; }
+        #auto-btn { width: 70px; height: 60px; background: rgba(0, 255, 255, 0.1); border: 2px solid #00FFFF; color: #00FFFF; font-size: 14px; font-weight: bold; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 8px; pointer-events: auto; cursor: pointer; box-shadow: 0 0 10px rgba(0,255,255,0.3); transition: 0.1s; }
+        #auto-btn:active { transform: scale(0.95); background: #00FFFF; color: #000; }
+        #auto-btn span { font-size: 10px; opacity: 0.8; }
 
-        /* UIレイヤー */
-        #ui-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; display: flex; flex-direction: column; justify-content: space-between;
-        }
-
-        /* ヘッダーエリア */
-        #top-hud {
-            display: flex; justify-content: space-between; align-items: flex-start;
-            padding: 15px;
-            background: linear-gradient(to bottom, rgba(0, 50, 100, 0.8), transparent);
-        }
-
-        /* 司令官通信ウィンドウ */
-        #comm-window {
-            width: 70px; height: 70px;
-            border: 2px solid #00FFFF; border-radius: 50%;
-            background: rgba(0, 20, 30, 0.7);
-            box-shadow: 0 0 15px #00FFFF;
-            display: flex; justify-content: center; align-items: center;
-            overflow: hidden; position: relative;
-        }
-        #comm-scanline {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(to bottom, transparent 50%, rgba(0,255,255,0.1) 51%);
-            background-size: 100% 4px; pointer-events: none;
-        }
-
-        /* スコア・タイム */
-        #status-panel { text-align: right; }
-        .hud-label { font-size: 10px; color: #00FFFF; letter-spacing: 2px; text-shadow: 0 0 5px #00FFFF; }
-        .hud-value { font-size: 24px; font-weight: bold; font-family: 'Courier New', monospace; color: #fff; }
-
-        /* ミッション表示（画面中央上） */
-        #mission-hud {
-            position: absolute; top: 90px; width: 100%; text-align: center; pointer-events: none;
-        }
-        #mission-title {
-            font-size: 36px; font-weight: 900; color: #FFD700;
-            text-shadow: 0 0 20px #FFD700; letter-spacing: 3px;
-            font-family: 'Arial Black', sans-serif;
-            transition: transform 0.1s;
-        }
-        #mission-desc {
-            font-size: 14px; color: #fff; background: rgba(0,0,0,0.6);
-            padding: 4px 12px; border-radius: 4px; display: inline-block;
-            border: 1px solid #555; margin-top: 5px;
-        }
-        .pulse-text { animation: pulse 0.8s infinite alternate; }
-        @keyframes pulse { from { opacity: 1; transform: scale(1); } to { opacity: 0.8; transform: scale(0.95); } }
-
-        /* フッターエリア */
-        #bottom-hud {
-            padding: 20px; display: flex; justify-content: flex-end; align-items: flex-end;
-            background: linear-gradient(to top, rgba(0, 20, 30, 0.9), transparent);
-            pointer-events: auto;
-            min-height: 80px;
-        }
-
-        #formula-bar {
-            position: absolute; bottom: 30px; left: 0; width: 100%;
-            text-align: center; font-size: 24px; font-weight: bold; color: #fff;
-            text-shadow: 0 0 10px #00FFFF; font-family: monospace;
-            pointer-events: none;
-        }
-
-        #auto-lock-sub {
-            width: 70px; height: 70px; border-radius: 50%;
-            border: 2px solid #00FF00; color: #00FF00;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            font-size: 10px; font-weight: bold; background: rgba(0, 255, 0, 0.1);
-            cursor: pointer; pointer-events: auto; box-shadow: 0 0 10px #00FF00;
-            margin-left: auto; /* 右寄せ */
-        }
-        #auto-lock-sub:active { transform: scale(0.9); background: #00FF00; color: #000; }
-
-        /* タイムバー */
-        #time-gauge {
-            position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: #333;
-        }
-        #time-fill {
-            width: 100%; height: 100%; background: #00FFFF;
-            box-shadow: 0 0 10px #00FFFF; transition: width 0.1s linear;
-        }
-
-        /* スタート画面 */
-        #start-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 50;
-        }
-        .title-text {
-            font-size: 40px; color: #00FFFF; font-weight: 900;
-            text-shadow: 0 0 20px #00FFFF; margin-bottom: 10px; text-align: center;
-            font-family: 'Arial Black', sans-serif;
-        }
-        .start-btn {
-            padding: 15px 50px; border: 2px solid #FFD700; color: #FFD700;
-            background: transparent; font-size: 20px; font-weight: bold;
-            cursor: pointer; box-shadow: 0 0 15px #FFD700; margin-top: 30px;
-        }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 10, 15, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; pointer-events: auto; text-align: center; }
         .hidden { display: none !important; }
-
+        .btn-start { padding: 15px 50px; font-size: 20px; background: transparent; border: 2px solid #FFDC00; color: #FFDC00; cursor: pointer; font-weight: bold; box-shadow: 0 0 15px #FFDC00; }
     </style>
 </head>
 <body>
-
 <div id="game-container">
     <canvas id="gameCanvas"></canvas>
-
     <div id="ui-layer">
-        <div id="time-gauge"><div id="time-fill"></div></div>
-
-        <div id="top-hud">
-            <div id="comm-window">
-                <canvas id="comm-canvas" width="70" height="70"></canvas>
-                <div id="comm-scanline"></div>
+        <div id="top-area">
+            <div id="commander-window"><canvas id="comm-canvas" width="70" height="70"></canvas></div>
+            <div id="mission-label">WEAPON & TARGET</div>
+            <div id="mission-timer-wrapper"><div id="mission-timer-bar"></div></div>
+            <div id="mission-method-box">
+                <span class="method-tag">USE</span>
+                <div id="mission-op-display">?</div>
+                <span class="method-tag">TO MAKE</span>
+                <div id="mission-target-display">0</div>
             </div>
-            <div id="status-panel">
-                <div class="hud-label">SCORE</div>
-                <div class="hud-value" id="score-val">00000</div>
-                <div class="hud-label">TIME</div>
-                <div class="hud-value" id="time-val">60</div>
+            <div id="mission-sub">指示に従いロックせよ</div>
+            <div id="status-bar">
+                <span>SCORE: <span id="score">0</span></span>
+                <span>TIME: <span id="timer">90</span></span>
             </div>
+            <div id="sync-gauge-container"><div id="sync-gauge"></div></div>
         </div>
-
-        <div id="mission-hud">
-            <div id="mission-title" class="pulse-text">ODD NUMS</div>
-            <div id="mission-desc">奇数(1,3,5...)をロックして撃て</div>
-        </div>
-
-        <div id="formula-bar">Trace to Lock</div>
-
-        <div id="bottom-hud">
-            <div id="auto-lock-sub" onclick="game.autoLock()">
-                MAP<br>WPN
-            </div>
+        <div id="bottom-area">
+            <div id="auto-btn" onclick="game.autoLock()">AUTO<span>LOCK</span></div>
+            <div id="fire-btn" onclick="game.fire()">SHOT</div>
         </div>
     </div>
-
-    <div id="start-overlay">
-        <div class="title-text">Hi-MAT<br>BURST</div>
-        <div style="color:#ccc; font-size:14px;">Trace targets > Release to Fire</div>
-        <button class="start-btn" onclick="game.start()">LAUNCH</button>
+    <div id="menu-screen" class="overlay">
+        <h1 style="color: #00FFFF; letter-spacing: 5px;">BUBBLE SHOT</h1>
+        <p style="color: #888;">UNDEFINED BLUE PROJECT</p>
+        <button class="btn-start" onclick="game.start()">ENGAGE</button>
+    </div>
+    <div id="gameover-screen" class="overlay hidden">
+        <h1 style="color: #FF4136;">MISSION OVER</h1>
+        <p style="font-size: 28px;">SCORE: <span id="final-score">0</span></p>
+        <button class="btn-start" onclick="location.reload()">RE-ENGAGE</button>
     </div>
 </div>
 
 <script>
-/**
- * Bubble Shot Ver 4.2: Hi-MAT Final Fix
- * - 文字色を白に修正
- * - 操作を「なぞり（ドラッグ）」に戻し、マルチロック感を再現
- */
-
+// 演算子定義：記号を明確に
 const OPS = {
-    add: { label: '+', op: '+' }, 
-    sub: { label: '-', op: '-' },
-    mul: { label: '×', op: '*' }, 
-    div: { label: '÷', op: '/' }
+    add: { label: '＋', calc: (a, b) => a + b, color: '#00FF66' },
+    sub: { label: '－', calc: (a, b) => a - b, color: '#FF8800' },
+    mul: { label: '×', calc: (a, b) => a * b, color: '#FF00FF' },
+    div: { label: '÷', calc: (a, b) => (b !== 0 && a % b === 0) ? a / b : null, color: '#00FFFF' }
 };
 
 class Game {
@@ -184,460 +113,342 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         this.commCanvas = document.getElementById('comm-canvas');
         this.commCtx = this.commCanvas.getContext('2d');
-
+        this.entities = []; this.effects = []; this.lasers = [];
+        this.score = 0; this.timeLeft = 90; this.missionTimeMax = 10.0;
+        this.missionTimeLeft = this.missionTimeMax;
+        this.syncRatio = 0; this.state = 'menu'; this.lastTime = 0; this.scanAngle = 0;
+        this.targetNum = 0; this.targetOp = null; this.burstWave = 0;
         this.resize();
         window.addEventListener('resize', () => this.resize());
-
-        // 入力：なぞり操作（ドラッグ）
-        this.canvas.addEventListener('pointerdown', (e) => this.handleStart(e));
-        this.canvas.addEventListener('pointermove', (e) => this.handleMove(e));
-        this.canvas.addEventListener('pointerup', () => this.handleEnd());
-        this.canvas.addEventListener('pointercancel', () => this.handleEnd());
-
-        // 状態
-        this.state = 'menu'; 
-        this.score = 0;
-        this.maxTime = 60;
-        this.timeLeft = 60;
-        this.isDragging = false;
-        
-        this.bubbles = [];
-        this.selectedBubbles = [];
-        this.lasers = [];
-        this.particles = [];
-        this.texts = [];
-        
-        this.mission = null;
-        this.combo = 0;
-        this.maxNum = 9; // 初期値
-
-        this.lastTime = 0;
-        this.loop = this.loop.bind(this);
-        requestAnimationFrame(this.loop);
-
-        this.drawCommander('normal');
+        this.canvas.addEventListener('pointerdown', (e) => this.handleClick(e));
+        this.updateCommander('normal');
+        requestAnimationFrame((t) => this.loop(t));
     }
 
     resize() {
-        this.dpr = window.devicePixelRatio || 1;
-        this.width = window.innerWidth;
-        this.height = window.innerHeight;
-        this.canvas.width = this.width * this.dpr;
-        this.canvas.height = this.height * this.dpr;
-        this.ctx.scale(this.dpr, this.dpr);
-        this.bubbleR = Math.min(this.width, this.height) / 8;
+        const dpr = window.devicePixelRatio || 1;
+        this.width = window.innerWidth; this.height = window.innerHeight;
+        this.canvas.width = this.width * dpr; this.canvas.height = this.height * dpr;
+        this.ctx.scale(dpr, dpr);
+        this.centerX = this.width / 2;
+        this.centerY = 220 + (this.height - 220 - 150) / 2;
+        this.radarRadius = Math.min(this.width, this.height - 420) / 2 - 10;
+        this.shipPos = { x: this.width / 2, y: this.height - 50 };
     }
 
     start() {
-        document.getElementById('start-overlay').classList.add('hidden');
-        this.state = 'playing';
-        this.score = 0;
-        this.timeLeft = this.maxTime;
-        this.bubbles = [];
-        this.replenishBubbles(15);
-        this.setNextMission();
-        this.updateUI();
+        this.state = 'playing'; this.score = 0; this.timeLeft = 90;
+        this.entities = []; this.nextMission(); this.replenish();
+        document.getElementById('menu-screen').classList.add('hidden');
     }
 
-    // --- ミッション ---
-    setNextMission() {
-        const rules = [
-            { id: 'odd', title: 'ODD', desc: '奇数 (1,3,5...) をなぞって撃て', color: '#FF0055' },
-            { id: 'even', title: 'EVEN', desc: '偶数 (2,4,6...) をなぞって撃て', color: '#00CCFF' },
-            { id: 'asc', title: 'ASCEND', desc: '小さい順 (1→2→3) になぞれ', color: '#00FF00' },
-            { id: 'desc', title: 'DESCEND', desc: '大きい順 (9→8→7) になぞれ', color: '#FFCC00' }
-        ];
-
-        if (Math.random() < 0.25 && this.score > 500) {
-            this.setBossMission();
-            return;
-        }
-
-        let next;
-        do { next = rules[Math.floor(Math.random()*rules.length)]; } 
-        while(this.mission && this.mission.id === next.id);
-        
-        this.mission = next;
-        this.updateMissionUI();
-        this.drawCommander('normal');
-    }
-
-    setBossMission() {
-        const targets = [
-            { t: 6, op: 'mul', title: 'TARGET: 6', desc: '掛け算で作れ (2×3)' },
-            { t: 12, op: 'mul', title: 'TARGET: 12', desc: '掛け算で作れ (3×4)' },
-            { t: 10, op: 'add', title: 'TARGET: 10', desc: '足し算で作れ (5+5)' }
-        ];
-        const t = targets[Math.floor(Math.random()*targets.length)];
-        this.mission = { id: 'calc', title: t.title, desc: t.desc, targetVal: t.t, targetOp: t.op, color: '#FFFFFF' };
-        
-        this.updateMissionUI();
-        this.drawCommander('panic');
-        this.ensureBossSolvable();
-    }
-
-    updateMissionUI() {
-        const t = document.getElementById('mission-title');
-        const d = document.getElementById('mission-desc');
-        t.innerText = this.mission.title;
-        t.style.color = this.mission.color;
-        d.innerText = this.mission.desc;
-        t.classList.remove('pulse-text');
-        void t.offsetWidth;
-        t.classList.add('pulse-text');
-        document.getElementById('formula-bar').innerText = "";
-    }
-
-    // --- なぞり操作 ---
-    handleStart(e) {
-        if (this.state !== 'playing') return;
-        this.isDragging = true;
-        this.selectedBubbles = [];
-        this.handleMove(e);
-    }
-
-    handleMove(e) {
-        if (!this.isDragging) return;
-        const rect = this.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        for (let b of this.bubbles) {
-            const dist = Math.hypot(b.x - x, b.y - y);
-            if (dist < b.r * 1.0) {
-                this.tryAddBubble(b);
-            }
-        }
-    }
-
-    handleEnd() {
-        this.isDragging = false;
-        if (this.selectedBubbles.length > 0) {
-            this.fire();
-        }
-    }
-
-    tryAddBubble(b) {
-        if (this.selectedBubbles.includes(b)) return; // 既に選択済みなら無視
-
-        // ルールチェック
-        let isValid = false;
-
-        if (this.mission.id === 'calc') {
-            // 計算モード: Num -> Op -> Num の順
-            const last = this.selectedBubbles[this.selectedBubbles.length - 1];
-            if (!last) {
-                if (b.type === 'num') isValid = true;
-            } else {
-                if (last.type === 'num' && b.type === 'op') isValid = true;
-                if (last.type === 'op' && b.type === 'num') isValid = true;
-            }
-        } else {
-            // 反射神経モード: ルールに合う数字のみ
-            if (b.type !== 'num') return;
-            const last = this.selectedBubbles[this.selectedBubbles.length - 1];
+    nextMission() {
+        const mode = Math.random();
+        // 60%の確率で計算ミッション
+        if(mode < 0.6) {
+            this.isCalcMission = true;
+            this.targetNum = Math.floor(Math.random() * 19) + 2;
+            const opKeys = Object.keys(OPS);
+            this.targetOp = opKeys[Math.floor(Math.random() * opKeys.length)];
             
-            if (this.mission.id === 'odd') isValid = (b.val % 2 !== 0);
-            else if (this.mission.id === 'even') isValid = (b.val % 2 === 0);
-            else if (this.mission.id === 'asc') {
-                isValid = (!last || b.val > last.val);
-            }
-            else if (this.mission.id === 'desc') {
-                isValid = (!last || b.val < last.val);
-            }
-        }
-
-        if (isValid) {
-            b.selected = true;
-            this.selectedBubbles.push(b);
-            b.scale = 1.3; // 選択時の反応
-            this.updateFormulaBar();
-        }
-    }
-
-    updateFormulaBar() {
-        let txt = "";
-        this.selectedBubbles.forEach(b => {
-             txt += (b.type==='op' ? OPS[b.val].label : b.val) + " ";
-        });
-        document.getElementById('formula-bar').innerText = txt;
-    }
-
-    // --- 発射 ---
-    fire() {
-        let success = false;
-        let bonus = 0;
-        const selected = this.selectedBubbles;
-
-        if (this.mission.id === 'calc') {
-            if (selected.length >= 3) {
-                let exp = "";
-                let hasOp = false;
-                selected.forEach(b => {
-                    let v = b.val;
-                    if (b.type === 'op') {
-                        if (b.val === this.mission.targetOp) hasOp = true;
-                        v = OPS[b.val].op;
-                    }
-                    exp += v;
-                });
-                try {
-                    if (new Function('return '+exp)() === this.mission.targetVal && hasOp) {
-                        success = true; bonus = 5000;
-                    }
-                } catch(e){}
-            }
+            // 計算ミッション表示
+            document.getElementById('mission-op-display').innerText = OPS[this.targetOp].label;
+            document.getElementById('mission-op-display').style.color = OPS[this.targetOp].color;
+            document.getElementById('mission-op-display').style.borderColor = OPS[this.targetOp].color;
+            document.getElementById('mission-target-display').innerText = this.targetNum;
+            document.getElementById('mission-sub').innerText = "計算して数値を作れ";
+            
+            this.ensureSolutionExists();
         } else {
-            // 反射神経モードは1個以上でOK、多いほど高得点
-            if (selected.length > 0) {
-                success = true;
-                bonus = selected.length * 200;
-            }
+            this.isCalcMission = false;
+            this.targetOp = (Math.random() < 0.5) ? 'even' : 'odd';
+            
+            // 偶数・奇数ミッション表示（漢字対応）
+            const label = (this.targetOp === 'even' ? '偶数' : '奇数');
+            document.getElementById('mission-op-display').innerText = label;
+            document.getElementById('mission-op-display').style.color = "#FFDC00";
+            document.getElementById('mission-op-display').style.borderColor = "#FFDC00";
+            // ターゲットは「TARGET」等の汎用表記へ（USE [偶数] TO MAKE [TARGET]）
+            document.getElementById('mission-target-display').innerText = "TARGET";
+            document.getElementById('mission-target-display').style.fontSize = "32px"; // 文字サイズ調整
+            document.getElementById('mission-sub').innerText = label + "をすべて撃て";
         }
+        this.missionTimeLeft = 10.0;
+        this.entities.forEach(e => { e.locked = false; e.order = 0; });
+        this.updateFireButton();
+        this.updateCommander('normal');
+    }
 
-        if (success) {
-            this.triggerBurst(selected, this.mission.color);
-            this.score += bonus;
-            this.addText(this.width/2, this.height/2, `BURST! +${bonus}`, this.mission.color, 40);
-            this.drawCommander('happy');
-            this.timeLeft = Math.min(this.maxTime, this.timeLeft + (this.mission.id==='calc'?10:1));
+    // 必ず正解が存在するように、強制的にバブルを配置する
+    ensureSolutionExists() {
+        if(!this.isCalcMission) return;
+        let n1, n2;
+        const op = this.targetOp;
+        const target = this.targetNum;
 
-            if (this.mission.id === 'calc') {
-                this.setNextMission();
+        if(op === 'add') { n1 = Math.floor(Math.random() * (target - 1)) + 1; n2 = target - n1; }
+        else if(op === 'sub') { n2 = Math.floor(Math.random() * 10) + 1; n1 = target + n2; }
+        else if(op === 'mul') {
+            const divisors = [];
+            for(let i=1; i<=target; i++) { if(target % i === 0) divisors.push(i); }
+            n1 = divisors[Math.floor(Math.random() * divisors.length)]; n2 = target / n1;
+        } else if(op === 'div') { n2 = Math.floor(Math.random() * 5) + 1; n1 = target * n2; }
+
+        // 第3引数 true で、場所がなくても強制配置（古いバブルを上書き）
+        this.spawnEntityFixed(n1, 'num', true);
+        this.spawnEntityFixed(op, 'op', true);
+        this.spawnEntityFixed(n2, 'num', true);
+    }
+
+    spawnEntityFixed(val, type, force = false) {
+        const r = 22;
+        let attempts = 0;
+        while(attempts < 200) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.sqrt(Math.random()) * (this.radarRadius - r - 10);
+            const x = this.centerX + Math.cos(angle) * dist;
+            const y = this.centerY + Math.sin(angle) * dist;
+            let safe = true;
+            for(let e of this.entities) { if(Math.hypot(e.x - x, e.y - y) < r * 2.6) { safe = false; break; } }
+            if(safe) {
+                this.entities.push({ x, y, r, val, type, scale: 0, locked: false, alive: true, order: 0 });
+                return;
+            }
+            attempts++;
+        }
+        if(force) {
+            // 場所がない場合、配列の先頭（古いもの）を削除して場所を確保
+            if(this.entities.length > 0) {
+                const old = this.entities.shift();
+                this.entities.push({ x: old.x, y: old.y, r, val, type, scale: 0, locked: false, alive: true, order: 0 });
             } else {
-                this.combo++;
-                if (this.combo > 2) { this.combo = 0; this.setNextMission(); }
+                this.entities.push({ x: this.centerX, y: this.centerY, r, val, type, scale: 0, locked: false, alive: true, order: 0 });
             }
-        } else {
-            selected.forEach(b => b.selected = false);
-            this.addText(this.width/2, this.height/2, "MISS", "#888");
-            this.timeLeft -= 2;
-            this.drawCommander('panic');
         }
+    }
 
-        this.selectedBubbles = [];
-        document.getElementById('formula-bar').innerText = "";
+    replenish() { while (this.entities.length < 20) { this.spawnEntity(); } }
+
+    spawnEntity() {
+        const r = 22;
+        const type = (this.isCalcMission && Math.random() < 0.4) ? 'op' : 'num';
+        let val = type === 'num' ? Math.floor(Math.random() * 25) + 1 : Object.keys(OPS)[Math.floor(Math.random() * 4)];
+        this.spawnEntityFixed(val, type, false);
+    }
+
+    handleClick(e) {
+        if(this.state !== 'playing') return;
+        const rect = this.canvas.getBoundingClientRect();
+        const tx = e.clientX - rect.left; const ty = e.clientY - rect.top;
+        for(let ent of this.entities) {
+            if(Math.hypot(ent.x - tx, ent.y - ty) < ent.r + 15) {
+                if(!ent.locked) {
+                    const lockedCount = this.entities.filter(e => e.locked).length;
+                    if(this.isCalcMission && lockedCount >= 3) return; // 計算時は3つまで
+                    ent.locked = true; ent.order = lockedCount + 1;
+                } else {
+                    ent.locked = false; ent.order = 0;
+                    let count = 1;
+                    this.entities.filter(e => e.locked).sort((a,b)=>a.order-b.order).forEach(e => e.order = count++);
+                }
+                this.updateFireButton(); return;
+            }
+        }
     }
 
     autoLock() {
-        if (this.state !== 'playing') return;
-        const targets = [];
-        this.bubbles.forEach(b => {
-            let match = false;
-            if (this.mission.id === 'odd') match = (b.type === 'num' && b.val % 2 !== 0);
-            else if (this.mission.id === 'even') match = (b.type === 'num' && b.val % 2 === 0);
-            else match = true; // その他は全消し
-            if (match) targets.push(b);
-        });
-        if (targets.length > 0) {
-            this.triggerBurst(targets, '#00FF00');
-            this.score += targets.length * 100;
-            this.addText(this.width/2, this.height/2, "MAP WPN!!", "#00FF00", 50);
-            this.replenishBubbles(15);
-        }
-    }
+        if(this.state !== 'playing') return;
+        this.entities.forEach(e => { e.locked = false; e.order = 0; });
 
-    triggerBurst(targets, color) {
-        targets.forEach(b => {
-            this.lasers.push({ tx: b.x, ty: b.y, life: 1.0, color: color });
-            this.spawnParticles(b.x, b.y, color);
-            const idx = this.bubbles.indexOf(b);
-            if (idx > -1) this.bubbles.splice(idx, 1);
-        });
-        this.replenishBubbles(15 - this.bubbles.length);
-    }
-
-    // --- 生成系 ---
-    replenishBubbles(count) {
-        if (count <= 0) return;
-        for(let i=0; i<count; i++) {
-            let type = 'num';
-            let val = Math.floor(Math.random()*9)+1;
-            if (this.mission && this.mission.id === 'calc' && Math.random()<0.4) {
-                type = 'op';
-                val = ['add','mul'][Math.floor(Math.random()*2)];
-            }
-            this.bubbles.push({
-                x: Math.random() * (this.width - 60) + 30,
-                y: Math.random() * (this.height - 250) + 150,
-                r: this.bubbleR * 0.7,
-                val: val, type: type,
-                vx: (Math.random()-0.5)*1.5, vy: (Math.random()-0.5)*1.5,
-                selected: false, scale: 1,
-                color: type==='num' ? '#0074D9' : '#FF4136'
-            });
-        }
-    }
-    
-    ensureBossSolvable() {
-        const t = this.mission.targetVal;
-        const op = this.mission.targetOp === 'mul' ? 'mul' : 'add';
-        this.bubbles.push(this.makeBubble(1, 'num'));
-        this.bubbles.push(this.makeBubble(op, 'op'));
-        this.bubbles.push(this.makeBubble(t, 'num'));
-    }
-
-    makeBubble(val, type) {
-        return {
-            x: this.width/2 + (Math.random()-0.5)*50,
-            y: this.height/2 + (Math.random()-0.5)*50,
-            r: this.bubbleR * 0.7, val, type,
-            vx: (Math.random()-0.5)*2, vy: (Math.random()-0.5)*2,
-            selected: false, scale: 1, color: type==='num' ? '#0074D9' : '#FF4136'
-        };
-    }
-
-    spawnParticles(x, y, color) {
-        for(let i=0; i<8; i++) {
-            this.particles.push({ x, y, vx:(Math.random()-0.5)*10, vy:(Math.random()-0.5)*10, life:1.0, color });
-        }
-    }
-    
-    addText(x, y, text, color, size=20) {
-        this.texts.push({ x, y, text, color, size, life: 1.0 });
-    }
-
-    drawCommander(mood) {
-        const ctx = this.commCtx;
-        ctx.clearRect(0,0,70,70);
-        const x=35, y=35, s=28;
-        ctx.fillStyle = mood==='panic'?'#A0A0FF':(mood==='happy'?'#FF4136':'#FFDB58');
-        ctx.beginPath(); ctx.arc(x,y,s,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle='#000'; 
-        ctx.beginPath(); ctx.arc(x-8, y-5, 3, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x+8, y-5, 3, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath();
-        if(mood==='panic') { ctx.moveTo(x-10,y+10); ctx.lineTo(x+10,y+10); ctx.stroke(); }
-        else { ctx.arc(x,y+5,10,0,Math.PI); ctx.fill(); }
-    }
-
-    // --- ループ ---
-    loop() {
-        if (this.state === 'playing') {
-            this.timeLeft -= 1/60;
-            if (this.timeLeft <= 0) {
-                this.state = 'gameover';
-                document.getElementById('start-overlay').classList.remove('hidden');
-                document.querySelector('.title-text').innerText = "TIME UP";
-                document.querySelector('.start-btn').innerText = "RETRY";
-            }
-            document.getElementById('score-val').innerText = this.score.toString().padStart(5, '0');
-            document.getElementById('time-val').innerText = Math.ceil(this.timeLeft);
-            const pct = (this.timeLeft/this.maxTime)*100;
-            document.getElementById('time-fill').style.width = pct + '%';
-        }
-
-        // Draw
-        this.ctx.fillStyle = '#020205';
-        this.ctx.fillRect(0, 0, this.width, this.height);
-
-        // Lasers
-        this.ctx.globalCompositeOperation = 'lighter';
-        for (let i = this.lasers.length - 1; i >= 0; i--) {
-            let l = this.lasers[i];
-            l.life -= 0.1;
-            this.ctx.strokeStyle = l.color;
-            this.ctx.lineWidth = 20 * l.life;
-            this.ctx.lineCap = 'round';
-            this.ctx.beginPath();
-            this.ctx.moveTo(this.width/2, this.height);
-            this.ctx.lineTo(l.tx, l.ty);
-            this.ctx.stroke();
-            this.ctx.lineWidth = 5 * l.life;
-            this.ctx.strokeStyle = '#fff';
-            this.ctx.stroke();
-            if (l.life <= 0) this.lasers.splice(i, 1);
-        }
-        this.ctx.globalCompositeOperation = 'source-over';
-
-        // Bubbles
-        this.bubbles.forEach(b => {
-            b.x += b.vx; b.y += b.vy;
-            if (b.x < b.r || b.x > this.width-b.r) b.vx *= -1;
-            if (b.y < 150 || b.y > this.height-80) b.vy *= -1;
-            if (b.scale > 1) b.scale -= 0.05;
-
-            // Background Circle
-            this.ctx.fillStyle = b.color;
-            this.ctx.beginPath();
-            this.ctx.arc(b.x, b.y, b.r * b.scale, 0, Math.PI*2);
-            this.ctx.fill();
-            
-            // Highlight
-            this.ctx.fillStyle = 'rgba(255,255,255,0.2)';
-            this.ctx.beginPath();
-            this.ctx.arc(b.x - b.r*0.2, b.y - b.r*0.2, b.r*0.3, 0, Math.PI*2);
-            this.ctx.fill();
-
-            // Lock-on Sight
-            if (b.selected) {
-                this.drawReticle(b.x, b.y, b.r * 1.3, this.mission.color);
-                // リンク線（前のバブルと繋ぐ）
-                const idx = this.selectedBubbles.indexOf(b);
-                if (idx > 0) {
-                    const prev = this.selectedBubbles[idx-1];
-                    this.ctx.strokeStyle = this.mission.color;
-                    this.ctx.lineWidth = 4;
-                    this.ctx.beginPath(); this.ctx.moveTo(prev.x, prev.y); this.ctx.lineTo(b.x, b.y); this.ctx.stroke();
+        if (this.isCalcMission) {
+            const ops = this.entities.filter(e => e.type === 'op' && e.val === this.targetOp);
+            const nums = this.entities.filter(e => e.type === 'num');
+            let found = false;
+            // 総当たりで正解ペアを探す
+            for (let op of ops) {
+                for (let n1 of nums) {
+                    for (let n2 of nums) {
+                        if (n1 === n2) continue;
+                        if (OPS[this.targetOp].calc(n1.val, n2.val) === this.targetNum) {
+                            n1.locked = true; n1.order = 1; op.locked = true; op.order = 2; n2.locked = true; n2.order = 3;
+                            found = true; break;
+                        }
+                    }
+                    if(found) break;
                 }
+                if(found) break;
             }
-            
-            // Text (★修正: 白文字 + 影)
-            this.ctx.fillStyle = '#FFFFFF';
-            this.ctx.shadowColor = 'rgba(0,0,0,0.8)';
-            this.ctx.shadowBlur = 4;
-            this.ctx.font = 'bold 24px Arial';
-            this.ctx.textAlign = 'center';
-            this.ctx.textBaseline = 'middle';
-            let label;
-            if (b.type === 'num') label = b.val;
-            else label = (OPS[b.val] ? OPS[b.val].label : '?');
-            this.ctx.fillText(label, b.x, b.y);
-            this.ctx.shadowBlur = 0; // Reset
-        });
-
-        // Effects
-        this.particles.forEach((p, i) => {
-            p.x += p.vx; p.y += p.vy; p.life -= 0.05;
-            this.ctx.globalAlpha = p.life;
-            this.ctx.fillStyle = p.color;
-            this.ctx.beginPath(); this.ctx.arc(p.x, p.y, 4, 0, Math.PI*2); this.ctx.fill();
-            this.ctx.globalAlpha = 1;
-            if (p.life<=0) this.particles.splice(i,1);
-        });
-
-        this.texts.forEach((t, i) => {
-            t.y -= 1; t.life -= 0.02;
-            this.ctx.globalAlpha = t.life;
-            this.ctx.fillStyle = t.color;
-            this.ctx.font = `bold ${t.size}px Arial`;
-            this.ctx.textAlign = 'center';
-            this.ctx.fillText(t.text, t.x, t.y);
-            this.ctx.globalAlpha = 1;
-            if (t.life<=0) this.texts.splice(i,1);
-        });
-
-        requestAnimationFrame(this.loop);
+            if(found) this.addEffect("TARGET LOCKED", this.centerX, this.centerY, "#00FFFF", 20);
+        } else {
+            // 偶数・奇数：条件に合うものを全選択
+            let count = 1;
+            this.entities.forEach(e => {
+                if(e.type === 'num') {
+                    const isEven = e.val % 2 === 0;
+                    if((this.targetOp === 'even' && isEven) || (this.targetOp === 'odd' && !isEven)) {
+                        e.locked = true; e.order = count++;
+                    }
+                }
+            });
+            if(count > 1) this.addEffect("MULTI LOCK", this.centerX, this.centerY, "#FF00FF", 20);
+        }
+        this.updateFireButton();
     }
 
-    drawReticle(x, y, r, color) {
-        this.ctx.strokeStyle = color;
-        this.ctx.lineWidth = 3;
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, r, 0, Math.PI*2);
-        this.ctx.stroke();
-        
-        // Rotating Part
-        this.ctx.save();
-        this.ctx.translate(x, y);
-        this.ctx.rotate(Date.now() / 150);
-        this.ctx.beginPath();
-        this.ctx.arc(0, 0, r * 0.8, 0, Math.PI*1.5);
-        this.ctx.stroke();
-        this.ctx.restore();
+    updateFireButton() {
+        const locked = this.entities.filter(e => e.locked);
+        const btn = document.getElementById('fire-btn');
+        let ready = false;
+        if (this.isCalcMission) {
+            const opCount = locked.filter(e => e.type === 'op').length;
+            const numCount = locked.filter(e => e.type === 'num').length;
+            ready = (opCount === 1 && numCount === 2);
+        } else {
+            ready = locked.length > 0;
+        }
+        if(ready) btn.classList.add('ready'); else btn.classList.remove('ready');
     }
+
+    // 判定ロジック：順序不問で計算成立すればOK
+    fire() {
+        if(this.state !== 'playing') return;
+        const locked = this.entities.filter(e => e.locked);
+        if(locked.length === 0) return;
+        let hitAll = true, totalGain = 0;
+
+        if(this.isCalcMission) {
+            const opEntity = locked.find(e => e.type === 'op');
+            const nums = locked.filter(e => e.type === 'num');
+
+            if (opEntity && nums.length === 2) {
+                const n1 = nums[0].val;
+                const n2 = nums[1].val;
+                // n1 op n2 または n2 op n1 どちらかが正解ならOK
+                const res1 = OPS[opEntity.val].calc(n1, n2);
+                const res2 = OPS[opEntity.val].calc(n2, n1);
+                
+                if ((res1 === this.targetNum || res2 === this.targetNum) && opEntity.val === this.targetOp) {
+                    hitAll = true;
+                    totalGain = 500 + Math.floor(this.missionTimeLeft * 100);
+                } else {
+                    hitAll = false;
+                }
+            } else {
+                hitAll = false;
+            }
+        } else {
+            // 偶数奇数判定
+            locked.forEach(ent => {
+                const isCorrect = (this.targetOp === 'even' ? ent.val % 2 === 0 : ent.val % 2 !== 0);
+                if(isCorrect) totalGain += 150; else hitAll = false;
+            });
+            if(hitAll) totalGain += Math.floor(this.missionTimeLeft * 50);
+        }
+
+        locked.forEach(ent => {
+            this.lasers.push({ x1: this.shipPos.x, y1: this.shipPos.y, x2: ent.x, y2: ent.y, life: 0.2, color: hitAll ? '#00FFFF' : '#FF4136', ent: ent });
+            ent.alive = false;
+        });
+
+        if(hitAll) {
+            this.score += totalGain; this.syncRatio = Math.min(100, this.syncRatio + (this.isCalcMission ? 20 : locked.length * 5));
+            this.addEffect(`HIT! +${totalGain}`, this.centerX, this.centerY - 40, "#00FFFF", 28);
+            this.updateCommander('happy');
+        } else {
+            this.syncRatio = Math.max(0, this.syncRatio - 15); this.updateCommander('panic');
+        }
+        this.entities = this.entities.filter(e => e.alive); this.replenish(); this.updateFireButton();
+        if(this.syncRatio >= 100) this.fullBurst(); else setTimeout(() => this.nextMission(), 400);
+    }
+
+    fullBurst() {
+        this.state = 'burst'; this.burstWave = 0; this.syncRatio = 0;
+        this.updateCommander('fever'); this.effects.push({ type: 'flash', life: 0.6 });
+    }
+
+    updateUI() {
+        document.getElementById('score').innerText = this.score;
+        document.getElementById('timer').innerText = Math.floor(this.timeLeft);
+        document.getElementById('sync-gauge').style.width = this.syncRatio + '%';
+        document.getElementById('mission-timer-bar').style.width = (this.missionTimeLeft / 10 * 100) + '%';
+    }
+
+    loop(t) {
+        const dt = (t - this.lastTime) / 1000; this.lastTime = t;
+        if(this.state === 'playing') {
+            this.timeLeft -= dt; this.missionTimeLeft -= dt;
+            if(this.missionTimeLeft <= 0) this.nextMission();
+            if(this.timeLeft <= 0) {
+                this.state = 'gameover';
+                document.getElementById('gameover-screen').classList.remove('hidden');
+                document.getElementById('final-score').innerText = this.score;
+            }
+            this.updateUI();
+        } else if (this.state === 'burst') {
+            this.burstWave += dt * 2000;
+            if(this.burstWave > this.width * 1.5) { this.state = 'playing'; this.entities = []; this.replenish(); this.nextMission(); }
+        }
+        this.scanAngle += dt * 2; this.draw();
+        requestAnimationFrame((t) => this.loop(t));
+    }
+
+    draw() {
+        const ctx = this.ctx; ctx.fillStyle = '#050510'; ctx.fillRect(0, 0, this.width, this.height);
+        ctx.save(); ctx.translate(this.centerX, this.centerY);
+        ctx.strokeStyle = '#00FFFF'; ctx.lineWidth = 5; ctx.shadowBlur = 15; ctx.shadowColor = '#00FFFF';
+        ctx.beginPath(); ctx.arc(0,0,this.radarRadius,0,Math.PI*2); ctx.stroke(); ctx.shadowBlur = 0;
+        ctx.restore();
+        this.lasers = this.lasers.filter(l => {
+            ctx.strokeStyle = l.color; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(l.x1, l.y1); ctx.lineTo(l.x2, l.y2); ctx.stroke();
+            l.life -= 0.02; return l.life > 0;
+        });
+        if(this.state === 'burst') {
+            ctx.strokeStyle = 'magenta'; ctx.lineWidth = 15;
+            ctx.beginPath(); ctx.arc(this.shipPos.x, this.shipPos.y, this.burstWave, 0, Math.PI*2); ctx.stroke();
+        }
+        this.entities.forEach(ent => {
+            if(ent.scale < 1) ent.scale += 0.1;
+            const s = ent.r * ent.scale;
+            ctx.beginPath(); ctx.arc(ent.x, ent.y, s, 0, Math.PI*2);
+            ctx.fillStyle = ent.locked ? 'rgba(255, 0, 255, 0.2)' : (ent.type === 'op' ? 'rgba(0, 255, 100, 0.05)' : 'rgba(0, 255, 255, 0.05)');
+            ctx.fill(); ctx.strokeStyle = ent.locked ? '#FF00FF' : (ent.type === 'op' ? OPS[ent.val].color : '#00FFFF');
+            ctx.lineWidth = ent.locked ? 3 : 1; ctx.stroke();
+            if(ent.locked) this.drawLockBracket(ent.x, ent.y, s + 8, ent.order);
+            ctx.fillStyle = ent.locked ? '#FF00FF' : 'white';
+            ctx.font = 'bold 18px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            const displayVal = ent.type === 'op' ? OPS[ent.val].label : ent.val;
+            ctx.fillText(displayVal, ent.x, ent.y);
+        });
+        this.effects = this.effects.filter(eff => {
+            ctx.globalAlpha = eff.life;
+            if(eff.type === 'flash') { ctx.fillStyle = `rgba(255,255,255,${eff.life})`; ctx.fillRect(0,0,this.width,this.height); }
+            else { ctx.fillStyle = eff.color; ctx.font = `bold ${eff.size}px Arial`; ctx.fillText(eff.text, eff.x, eff.y); eff.y -= 1; }
+            eff.life -= 0.02; return eff.life > 0;
+        });
+        ctx.globalAlpha = 1;
+    }
+
+    drawLockBracket(x, y, r, order) {
+        const ctx = this.ctx; ctx.strokeStyle = '#FF00FF'; ctx.lineWidth = 2; const len = 10;
+        ctx.beginPath(); ctx.moveTo(x-r, y-r+len); ctx.lineTo(x-r, y-r); ctx.lineTo(x-r+len, y-r); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x+r-len, y-r); ctx.lineTo(x+r, y-r); ctx.lineTo(x+r, y-r+len); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x-r, y+r-len); ctx.lineTo(x-r, y+r); ctx.lineTo(x-r+len, y+r); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x+r-len, y+r); ctx.lineTo(x+r, y+r); ctx.lineTo(x+r, y+r-len); ctx.stroke();
+    }
+
+    updateCommander(mood) { this.commCtx.clearRect(0,0,70,70); this.drawEbiFace(this.commCtx, 35, 35, 25, mood); }
+    drawEbiFace(ctx, x, y, size, mood) {
+        ctx.fillStyle = mood === 'fever' ? '#FF4136' : (mood === 'panic' ? '#A0A0FF' : '#FFDB58');
+        ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#8B4513'; ctx.beginPath(); ctx.ellipse(x-size*0.4, y-size*0.5, size*0.2, size*0.1, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(x+size*0.3, y-size*0.4, size*0.25, size*0.15, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(x-size*0.3, y+size*0.1, size*0.1, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x+size*0.3, y+size*0.1, size*0.1, 0, Math.PI*2); ctx.fill();
+        if(mood==='happy'||mood==='fever') { ctx.beginPath(); ctx.arc(x, y+size*0.1, size*0.3, 0, Math.PI); ctx.stroke(); }
+        else { ctx.beginPath(); ctx.arc(x, y+size*0.2, size*0.3, 0.2*Math.PI, 0.8*Math.PI); ctx.stroke(); }
+    }
+    addEffect(text, x, y, color, size) { this.effects.push({ text, x, y, color, size, life: 1 }); }
 }
-
 window.game = new Game();
 </script>
 </body>
