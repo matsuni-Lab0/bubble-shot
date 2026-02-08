@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Bubble Shot: Mobile Fixed</title>
+    <title>Bubble Shot: Final Fix</title>
     <style>
-        /* CSSは変更なし（スマホで見やすい設定のまま） */
+        /* --- スタイル設定 (スマホ操作・日本語表示最適化) --- */
         body { margin: 0; overflow: hidden; background-color: #111; color: white; font-family: 'Helvetica Neue', Arial, sans-serif; touch-action: none; user-select: none; -webkit-tap-highlight-color: transparent; }
         #game-container { position: relative; width: 100vw; height: 100dvh; background-color: #050510; }
         canvas { display: block; width: 100%; height: 100%; }
@@ -22,6 +22,7 @@
         #mission-method-box { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
         .method-tag { font-size: 10px; color: #888; font-weight: bold; letter-spacing: 1px; }
         
+        /* 演算子・条件表示 */
         #mission-op-display { 
             font-size: 28px; font-weight: 900; color: #FF4136; 
             text-shadow: 0 0 10px currentColor; 
@@ -31,6 +32,7 @@
             font-family: 'Arial', sans-serif;
         }
         
+        /* ターゲット数字表示 */
         #mission-target-display { 
             font-size: 48px; font-weight: 900; color: #FFDC00; line-height: 1.0; 
             text-shadow: 0 0 20px rgba(255, 220, 0, 0.8); 
@@ -43,18 +45,58 @@
         #sync-gauge-container { width: 240px; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-top: 10px; border: 1px solid #444; }
         #sync-gauge { width: 0%; height: 100%; background: linear-gradient(90deg, #00FFFF, #FF00FF); transition: width 0.3s; }
         
+        /* ボトムエリア（ボタン群） */
         #bottom-area { height: 150px; display: flex; justify-content: center; align-items: center; padding-bottom: 20px; gap: 20px; pointer-events: auto; }
-        #fire-btn { width: 160px; height: 60px; background: rgba(255, 65, 54, 0.1); border: 2px solid #555; color: #555; font-size: 24px; font-weight: 900; letter-spacing: 4px; display: flex; justify-content: center; align-items: center; clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%); pointer-events: auto; transition: 0.1s; cursor: pointer; -webkit-tap-highlight-color: transparent;}
-        #fire-btn:active { transform: scale(0.95); }
-        #fire-btn.ready { background: rgba(255, 65, 54, 0.8); border: none; color: white; box-shadow: 0 0 30px #FF4136; text-shadow: 0 0 10px white; }
         
-        #auto-btn { width: 70px; height: 60px; background: rgba(0, 255, 255, 0.1); border: 2px solid #00FFFF; color: #00FFFF; font-size: 14px; font-weight: bold; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 8px; pointer-events: auto; cursor: pointer; box-shadow: 0 0 10px rgba(0,255,255,0.3); transition: 0.1s; -webkit-tap-highlight-color: transparent;}
+        #fire-btn { 
+            width: 160px; height: 60px; background: rgba(255, 65, 54, 0.1); border: 2px solid #555; 
+            color: #555; font-size: 24px; font-weight: 900; letter-spacing: 4px; 
+            display: flex; justify-content: center; align-items: center; 
+            clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%); 
+            pointer-events: auto; transition: 0.1s; cursor: pointer; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        #fire-btn.ready { background: rgba(255, 65, 54, 0.8); border: none; color: white; box-shadow: 0 0 30px #FF4136; text-shadow: 0 0 10px white; }
+        #fire-btn:active { transform: scale(0.95); }
+        
+        #auto-btn { 
+            width: 70px; height: 60px; background: rgba(0, 255, 255, 0.1); 
+            border: 2px solid #00FFFF; color: #00FFFF; 
+            font-size: 14px; font-weight: bold; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            border-radius: 8px; pointer-events: auto; cursor: pointer; 
+            box-shadow: 0 0 10px rgba(0,255,255,0.3); transition: 0.1s; 
+            -webkit-tap-highlight-color: transparent;
+        }
         #auto-btn:active { transform: scale(0.95); background: #00FFFF; color: #000; }
         #auto-btn span { font-size: 10px; opacity: 0.8; }
 
-        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 10, 15, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; pointer-events: auto; text-align: center; }
+        /* オーバーレイ（スタート画面・ゲームオーバー画面） */
+        .overlay { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(5, 10, 15, 0.95); 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            z-index: 100; pointer-events: auto; text-align: center; 
+        }
         .hidden { display: none !important; }
-        .btn-start { padding: 15px 50px; font-size: 20px; background: transparent; border: 2px solid #FFDC00; color: #FFDC00; cursor: pointer; font-weight: bold; box-shadow: 0 0 15px #FFDC00; }
+        
+        /* スタートボタン */
+        #start-btn { 
+            padding: 15px 50px; font-size: 20px; background: transparent; 
+            border: 2px solid #FFDC00; color: #FFDC00; cursor: pointer; 
+            font-weight: bold; box-shadow: 0 0 15px #FFDC00; margin-top: 20px;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #start-btn:active { transform: scale(0.95); background: #FFDC00; color: black; }
+        
+        #retry-btn {
+            padding: 15px 50px; font-size: 20px; background: transparent; 
+            border: 2px solid #FF4136; color: #FF4136; cursor: pointer; 
+            font-weight: bold; box-shadow: 0 0 15px #FF4136; margin-top: 20px;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #retry-btn:active { transform: scale(0.95); background: #FF4136; color: black; }
+
     </style>
 </head>
 <body>
@@ -83,19 +125,22 @@
             <div id="fire-btn">SHOT</div>
         </div>
     </div>
+    
     <div id="menu-screen" class="overlay">
         <h1 style="color: #00FFFF; letter-spacing: 5px;">BUBBLE SHOT</h1>
         <p style="color: #888;">UNDEFINED BLUE PROJECT</p>
-        <button class="btn-start" onclick="game.start()">ENGAGE</button>
+        <div id="start-btn">ENGAGE</div>
     </div>
+    
     <div id="gameover-screen" class="overlay hidden">
         <h1 style="color: #FF4136;">MISSION OVER</h1>
         <p style="font-size: 28px;">SCORE: <span id="final-score">0</span></p>
-        <button class="btn-start" onclick="location.reload()">RE-ENGAGE</button>
+        <div id="retry-btn">RE-ENGAGE</div>
     </div>
 </div>
 
 <script>
+// --- ゲーム定数・設定 ---
 const OPS = {
     add: { label: '＋', calc: (a, b) => a + b, color: '#00FF66' },
     sub: { label: '－', calc: (a, b) => a - b, color: '#FF8800' },
@@ -109,28 +154,32 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         this.commCanvas = document.getElementById('comm-canvas');
         this.commCtx = this.commCanvas.getContext('2d');
+        
         this.entities = []; this.effects = []; this.lasers = [];
         this.score = 0; this.timeLeft = 90; this.missionTimeMax = 10.0;
         this.missionTimeLeft = this.missionTimeMax;
         this.syncRatio = 0; this.state = 'menu'; this.lastTime = 0; this.scanAngle = 0;
         this.targetNum = 0; this.targetOp = null; this.burstWave = 0;
+
+        // リサイズ初期化
         this.resize();
         window.addEventListener('resize', () => this.resize());
 
-        // --- ★ここがスマホ対応の重要ポイント ---
-        // タッチ操作 (スマホ用)
+        // --- ★スマホ対応：イベントリスナーの登録 ---
+        // キャンバス操作
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault(); // スクロール防止
             const touch = e.touches[0];
             this.handleInput(touch.clientX, touch.clientY);
         }, { passive: false });
 
-        // マウス操作 (PC用)
         this.canvas.addEventListener('mousedown', (e) => {
             this.handleInput(e.clientX, e.clientY);
         });
 
-        // ボタンにもタッチイベントを明示的に追加（反応を良くするため）
+        // ボタン操作（ID指定で登録）
+        this.setupButton('start-btn', () => this.start());
+        this.setupButton('retry-btn', () => location.reload());
         this.setupButton('fire-btn', () => this.fire());
         this.setupButton('auto-btn', () => this.autoLock());
 
@@ -138,16 +187,22 @@ class Game {
         requestAnimationFrame((t) => this.loop(t));
     }
 
+    // ★スマホ対応：ボタン登録ヘルパー
     setupButton(id, callback) {
         const btn = document.getElementById(id);
-        // タッチとクリックの両方を監視し、重複実行を防ぐ
-        const handler = (e) => {
-            e.preventDefault();
+        if(!btn) return;
+        
+        // タッチ開始時に実行
+        btn.addEventListener('touchstart', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            callback();
+        }, { passive: false });
+        
+        // マウスダウン時に実行
+        btn.addEventListener('mousedown', (e) => {
             e.stopPropagation();
-            if(this.state === 'playing') callback();
-        };
-        btn.addEventListener('touchstart', handler, { passive: false });
-        btn.addEventListener('mousedown', handler);
+            callback();
+        });
     }
 
     resize() {
@@ -167,9 +222,11 @@ class Game {
         document.getElementById('menu-screen').classList.add('hidden');
     }
 
+    // --- ミッション・ゲームロジック ---
     nextMission() {
         const mode = Math.random();
         if(mode < 0.6) {
+            // 計算ミッション
             this.isCalcMission = true;
             this.targetNum = Math.floor(Math.random() * 19) + 2;
             const opKeys = Object.keys(OPS);
@@ -183,6 +240,7 @@ class Game {
             
             this.ensureSolutionExists();
         } else {
+            // 偶数・奇数ミッション
             this.isCalcMission = false;
             this.targetOp = (Math.random() < 0.5) ? 'even' : 'odd';
             
@@ -254,7 +312,7 @@ class Game {
         this.spawnEntityFixed(val, type, false);
     }
 
-    // ★ 共通入力ハンドラ (x, yを受け取る)
+    // --- 入力ハンドリング (共通化) ---
     handleInput(tx, ty) {
         if(this.state !== 'playing') return;
         const rect = this.canvas.getBoundingClientRect();
@@ -265,7 +323,7 @@ class Game {
             if(Math.hypot(ent.x - x, ent.y - y) < ent.r + 15) {
                 if(!ent.locked) {
                     const lockedCount = this.entities.filter(e => e.locked).length;
-                    if(this.isCalcMission && lockedCount >= 3) return;
+                    if(this.isCalcMission && lockedCount >= 3) return; // 計算時は3つまで
                     ent.locked = true; ent.order = lockedCount + 1;
                 } else {
                     ent.locked = false; ent.order = 0;
@@ -298,7 +356,7 @@ class Game {
                 }
                 if(found) break;
             }
-            if(found) this.addEffect("LOCKED", this.centerX, this.centerY, "#00FFFF", 20);
+            if(found) this.addEffect("TARGET LOCKED", this.centerX, this.centerY, "#00FFFF", 20);
         } else {
             let count = 1;
             this.entities.forEach(e => {
