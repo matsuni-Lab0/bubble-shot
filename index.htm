@@ -3,45 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Bubble Shot: Mobile Final</title>
+    <title>Bubble Shot: Real Final</title>
     <style>
-        /* --- 基本設定 --- */
-        body { 
-            margin: 0; overflow: hidden; background-color: #111; color: white; 
-            font-family: 'Helvetica Neue', Arial, sans-serif; 
-            touch-action: none; /* スマホでのスクロール無効化 */
-            user-select: none; -webkit-tap-highlight-color: transparent;
-        }
+        /* --- 基本スタイル --- */
+        body { margin: 0; overflow: hidden; background-color: #111; color: white; font-family: 'Helvetica Neue', Arial, sans-serif; touch-action: none; user-select: none; -webkit-tap-highlight-color: transparent; }
         #game-container { position: relative; width: 100vw; height: 100dvh; background-color: #050510; }
         canvas { display: block; width: 100%; height: 100%; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
         
-        /* UIレイヤー */
-        #ui-layer { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            pointer-events: none; /* UIの下のCanvasを操作可能に */
-            display: flex; flex-direction: column; justify-content: space-between; 
-        }
-        
-        /* --- 上部エリア --- */
-        #top-area { 
-            height: 240px; display: flex; flex-direction: column; align-items: center; 
-            background: linear-gradient(to bottom, rgba(0,0,0,0.9), rgba(0,0,0,0)); 
-            z-index: 10; padding-top: 10px; position: relative; 
-        }
-        #commander-window { 
-            position: absolute; top: 10px; left: 10px; width: 70px; height: 70px; 
-            background: rgba(0, 20, 40, 0.6); border: 2px solid #00FFFF; border-radius: 10px; 
-            display: flex; justify-content: center; align-items: center; 
-        }
+        /* トップエリア */
+        #top-area { height: 240px; display: flex; flex-direction: column; align-items: center; background: linear-gradient(to bottom, rgba(0,0,0,0.9), rgba(0,0,0,0)); z-index: 10; padding-top: 10px; position: relative; }
+        #commander-window { position: absolute; top: 10px; left: 10px; width: 70px; height: 70px; background: rgba(0, 20, 40, 0.6); border: 2px solid #00FFFF; border-radius: 10px; clip-path: polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%); display: flex; justify-content: center; align-items: center; }
         #comm-canvas { width: 100%; height: 100%; }
         
-        #mission-timer-wrapper { width: 200px; height: 4px; background: #222; margin-top: 5px; border-radius: 2px; border: 1px solid #444; }
+        #mission-timer-wrapper { width: 200px; height: 4px; background: #222; margin-top: 5px; border-radius: 2px; overflow: hidden; border: 1px solid #444; }
         #mission-timer-bar { width: 100%; height: 100%; background: #FF4136; transition: width 0.1s linear; }
-        #mission-label { font-size: 10px; color: #00FFFF; letter-spacing: 4px; margin-top: 5px; opacity: 0.8;}
         
-        /* ミッション表示 */
         #mission-method-box { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
         .method-tag { font-size: 10px; color: #888; font-weight: bold; letter-spacing: 1px; }
+        
         #mission-op-display { 
             font-size: 28px; font-weight: 900; color: #FF4136; text-shadow: 0 0 10px currentColor; 
             border: 2px solid #FF4136; padding: 0 10px; border-radius: 8px; 
@@ -57,39 +37,31 @@
         #sync-gauge-container { width: 240px; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-top: 10px; border: 1px solid #444; }
         #sync-gauge { width: 0%; height: 100%; background: linear-gradient(90deg, #00FFFF, #FF00FF); transition: width 0.3s; }
         
-        /* --- 下部ボタンエリア --- */
-        #bottom-area { 
-            height: 150px; display: flex; justify-content: center; align-items: center; 
-            padding-bottom: 20px; gap: 20px; pointer-events: auto; 
-        }
+        /* ボトムエリア */
+        #bottom-area { height: 150px; display: flex; justify-content: center; align-items: center; padding-bottom: 20px; gap: 20px; pointer-events: auto; }
         
-        /* ボタン共通スタイル */
-        .game-btn {
-            display: flex; justify-content: center; align-items: center; 
-            pointer-events: auto; cursor: pointer; transition: 0.1s; 
-            user-select: none;
-        }
+        .game-btn { pointer-events: auto; cursor: pointer; user-select: none; touch-action: manipulation; }
         
         #fire-btn { 
             width: 160px; height: 60px; background: rgba(255, 65, 54, 0.1); border: 2px solid #555; 
             color: #555; font-size: 24px; font-weight: 900; letter-spacing: 4px; 
+            display: flex; justify-content: center; align-items: center; 
             clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%); 
+            transition: 0.1s;
         }
-        #fire-btn.ready { 
-            background: rgba(255, 65, 54, 0.8); border: 2px solid #FF4136; color: white; 
-            box-shadow: 0 0 30px #FF4136; text-shadow: 0 0 10px white; 
-        }
+        #fire-btn.ready { background: rgba(255, 65, 54, 0.8); border: 2px solid #FF4136; color: white; box-shadow: 0 0 30px #FF4136; }
         #fire-btn:active { transform: scale(0.95); }
         
         #auto-btn { 
             width: 70px; height: 60px; background: rgba(0, 255, 255, 0.1); 
             border: 2px solid #00FFFF; color: #00FFFF; font-size: 14px; font-weight: bold; 
-            flex-direction: column; border-radius: 8px; box-shadow: 0 0 10px rgba(0,255,255,0.3); 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            border-radius: 8px; box-shadow: 0 0 10px rgba(0,255,255,0.3); transition: 0.1s; 
         }
         #auto-btn:active { transform: scale(0.95); background: #00FFFF; color: #000; }
         #auto-btn span { font-size: 10px; opacity: 0.8; }
 
-        /* --- オーバーレイ (Start/GameOver) --- */
+        /* オーバーレイ */
         .overlay { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(5, 10, 15, 0.95); 
@@ -98,15 +70,14 @@
         }
         .hidden { display: none !important; }
         
-        /* スマホで確実に押せるボタン */
         .big-btn { 
             padding: 20px 60px; font-size: 24px; background: transparent; 
             border: 3px solid #FFDC00; color: #FFDC00; cursor: pointer; 
             font-weight: bold; box-shadow: 0 0 20px #FFDC00; margin-top: 30px; border-radius: 10px;
-            touch-action: manipulation; /* ダブルタップズーム防止 */
+            /* ★最重要：これを指定することで標準クリック動作を保証 */
+            touch-action: manipulation; 
         }
         .big-btn:active { background: #FFDC00; color: black; transform: scale(0.95); }
-        
         .retry-style { border-color: #FF4136; color: #FF4136; box-shadow: 0 0 20px #FF4136; }
         .retry-style:active { background: #FF4136; color: white; }
 
@@ -119,7 +90,7 @@
     <div id="ui-layer">
         <div id="top-area">
             <div id="commander-window"><canvas id="comm-canvas" width="70" height="70"></canvas></div>
-            <div id="mission-label">WEAPON & TARGET</div>
+            <div id="mission-label" style="font-size:10px; color:#00FFFF; letter-spacing:4px; margin-top:5px; opacity:0.8;">WEAPON & TARGET</div>
             <div id="mission-timer-wrapper"><div id="mission-timer-bar"></div></div>
             <div id="mission-method-box">
                 <span class="method-tag">USE</span>
@@ -155,7 +126,6 @@
 </div>
 
 <script>
-// --- 定数 ---
 const OPS = {
     add: { label: '＋', calc: (a, b) => a + b, color: '#00FF66' },
     sub: { label: '－', calc: (a, b) => a - b, color: '#FF8800' },
@@ -176,19 +146,16 @@ class Game {
         this.syncRatio = 0; this.state = 'menu'; this.lastTime = 0; this.scanAngle = 0;
         this.targetNum = 0; this.targetOp = null; this.burstWave = 0;
 
-        // リサイズ処理
         this.resize();
         window.addEventListener('resize', () => this.resize());
 
-        // --- ★スマホ対応：タッチイベントの最適化 ---
-        // タッチ開始（バブル選択）
+        // ★ゲーム操作（Canvas）のみタッチイベントを登録
         this.canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // キャンバス内でのスクロール完全停止
+            e.preventDefault(); 
             const t = e.touches[0];
             this.handleInput(t.clientX, t.clientY);
         }, { passive: false });
 
-        // マウス（PC）
         this.canvas.addEventListener('mousedown', (e) => {
             this.handleInput(e.clientX, e.clientY);
         });
@@ -216,11 +183,9 @@ class Game {
         document.getElementById('menu-screen').classList.add('hidden');
     }
 
-    // --- ゲームロジック ---
     nextMission() {
         const mode = Math.random();
         if(mode < 0.6) {
-            // 計算モード
             this.isCalcMission = true;
             this.targetNum = Math.floor(Math.random() * 19) + 2;
             const opKeys = Object.keys(OPS);
@@ -231,13 +196,10 @@ class Game {
             document.getElementById('mission-op-display').style.borderColor = OPS[this.targetOp].color;
             document.getElementById('mission-target-display').innerText = this.targetNum;
             document.getElementById('mission-sub').innerText = "計算して数値を作れ";
-            
             this.ensureSolutionExists();
         } else {
-            // 偶数奇数モード
             this.isCalcMission = false;
             this.targetOp = (Math.random() < 0.5) ? 'even' : 'odd';
-            
             const label = (this.targetOp === 'even' ? '偶数' : '奇数');
             document.getElementById('mission-op-display').innerText = label;
             document.getElementById('mission-op-display').style.color = "#FFDC00";
@@ -257,7 +219,6 @@ class Game {
         let n1, n2;
         const op = this.targetOp;
         const target = this.targetNum;
-
         if(op === 'add') { n1 = Math.floor(Math.random() * (target - 1)) + 1; n2 = target - n1; }
         else if(op === 'sub') { n2 = Math.floor(Math.random() * 10) + 1; n1 = target + n2; }
         else if(op === 'mul') {
@@ -265,7 +226,6 @@ class Game {
             for(let i=1; i<=target; i++) { if(target % i === 0) divisors.push(i); }
             n1 = divisors[Math.floor(Math.random() * divisors.length)]; n2 = target / n1;
         } else if(op === 'div') { n2 = Math.floor(Math.random() * 5) + 1; n1 = target * n2; }
-
         this.spawnEntityFixed(n1, 'num', true);
         this.spawnEntityFixed(op, 'op', true);
         this.spawnEntityFixed(n2, 'num', true);
@@ -306,13 +266,11 @@ class Game {
         this.spawnEntityFixed(val, type, false);
     }
 
-    // --- 入力処理 ---
     handleInput(tx, ty) {
         if(this.state !== 'playing') return;
         const rect = this.canvas.getBoundingClientRect();
         const x = tx - rect.left;
         const y = ty - rect.top;
-
         for(let ent of this.entities) {
             if(Math.hypot(ent.x - x, ent.y - y) < ent.r + 15) {
                 if(!ent.locked) {
@@ -332,7 +290,6 @@ class Game {
     autoLock() {
         if(this.state !== 'playing') return;
         this.entities.forEach(e => { e.locked = false; e.order = 0; });
-
         if (this.isCalcMission) {
             const ops = this.entities.filter(e => e.type === 'op' && e.val === this.targetOp);
             const nums = this.entities.filter(e => e.type === 'num');
@@ -350,7 +307,7 @@ class Game {
                 }
                 if(found) break;
             }
-            if(found) this.addEffect("LOCKED", this.centerX, this.centerY, "#00FFFF", 20);
+            if(found) this.addEffect("TARGET LOCKED", this.centerX, this.centerY, "#00FFFF", 20);
         } else {
             let count = 1;
             this.entities.forEach(e => {
@@ -385,26 +342,17 @@ class Game {
         const locked = this.entities.filter(e => e.locked);
         if(locked.length === 0) return;
         let hitAll = true, totalGain = 0;
-
         if(this.isCalcMission) {
             const opEntity = locked.find(e => e.type === 'op');
             const nums = locked.filter(e => e.type === 'num');
-
             if (opEntity && nums.length === 2) {
-                const n1 = nums[0].val;
-                const n2 = nums[1].val;
+                const n1 = nums[0].val; const n2 = nums[1].val;
                 const res1 = OPS[opEntity.val].calc(n1, n2);
                 const res2 = OPS[opEntity.val].calc(n2, n1);
-                
                 if ((res1 === this.targetNum || res2 === this.targetNum) && opEntity.val === this.targetOp) {
-                    hitAll = true;
-                    totalGain = 500 + Math.floor(this.missionTimeLeft * 100);
-                } else {
-                    hitAll = false;
-                }
-            } else {
-                hitAll = false;
-            }
+                    hitAll = true; totalGain = 500 + Math.floor(this.missionTimeLeft * 100);
+                } else { hitAll = false; }
+            } else { hitAll = false; }
         } else {
             locked.forEach(ent => {
                 const isCorrect = (this.targetOp === 'even' ? ent.val % 2 === 0 : ent.val % 2 !== 0);
@@ -412,12 +360,10 @@ class Game {
             });
             if(hitAll) totalGain += Math.floor(this.missionTimeLeft * 50);
         }
-
         locked.forEach(ent => {
             this.lasers.push({ x1: this.shipPos.x, y1: this.shipPos.y, x2: ent.x, y2: ent.y, life: 0.2, color: hitAll ? '#00FFFF' : '#FF4136', ent: ent });
             ent.alive = false;
         });
-
         if(hitAll) {
             this.score += totalGain; this.syncRatio = Math.min(100, this.syncRatio + (this.isCalcMission ? 20 : locked.length * 5));
             this.addEffect(`HIT! +${totalGain}`, this.centerX, this.centerY - 40, "#00FFFF", 28);
