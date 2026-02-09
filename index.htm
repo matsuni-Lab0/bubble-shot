@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bubble Shot: Commander Speak</title>
+    <title>Bubble Shot: Operator Mode</title>
     <style>
         body { 
             margin: 0; padding: 0; overflow: hidden; background-color: #000; 
@@ -18,9 +18,16 @@
 
 <script>
 /**
- * Bubble Shot Ver 13.0
- * リセットボタン ＆ 司令官メッセージ ＆ 見落としハイライト
+ * Bubble Shot Ver 14.0
+ * 厳密な順序判定 & オペレーター表示機能
  */
+
+// ★設定エリア
+var GAME_CONFIG = {
+    totalTimeLimit: 60,
+    missionTimeLimits: { attr: 15, formula: 20 },
+    timeBonus: { attr: 0, formula: 5 }
+};
 
 var COLORS = {
     bg: '#050510',
@@ -31,7 +38,7 @@ var COLORS = {
     bubbleNum: '#0074D9',
     bubbleOp: '#FF4136',
     lock: '#FF00FF',
-    missed: '#FFFF00' // 見落としハイライト色（黄色）
+    missed: '#FFFF00'
 };
 
 var OPS = {
@@ -45,8 +52,8 @@ var game = {
     canvas: null, ctx: null,
     width: 0, height: 0, cx: 0, cy: 0,
     
-    state: 'title',
-    score: 0, timeLeft: 90, missionTime: 10,
+    state: 'title', 
+    score: 0, timeLeft: 0, missionTime: 0,
     bubbles: [], lasers: [], effects: [],
     
     mission: { 
@@ -57,11 +64,10 @@ var game = {
         textSub: '' 
     },
 
-    // 司令官のセリフ管理
     commander: {
         text: "待機中...",
-        timer: 0,
-        mood: 'normal' // normal, happy, panic, angry
+        mood: 'normal',
+        timer: 0
     },
 
     ui: {},
@@ -95,11 +101,9 @@ var game = {
         this.cx = this.width / 2;
         this.cy = this.height / 2;
         
-        // ボタン配置
         var bY = this.height - 90;
-        // 左: AUTO, 中: RESET, 右: SHOT
         this.ui.btnAuto = { x: this.cx - 110, y: bY, r: 35, label: "AUTO" };
-        this.ui.btnReset = { x: this.cx - 30, y: bY, r: 25, label: "RESET" }; // 新設
+        this.ui.btnReset = { x: this.cx - 30, y: bY, r: 25, label: "RESET" };
         this.ui.btnFire = { x: this.cx + 20, y: bY - 35, w: 130, h: 70, label: "SHOT" };
         
         this.areaRadius = Math.min(this.width, this.height - 350) / 2 - 10;
@@ -120,7 +124,7 @@ var game = {
             if (Math.hypot(x - this.ui.btnAuto.x, y - this.ui.btnAuto.y) < this.ui.btnAuto.r + 10) {
                 this.autoLock(); return;
             }
-            // RESET (新規追加)
+            // RESET
             if (Math.hypot(x - this.ui.btnReset.x, y - this.ui.btnReset.y) < this.ui.btnReset.r + 10) {
                 this.resetLocks(); return;
             }
@@ -142,22 +146,70 @@ var game = {
     startGame: function() {
         this.state = 'playing';
         this.score = 0;
-        this.timeLeft = 60; // 60秒
+        this.timeLeft = GAME_CONFIG.totalTimeLimit;
         this.bubbles = [];
         this.replenish(20);
         this.nextMission();
     },
 
-    // --- 司令官メッセージ ---
+    // --- 司令官メッセージ更新 ---
     setCommanderMsg: function(text, mood, duration) {
         this.commander.text = text;
         this.commander.mood = mood;
-        this.commander.timer = duration || 2.0; // 表示時間
+        this.commander.timer = duration || 0; // 0ならずっと表示
+    },
+
+    updateOperatorGuidance: function() {
+        var locked = this.getLocked();
+        
+        if (locked.length === 0) {
+            this.setCommanderMsg("ターゲットをロックせよ", "normal", 0);
+            return;
+        }
+
+        // 入力内容の文字列化
+        var currentSeq = "";
+        for(var i=0; i<locked.length; i++) {
+            var b = locked[i];
+            var valStr = (b.type==='op') ? OPS[b.val].label : b.val;
+            currentSeq += valStr + " ";
+        }
+
+        if (this.mission.type === 'formula') {
+            // 計算モードの場合の厳密なガイド
+            var len = locked.length;
+            var last = locked[len-1];
+            
+            // 順序チェックのフィードバック
+            if (len === 1) {
+                if (last.type === 'num') {
+                    this.setCommanderMsg("入力: " + currentSeq + "→ 次は記号だ！", "normal", 0);
+                } else {
+                    this.setCommanderMsg("入力: " + currentSeq + "(順序が違うぞ！最初は数字だ)", "panic", 0);
+                }
+            } else if (len === 2) {
+                if (locked[0].type === 'num' && last.type === 'op') {
+                    this.setCommanderMsg("入力: " + currentSeq + "→ 最後は数字だ！", "normal", 0);
+                } else {
+                    this.setCommanderMsg("入力: " + currentSeq + "(順序が違うぞ！)", "panic", 0);
+                }
+            } else if (len === 3) {
+                if (locked[0].type === 'num' && locked[1].type === 'op' && locked[2].type === 'num') {
+                    this.setCommanderMsg("式完成: " + currentSeq + "発射！", "happy", 0);
+                } else {
+                    this.setCommanderMsg("入力: " + currentSeq + "(無効な式だ！)", "panic", 0);
+                }
+            } else {
+                this.setCommanderMsg("入力: " + currentSeq + "(多すぎる！)", "panic", 0);
+            }
+        } else {
+            // 偶数・奇数モード
+            this.setCommanderMsg("ロック数: " + locked.length + "体... 撃て！", "normal", 0);
+        }
     },
 
     nextMission: function() {
         var r = Math.random();
-        // 偶数・奇数・計算B(数式) の3種
         if (r < 0.33) {
             this.setupAttribute('even');
         } else if (r < 0.66) {
@@ -166,15 +218,13 @@ var game = {
             this.setupFormulaBuilder();
         }
         
-        this.missionTime = 15;
-        this.resetLocks(); // ロック解除
-        this.setCommanderMsg("ミッション開始！", "normal");
+        this.missionTime = GAME_CONFIG.missionTimeLimits[this.mission.type] || 15;
+        this.resetLocks();
     },
 
     setupAttribute: function(type) {
         this.mission.type = 'attr';
         this.mission.opKey = type;
-        
         if (type === 'even') {
             this.mission.textMain = "偶数 (EVEN)";
             this.mission.textSub = "偶数をすべて撃て";
@@ -189,9 +239,8 @@ var game = {
         this.mission.type = 'formula';
         this.mission.target = Math.floor(Math.random() * 19) + 2;
         this.mission.opKey = null;
-        
         this.mission.textMain = "TARGET: " + this.mission.target;
-        this.mission.textSub = "盤面の記号と数字で式を作れ";
+        this.mission.textSub = "数字と記号で式を作れ";
         
         this.ensureAllOperators(); 
         this.ensureSolvableFormula();
@@ -264,11 +313,10 @@ var game = {
             x: x, y: y, r: r, val: val, type: type,
             locked: false, order: 0, scale: 0,
             color: type==='num' ? COLORS.bubbleNum : COLORS.bubbleOp,
-            missedTime: 0 // 見落としハイライト用
+            missedTime: 0
         });
     },
 
-    // --- ロック操作 ---
     toggleLock: function(b) {
         if(b.locked) {
             b.locked = false; b.order = 0;
@@ -279,6 +327,7 @@ var game = {
             b.locked = true;
             b.order = cnt + 1;
         }
+        this.updateOperatorGuidance(); // ★タップ時にガイダンス更新
     },
 
     resetLocks: function() {
@@ -287,6 +336,7 @@ var game = {
             this.bubbles[i].order = 0;
         }
         this.addEffect("RESET", this.cx, this.cy, "#888");
+        this.updateOperatorGuidance();
     },
 
     reorderLocks: function() {
@@ -344,6 +394,7 @@ var game = {
         }
 
         if(found) this.addEffect("LOCKED", this.cx, this.cy, COLORS.lock);
+        this.updateOperatorGuidance();
     },
 
     fire: function() {
@@ -355,16 +406,15 @@ var game = {
         var missedBubbles = [];
 
         if (this.mission.type === 'formula') {
+            // ★厳密な順序判定: Num -> Op -> Num
             if (locked.length === 3) {
-                var opB = null; var nums = [];
-                for(var i=0; i<locked.length; i++) {
-                    if(locked[i].type==='op') opB=locked[i];
-                    else nums.push(locked[i]);
-                }
-                if (opB && nums.length === 2) {
-                    var func = OPS[opB.val].calc;
-                    if (func(nums[0].val, nums[1].val) === this.mission.target ||
-                        func(nums[1].val, nums[0].val) === this.mission.target) {
+                if (locked[0].type === 'num' && locked[1].type === 'op' && locked[2].type === 'num') {
+                    var n1 = locked[0].val;
+                    var opVal = locked[1].val;
+                    var n2 = locked[2].val;
+                    var func = OPS[opVal].calc;
+                    
+                    if (func(n1, n2) === this.mission.target) {
                         isHit = true;
                         gain = 1500;
                     }
@@ -380,9 +430,7 @@ var game = {
                 isHit = true;
                 gain = locked.length * 200;
             }
-
-            // ★見落としチェック機能★
-            // 盤面にある「条件に合うのにロックされなかったバブル」を探す
+            // 見落としチェック
             for(var i=0; i<this.bubbles.length; i++) {
                 var b = this.bubbles[i];
                 if (!b.locked && b.type === 'num' && b.val % 2 === rem) {
@@ -391,7 +439,6 @@ var game = {
             }
         }
 
-        // 処理実行
         for(var i=0; i<locked.length; i++) {
             var b = locked[i];
             this.lasers.push({ tx: b.x, ty: b.y, color: isHit?COLORS.accent:COLORS.warn, life:1.0 });
@@ -401,18 +448,16 @@ var game = {
 
         if(isHit) {
             this.score += gain + Math.floor(this.missionTime * 100);
-            this.addEffect("HIT! +"+gain, this.cx, this.cy-50, COLORS.accent);
-            this.timeLeft += 5; // ボーナス
+            var bonus = GAME_CONFIG.timeBonus[this.mission.type] || 0;
+            this.timeLeft += bonus;
 
-            // ★見落としがあった場合の司令官メッセージ
+            this.addEffect("HIT! +"+gain, this.cx, this.cy-50, COLORS.accent);
+            
             if (missedBubbles.length > 0) {
-                // 黄色く光らせる
-                for(var k=0; k<missedBubbles.length; k++) {
-                    missedBubbles[k].missedTime = 1.5; // 1.5秒光る
-                }
+                for(var k=0; k<missedBubbles.length; k++) missedBubbles[k].missedTime = 1.5;
                 this.setCommanderMsg("まだ残っているぞ！", "angry", 2.0);
             } else {
-                this.setCommanderMsg("よし！全滅だ！", "happy", 1.5);
+                this.setCommanderMsg("ターゲット排除完了！", "happy", 1.5);
             }
 
             var _this = this;
@@ -420,7 +465,12 @@ var game = {
         } else {
             this.addEffect("MISS...", this.cx, this.cy-50, "#888");
             this.timeLeft -= 3;
-            this.setCommanderMsg("狙いが違うぞ！", "panic", 1.5);
+            // 失敗理由に応じたメッセージ
+            if (this.mission.type === 'formula') {
+                this.setCommanderMsg("式か答えが間違っている！", "panic", 1.5);
+            } else {
+                this.setCommanderMsg("違うターゲットだ！", "panic", 1.5);
+            }
         }
         
         this.replenish(20);
@@ -430,7 +480,6 @@ var game = {
         this.effects.push({ text:t, x:x, y:y, color:c, life:1.0 });
     },
 
-    // --- ループ ---
     loop: function() {
         var now = Date.now();
         var dt = (now - this.lastTime) / 1000;
@@ -442,56 +491,46 @@ var game = {
             if (this.missionTime <= 0) this.nextMission();
             if (this.timeLeft <= 0) this.state = 'gameover';
             
+            // メッセージタイマー
             if (this.commander.timer > 0) {
                 this.commander.timer -= dt;
                 if (this.commander.timer <= 0) {
-                    this.commander.text = "待機中...";
-                    this.commander.mood = "normal";
+                    this.updateOperatorGuidance(); // デフォルトに戻す
                 }
             }
         }
 
-        // バブルアニメーション
         for(var i=0; i<this.bubbles.length; i++) {
             var b = this.bubbles[i];
             if(b.scale < 1) b.scale += 0.1;
-            if(b.missedTime > 0) b.missedTime -= dt; // 見落とし光りタイマー
+            if(b.missedTime > 0) b.missedTime -= dt;
         }
 
-        // 描画開始
         var ctx = this.ctx;
         ctx.fillStyle = COLORS.bg;
         ctx.fillRect(0, 0, this.width, this.height);
 
-        // --- 司令官 & メッセージボックス ---
+        // --- 司令官 ---
         var cmX = this.cx, cmY = 50;
-        // 顔
         ctx.save();
-        ctx.translate(cmX - 120, cmY); // 左に配置
+        ctx.translate(cmX - 120, cmY);
         var mood = this.commander.mood;
-        var faceColor = (mood==='happy') ? '#FF6666' : (mood==='panic' ? '#6666FF' : '#FFD700');
+        var faceColor = (mood==='happy') ? '#FF6666' : (mood==='panic' ? '#6666FF' : (mood==='angry' ? '#FF4400' : '#FFD700'));
         ctx.fillStyle = faceColor; ctx.beginPath(); ctx.arc(0,0,30,0,6.28); ctx.fill();
         ctx.strokeStyle = '#FFF'; ctx.lineWidth = 2; ctx.stroke();
-        // エビ顔パーツ
         ctx.fillStyle = '#D35400'; 
         ctx.beginPath(); ctx.ellipse(-10,-5,8,5,0,0,6.28); ctx.fill();
         ctx.beginPath(); ctx.ellipse(10,-5,10,6,0,0,6.28); ctx.fill();
         ctx.restore();
 
-        // 吹き出し (メッセージボックス)
+        // メッセージボックス
         ctx.save();
         ctx.translate(cmX - 70, cmY - 20);
         ctx.fillStyle = 'rgba(0, 50, 80, 0.9)';
-        ctx.strokeStyle = '#00FFFF';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.roundRect(0, 0, 240, 40, 10); // 幅広
-        ctx.fill(); ctx.stroke();
-        // テキスト
-        ctx.fillStyle = '#FFF';
-        ctx.font = 'bold 16px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+        ctx.strokeStyle = '#00FFFF'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.roundRect(0, 0, 240, 40, 10); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#FFF'; ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(this.commander.text, 120, 20);
         ctx.restore();
 
@@ -499,35 +538,28 @@ var game = {
         if (this.state === 'playing') {
             ctx.textAlign = 'center';
             var barY = 110;
-            // タイムバー
             ctx.fillStyle = '#333'; ctx.fillRect(this.cx - 100, barY, 200, 6);
             ctx.fillStyle = COLORS.warn; ctx.fillRect(this.cx - 100, barY, 200 * Math.max(0, this.missionTime/15), 6);
 
-            ctx.font = 'bold 40px Arial';
-            ctx.fillStyle = COLORS.gold;
+            ctx.font = 'bold 40px Arial'; ctx.fillStyle = COLORS.gold;
             ctx.fillText(this.mission.textMain, this.cx, barY + 50);
             
-            ctx.font = 'bold 16px Arial';
-            ctx.fillStyle = COLORS.accent;
+            ctx.font = 'bold 16px Arial'; ctx.fillStyle = COLORS.accent;
             ctx.fillText(this.mission.textSub, this.cx, barY + 80);
 
-            ctx.font = '14px Monospace';
-            ctx.fillStyle = '#CCC';
+            ctx.font = '14px Monospace'; ctx.fillStyle = '#CCC';
             ctx.fillText("SCORE: " + this.score + "   TIME: " + Math.ceil(this.timeLeft), this.cx, barY + 105);
         }
 
-        // --- エリア ---
         ctx.strokeStyle = '#003333'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(this.cx, this.areaCy, this.areaRadius, 0, 6.28); ctx.stroke();
 
-        // --- レーザー ---
         this.lasers = this.lasers.filter(function(l){
             ctx.strokeStyle = l.color; ctx.lineWidth = 5;
             ctx.beginPath(); ctx.moveTo(game.cx, game.height); ctx.lineTo(l.tx, l.ty); ctx.stroke();
             l.life -= 0.1; return l.life > 0;
         });
 
-        // --- バブル ---
         for(var i=0; i<this.bubbles.length; i++) {
             var b = this.bubbles[i];
             var s = b.r * b.scale;
@@ -535,20 +567,12 @@ var game = {
             ctx.fillStyle = b.locked ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.5)';
             ctx.fill();
             
-            // 枠色：見落としなら黄色、ロックならピンク、通常は青/赤
             var strokeCol = b.color;
             var lineW = 2;
-            if (b.missedTime > 0) {
-                strokeCol = COLORS.missed; // 黄色
-                lineW = 4;
-            } else if (b.locked) {
-                strokeCol = COLORS.lock;
-                lineW = 4;
-            }
+            if (b.missedTime > 0) { strokeCol = COLORS.missed; lineW = 4; }
+            else if (b.locked) { strokeCol = COLORS.lock; lineW = 4; }
             
-            ctx.strokeStyle = strokeCol;
-            ctx.lineWidth = lineW;
-            ctx.stroke();
+            ctx.strokeStyle = strokeCol; ctx.lineWidth = lineW; ctx.stroke();
             
             if(b.locked && b.order > 0) {
                 ctx.beginPath(); ctx.arc(b.x, b.y, s+5, 0, 6.28); ctx.stroke();
@@ -560,14 +584,12 @@ var game = {
             ctx.fillText(txt, b.x, b.y);
         }
 
-        // --- エフェクト ---
         this.effects = this.effects.filter(function(e){
             ctx.fillStyle = e.color; ctx.font = 'bold 28px Arial';
             ctx.fillText(e.text, e.x, e.y);
             e.y -= 1; e.life -= 0.02; return e.life > 0;
         });
 
-        // --- ボタン (Canvas UI) ---
         if (this.state === 'playing') {
             // AUTO
             var ba = this.ui.btnAuto;
@@ -576,12 +598,12 @@ var game = {
             ctx.fillStyle = COLORS.accent; ctx.font = 'bold 14px Arial';
             ctx.fillText(ba.label, ba.x, ba.y+5);
 
-            // RESET (小さい丸)
+            // RESET
             var br = this.ui.btnReset;
             ctx.fillStyle = 'rgba(50,50,50,0.8)'; ctx.strokeStyle = '#CCC';
             ctx.beginPath(); ctx.arc(br.x, br.y, br.r, 0, 6.28); ctx.fill(); ctx.stroke();
             ctx.fillStyle = '#CCC'; ctx.font = 'bold 10px Arial';
-            ctx.fillText("RESET", br.x, br.y+4);
+            ctx.fillText(br.label, br.x, br.y+4);
 
             // FIRE
             var bf = this.ui.btnFire;
@@ -590,13 +612,11 @@ var game = {
             
             ctx.fillStyle = isReady ? 'rgba(255,65,54,0.9)' : 'rgba(50,0,0,0.5)';
             ctx.strokeStyle = isReady ? '#FFF' : '#555';
-            ctx.lineWidth = 3;
             ctx.beginPath(); ctx.rect(bf.x, bf.y, bf.w, bf.h); ctx.fill(); ctx.stroke();
             ctx.fillStyle = '#FFF'; ctx.font = 'bold 24px Arial';
             ctx.fillText(bf.label, bf.x + bf.w/2, bf.y + bf.h/2);
         }
 
-        // --- タイトル/終了 ---
         if (this.state !== 'playing') {
             ctx.fillStyle = 'rgba(0,0,0,0.85)';
             ctx.fillRect(0, 0, this.width, this.height);
