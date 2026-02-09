@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bubble Shot: Final Fixed</title>
+    <title>Bubble Shot: Configurable</title>
     <style>
         body { 
             margin: 0; padding: 0; overflow: hidden; background-color: #000; 
@@ -18,9 +18,28 @@
 
 <script>
 /**
- * Bubble Shot Ver 12.0
- * レイアウト位置ズレ修正 ＆ モード厳選版
+ * Bubble Shot Ver 13.0
+ * 計算モードA削除 & 設定外部化版
  */
+
+// ★★★ ゲーム設定エリア (ここを変えるだけで調整可能) ★★★
+var GAME_CONFIG = {
+    // 全体の制限時間 (秒)
+    totalTimeLimit: 60,
+    
+    // ミッションごとの制限時間 (秒) - これが0になると強制切り替え
+    missionTimeLimits: {
+        attr: 15,    // 偶数・奇数モード
+        formula: 20  // 数式作成モード（少し長めに設定）
+    },
+
+    // 正解時の追加タイム (秒)
+    timeBonus: {
+        attr: 0,     // 偶数奇数は数が多いので個別に加算済み
+        formula: 5   // 数式完成時のボーナス
+    }
+};
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
 var COLORS = {
     bg: '#050510',
@@ -42,28 +61,26 @@ var OPS = {
 
 var game = {
     canvas: null, ctx: null,
-    width: 0, height: 0,
-    cx: 0, cy: 0, // 画面中心座標
+    width: 0, height: 0, cx: 0, cy: 0,
     
-    state: 'title', // title, playing, gameover
-    score: 0, timeLeft: 90, missionTime: 10,
+    state: 'title', 
+    score: 0, timeLeft: 0, missionTime: 0,
     bubbles: [], lasers: [], effects: [],
     
     mission: { 
-        type: 'none', // 'mental'(暗算), 'formula'(数式), 'attr'(偶奇)
+        type: 'none', // 'formula'(数式), 'attr'(偶奇)
         target: 0, 
         opKey: null,
         textMain: '', 
         textSub: '' 
     },
 
-    ui: {}, // ボタン座標
+    ui: {},
 
     init: function() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         
-        // イベント
         this.canvas.addEventListener('pointerdown', function(e) {
             e.preventDefault();
             game.handleInput(e.clientX, e.clientY);
@@ -77,31 +94,25 @@ var game = {
     },
 
     resize: function() {
-        // デバイスピクセル比を考慮しつつ、CSSサイズと合わせる
         var dpr = window.devicePixelRatio || 1;
         this.width = window.innerWidth;
         this.height = window.innerHeight;
         
         this.canvas.width = this.width * dpr;
         this.canvas.height = this.height * dpr;
-        
-        // 描画コンテキストのスケール調整
-        this.ctx.setTransform(1, 0, 0, 1, 0, 0); // リセット
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.scale(dpr, dpr);
 
-        // 中心座標（ここを基準に描画する）
         this.cx = this.width / 2;
         this.cy = this.height / 2;
         
-        // ボタン配置 (画面下部中央)
         var bY = this.height - 100;
         this.ui.btnAuto = { x: this.cx - 100, y: bY, r: 40, label: "AUTO" };
         this.ui.btnFire = { x: this.cx + 20, y: bY - 40, w: 140, h: 80, label: "SHOT" };
         
-        // バブルエリア
         this.areaRadius = Math.min(this.width, this.height - 350) / 2 - 10;
         if(this.areaRadius < 120) this.areaRadius = 120;
-        this.areaCy = this.cy + 30; // 少し下げる
+        this.areaCy = this.cy + 30;
     },
 
     handleInput: function(x, y) {
@@ -115,19 +126,18 @@ var game = {
         }
         
         if (this.state === 'playing') {
-            // AUTO
             var da = Math.hypot(x - this.ui.btnAuto.x, y - this.ui.btnAuto.y);
             if (da < this.ui.btnAuto.r + 10) {
                 this.autoLock();
                 return;
             }
-            // SHOT
+            
             var bf = this.ui.btnFire;
             if (x > bf.x && x < bf.x + bf.w && y > bf.y && y < bf.y + bf.h) {
                 this.fire();
                 return;
             }
-            // Bubbles
+            
             for (var i = 0; i < this.bubbles.length; i++) {
                 var b = this.bubbles[i];
                 if (Math.hypot(x - b.x, y - b.y) < b.r + 15) {
@@ -141,7 +151,8 @@ var game = {
     startGame: function() {
         this.state = 'playing';
         this.score = 0;
-        this.timeLeft = 90;
+        // ★設定値を使用
+        this.timeLeft = GAME_CONFIG.totalTimeLimit;
         this.bubbles = [];
         this.replenish(20);
         this.nextMission();
@@ -150,24 +161,18 @@ var game = {
     nextMission: function() {
         var r = Math.random();
         
-        // 4つのモードを均等または調整して抽選
-        // 0.0-0.25: 偶数
-        // 0.25-0.5: 奇数
-        // 0.5-0.75: 計算A (暗算)
-        // 0.75-1.0: 計算B (数式)
-        
-        if (r < 0.25) {
+        // 確率調整: 33% 偶数, 33% 奇数, 33% 計算
+        if (r < 0.33) {
             this.setupAttribute('even');
-        } else if (r < 0.5) {
+        } else if (r < 0.66) {
             this.setupAttribute('odd');
-        } else if (r < 0.75) {
-            this.setupMentalMath();
         } else {
             this.setupFormulaBuilder();
         }
         
-        this.missionTime = 15; // 少し長めに
-        // ロック解除
+        // ★設定値からミッション時間を取得
+        this.missionTime = GAME_CONFIG.missionTimeLimits[this.mission.type] || 15;
+
         for(var i=0; i<this.bubbles.length; i++) {
             this.bubbles[i].locked = false; 
             this.bubbles[i].order = 0;
@@ -176,7 +181,7 @@ var game = {
 
     setupAttribute: function(type) {
         this.mission.type = 'attr';
-        this.mission.opKey = type; // 'even' or 'odd'
+        this.mission.opKey = type;
         
         if (type === 'even') {
             this.mission.textMain = "偶数 (EVEN)";
@@ -185,27 +190,10 @@ var game = {
             this.mission.textMain = "奇数 (ODD)";
             this.mission.textSub = "奇数をすべて撃て";
         }
-        // 盤面を数字のみにする
         this.cleanBoard('num');
     },
 
-    setupMentalMath: function() {
-        // 計算モードA: お題で演算子を指定、盤面は数字のみ
-        this.mission.type = 'mental';
-        this.mission.target = Math.floor(Math.random() * 19) + 2; 
-        var keys = ['add', 'sub', 'mul', 'div'];
-        this.mission.opKey = keys[Math.floor(Math.random() * 4)];
-        
-        var opLabel = OPS[this.mission.opKey].label;
-        this.mission.textMain = "TARGET: " + this.mission.target;
-        this.mission.textSub = "【 " + opLabel + " 】を使って数字を選べ";
-        
-        this.cleanBoard('num'); // 数字のみ
-        this.ensureSolvableMental();
-    },
-
     setupFormulaBuilder: function() {
-        // 計算モードB: お題は数字のみ、盤面の演算子を使う
         this.mission.type = 'formula';
         this.mission.target = Math.floor(Math.random() * 19) + 2;
         this.mission.opKey = null;
@@ -213,18 +201,14 @@ var game = {
         this.mission.textMain = "TARGET: " + this.mission.target;
         this.mission.textSub = "盤面の記号と数字で式を作れ";
         
-        // ★重要修正：演算子を確実に全種類混ぜる
         this.ensureAllOperators(); 
         this.ensureSolvableFormula();
     },
 
-    // --- 盤面操作 ---
-    
     cleanBoard: function(mode) {
         for(var i=0; i<this.bubbles.length; i++) {
             var b = this.bubbles[i];
             if (mode === 'num' && b.type === 'op') {
-                // 演算子を数字に変える
                 b.type = 'num';
                 b.val = Math.floor(Math.random()*9)+1;
                 b.color = COLORS.bubbleNum;
@@ -233,46 +217,24 @@ var game = {
     },
 
     ensureAllOperators: function() {
-        // 計算モードB用：＋－×÷ が最低1個ずつある状態にする
-        // 既存のバブルの先頭4つを強制的に書き換える
         var keys = ['add', 'sub', 'mul', 'div'];
-        
-        // 配列が足りない場合は補充
         if (this.bubbles.length < 4) this.replenish(10);
-
         for (var i = 0; i < 4; i++) {
             this.bubbles[i].type = 'op';
             this.bubbles[i].val = keys[i];
             this.bubbles[i].color = COLORS.bubbleOp;
-            this.bubbles[i].locked = false; // ロック外す
+            this.bubbles[i].locked = false;
         }
     },
 
-    ensureSolvableMental: function() {
-        // 計算A用：解となる数字ペアを用意
-        var t = this.mission.target;
-        var op = this.mission.opKey;
-        var n1, n2;
-        // 簡易生成ロジック
-        if(op==='add'){ n1=1; n2=t-1; }
-        else if(op==='sub'){ n1=t+1; n2=1; }
-        else if(op==='mul'){ n1=1; n2=t; }
-        else { n1=t*2; n2=2; }
-        
-        // バブル書き換え (index 0, 1)
-        this.bubbles[0].val = n1; this.bubbles[0].type = 'num'; this.bubbles[0].color = COLORS.bubbleNum;
-        this.bubbles[1].val = n2; this.bubbles[1].type = 'num'; this.bubbles[1].color = COLORS.bubbleNum;
-    },
-
     ensureSolvableFormula: function() {
-        // 計算B用：解となる [Num] [Op] [Num] を用意
-        // ensureAllOperatorsで記号は確保済みなので、数字のペアを追加
         var t = this.mission.target;
-        var n1 = 1, n2 = t-1; // 足し算で作れるペア
-        
-        // index 4, 5 を使う（0-3は記号にしたので）
+        // 単純な足し算解を仕込む (1 + (t-1))
+        var n1 = 1, n2 = t-1;
+        if (n2 < 1) { n1=0; n2=t; } // targetが小さい場合の保険
+
         if (this.bubbles.length < 6) this.replenish(10);
-        
+        // index 4,5 を使用
         this.bubbles[4].val = n1; this.bubbles[4].type = 'num'; this.bubbles[4].color = COLORS.bubbleNum;
         this.bubbles[5].val = n2; this.bubbles[5].type = 'num'; this.bubbles[5].color = COLORS.bubbleNum;
     },
@@ -286,13 +248,11 @@ var game = {
     spawn: function() {
         var r = 24;
         var x, y, safe=false;
-        // 配置場所探し
         for(var i=0; i<50; i++) {
             var ang = Math.random() * 6.28;
             var d = Math.sqrt(Math.random()) * (this.areaRadius - r);
             x = this.cx + Math.cos(ang) * d;
             y = this.areaCy + Math.sin(ang) * d;
-            
             safe = true;
             for(var k=0; k<this.bubbles.length; k++) {
                 var b = this.bubbles[k];
@@ -302,11 +262,9 @@ var game = {
         }
         if(!safe) return;
 
-        // モードBのときだけ、ランダム生成でも演算子を混ぜる
         var isOp = (this.mission.type === 'formula' && Math.random() < 0.2);
         var type = isOp ? 'op' : 'num';
         var val;
-        
         if(type === 'num') val = Math.floor(Math.random()*9) + 1;
         else {
             var keys = ['add','sub','mul','div'];
@@ -320,26 +278,28 @@ var game = {
         });
     },
 
-    // --- ロック処理 ---
     toggleLock: function(b) {
         if(b.locked) {
             b.locked = false; b.order = 0;
             this.reorderLocks();
         } else {
             var cnt = this.getLockedCount();
-            // 制限
-            if(this.mission.type === 'mental' && cnt >= 2) return;
             if(this.mission.type === 'formula' && cnt >= 3) return;
-            
             b.locked = true;
             b.order = cnt + 1;
         }
     },
 
     reorderLocks: function() {
-        var locked = this.bubbles.filter(function(b){ return b.locked; });
-        locked.sort(function(a,b){ return a.order - b.order; });
+        var locked = this.getLocked();
         for(var i=0; i<locked.length; i++) locked[i].order = i+1;
+    },
+
+    getLocked: function() {
+        var arr = [];
+        for(var i=0; i<this.bubbles.length; i++) if(this.bubbles[i].locked) arr.push(this.bubbles[i]);
+        arr.sort(function(a,b){ return a.order - b.order; });
+        return arr;
     },
 
     getLockedCount: function() {
@@ -348,9 +308,7 @@ var game = {
         return c;
     },
 
-    // --- オートロック ---
     autoLock: function() {
-        // リセット
         for(var i=0; i<this.bubbles.length; i++) {
             this.bubbles[i].locked = false;
             this.bubbles[i].order = 0;
@@ -361,7 +319,6 @@ var game = {
         var found = false;
 
         if (this.mission.type === 'attr') {
-            // 偶数奇数
             var rem = (this.mission.opKey === 'even') ? 0 : 1;
             var c = 1;
             for(var i=0; i<nums.length; i++) {
@@ -372,24 +329,7 @@ var game = {
             }
             if(c>1) found=true;
 
-        } else if (this.mission.type === 'mental') {
-            // 暗算 (Num, Num)
-            var func = OPS[this.mission.opKey].calc;
-            for(var i=0; i<nums.length; i++) {
-                for(var j=0; j<nums.length; j++) {
-                    if(i===j) continue;
-                    if(func(nums[i].val, nums[j].val) === this.mission.target) {
-                        nums[i].locked=true; nums[i].order=1;
-                        nums[j].locked=true; nums[j].order=2;
-                        found=true; break;
-                    }
-                }
-                if(found) break;
-            }
-
         } else if (this.mission.type === 'formula') {
-            // 数式 (Num, Op, Num)
-            // 盤面の演算子を使う
             for(var k=0; k<ops.length; k++) {
                 var func = OPS[ops[k].val].calc;
                 for(var i=0; i<nums.length; i++) {
@@ -411,69 +351,62 @@ var game = {
         if(found) this.addEffect("LOCKED", this.cx, this.cy, COLORS.lock);
     },
 
-    // --- 発射判定 ---
     fire: function() {
-        var locked = this.bubbles.filter(function(b){ return b.locked; });
-        locked.sort(function(a,b){ return a.order - b.order; });
-        
+        var locked = this.getLocked();
         if(locked.length === 0) return;
 
         var isHit = false;
         var gain = 0;
 
-        if (this.mission.type === 'attr') {
+        if (this.mission.type === 'formula') {
+            if (locked.length === 3) {
+                var opB = null; var nums = [];
+                for(var i=0; i<locked.length; i++) {
+                    if(locked[i].type==='op') opB=locked[i];
+                    else nums.push(locked[i]);
+                }
+                if (opB && nums.length === 2) {
+                    var func = OPS[opB.val].calc;
+                    if (func(nums[0].val, nums[1].val) === this.mission.target ||
+                        func(nums[1].val, nums[0].val) === this.mission.target) {
+                        isHit = true;
+                        gain = 1500;
+                    }
+                }
+            }
+        } else if (this.mission.type === 'attr') {
             var rem = (this.mission.opKey === 'even') ? 0 : 1;
             var allOk = true;
             for(var i=0; i<locked.length; i++) {
                 if(locked[i].type!=='num' || locked[i].val%2 !== rem) allOk=false;
             }
-            if(allOk && locked.length>0) {
+            if(allOk && locked.length > 0) {
                 isHit = true;
-                gain = locked.length * 100;
-            }
-        } else if (this.mission.type === 'mental') {
-            // 2個選択、指定OPで計算
-            if (locked.length === 2 && locked[0].type==='num' && locked[1].type==='num') {
-                var func = OPS[this.mission.opKey].calc;
-                // 順不同
-                if (func(locked[0].val, locked[1].val) === this.mission.target ||
-                    func(locked[1].val, locked[0].val) === this.mission.target) {
-                    isHit = true; gain = 1000;
-                }
-            }
-        } else if (this.mission.type === 'formula') {
-            // 3個選択、Num Op Num (または Op Num Num 等、柔軟に)
-            // 構成要素チェック：Op1個、Num2個
-            var opB = null; var nums = [];
-            for(var i=0; i<locked.length; i++) {
-                if(locked[i].type==='op') opB=locked[i];
-                else nums.push(locked[i]);
-            }
-            if (locked.length === 3 && opB && nums.length === 2) {
-                var func = OPS[opB.val].calc;
-                if (func(nums[0].val, nums[1].val) === this.mission.target ||
-                    func(nums[1].val, nums[0].val) === this.mission.target) {
-                    isHit = true; gain = 1500;
-                }
+                gain = locked.length * 200;
             }
         }
 
-        // 削除
         for(var i=0; i<locked.length; i++) {
             var b = locked[i];
-            this.lasers.push({ tx:b.x, ty:b.y, color: isHit?COLORS.accent:COLORS.warn, life:1.0 });
+            this.lasers.push({ tx: b.x, ty: b.y, color: isHit?COLORS.accent:COLORS.warn, life:1.0 });
             var idx = this.bubbles.indexOf(b);
             if(idx > -1) this.bubbles.splice(idx, 1);
         }
 
         if(isHit) {
-            this.score += gain + Math.floor(this.missionTime * 100);
+            this.score += gain;
+            // ★設定値からボーナスタイム加算
+            var bonus = GAME_CONFIG.timeBonus[this.mission.type] || 0;
+            this.timeLeft += bonus;
+            
             this.addEffect("HIT! +"+gain, this.cx, this.cy-50, COLORS.accent);
             var _this = this;
             setTimeout(function(){ _this.nextMission(); }, 500);
         } else {
             this.addEffect("MISS...", this.cx, this.cy-50, "#888");
+            this.timeLeft -= 3;
         }
+        
         this.replenish(20);
     },
 
@@ -481,7 +414,6 @@ var game = {
         this.effects.push({ text:t, x:x, y:y, color:c, life:1.0 });
     },
 
-    // --- メインループ ＆ 描画 ---
     loop: function() {
         var now = Date.now();
         var dt = (now - this.lastTime) / 1000;
@@ -490,93 +422,63 @@ var game = {
         if (this.state === 'playing') {
             this.timeLeft -= dt;
             this.missionTime -= dt;
-            if(this.missionTime <= 0) this.nextMission();
-            if(this.timeLeft <= 0) this.state = 'gameover';
+            if (this.missionTime <= 0) this.nextMission();
+            if (this.timeLeft <= 0) this.state = 'gameover';
         }
 
-        // アニメーション
         for(var i=0; i<this.bubbles.length; i++) {
             if(this.bubbles[i].scale < 1) this.bubbles[i].scale += 0.1;
         }
 
         var ctx = this.ctx;
-        var w = this.width, h = this.height;
-        ctx.fillStyle = COLORS.bg; ctx.fillRect(0,0,w,h);
+        ctx.fillStyle = COLORS.bg;
+        ctx.fillRect(0, 0, this.width, this.height);
 
-        // --- タイトル画面 ---
-        if (this.state === 'title') {
-            ctx.fillStyle = COLORS.accent; 
-            ctx.font = 'bold 40px Arial'; ctx.textAlign = 'center';
-            ctx.fillText("BUBBLE SHOT", this.cx, this.cy - 50);
-            
-            // スタートボタン（のような枠）
-            ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 4;
-            ctx.strokeRect(this.cx - 100, this.cy + 50, 200, 60);
-            ctx.fillStyle = COLORS.gold; ctx.font = 'bold 24px Arial';
-            ctx.fillText("TAP TO START", this.cx, this.cy + 88);
-            
-            requestAnimationFrame(function(){ game.loop(); });
-            return;
-        }
-
-        // --- ゲームオーバー ---
-        if (this.state === 'gameover') {
-            ctx.fillStyle = COLORS.warn; 
-            ctx.font = 'bold 40px Arial'; ctx.textAlign = 'center';
-            ctx.fillText("FINISH", this.cx, this.cy - 50);
-            
-            ctx.fillStyle = '#FFF'; ctx.font = '24px Arial';
-            ctx.fillText("SCORE: " + this.score, this.cx, this.cy);
-            
-            ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 4;
-            ctx.strokeRect(this.cx - 100, this.cy + 50, 200, 60);
-            ctx.fillStyle = COLORS.gold; ctx.font = 'bold 24px Arial';
-            ctx.fillText("RETRY", this.cx, this.cy + 88);
-            
-            requestAnimationFrame(function(){ game.loop(); });
-            return;
-        }
-
-        // --- ゲーム中 ---
-        
-        // 司令官
-        ctx.save(); ctx.translate(this.cx, 50);
-        ctx.fillStyle = '#003344'; ctx.beginPath(); ctx.arc(0,0,30,0,6.28); ctx.fill();
-        ctx.strokeStyle=COLORS.accent; ctx.lineWidth=2; ctx.stroke();
-        // 顔
-        ctx.fillStyle='#D35400';
-        ctx.beginPath(); ctx.ellipse(-10,-5,8,5,0,0,6.28); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(10,-5,10,6,0,0,6.28); ctx.fill();
+        // --- 司令官 ---
+        var cmX = this.cx, cmY = 60;
+        ctx.save();
+        ctx.translate(cmX, cmY);
+        ctx.fillStyle = (this.state==='playing') ? COLORS.gold : '#555';
+        ctx.beginPath(); ctx.arc(0,0,30,0,6.28); ctx.fill();
+        ctx.fillStyle = '#D35400'; 
+        ctx.beginPath(); ctx.ellipse(-10, -5, 8, 5, 0, 0, 6.28); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(10, -5, 10, 6, 0, 0, 6.28); ctx.fill();
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(0, 10, 10, 0, 3.14); ctx.stroke();
         ctx.restore();
 
-        // ミッション情報
-        ctx.textAlign = 'center';
-        // タイムバー
-        var barW = 200, barY = 100;
-        ctx.fillStyle = '#333'; ctx.fillRect(this.cx - barW/2, barY, barW, 6);
-        ctx.fillStyle = COLORS.warn; ctx.fillRect(this.cx - barW/2, barY, barW * Math.max(0, this.missionTime/15), 6);
-        
-        // テキスト
-        ctx.fillStyle = COLORS.gold; ctx.font = 'bold 40px Arial';
-        ctx.fillText(this.mission.textMain, this.cx, barY + 50);
-        ctx.fillStyle = COLORS.accent; ctx.font = 'bold 16px Arial';
-        ctx.fillText(this.mission.textSub, this.cx, barY + 80);
-        // スコア
-        ctx.fillStyle = '#CCC'; ctx.font = '14px Monospace';
-        ctx.fillText("SCORE: "+this.score+"  TIME: "+Math.ceil(this.timeLeft), this.cx, barY+110);
+        // --- ミッション ---
+        if (this.state === 'playing') {
+            ctx.textAlign = 'center';
+            var barW = 200, barY = 110;
+            ctx.fillStyle = '#333'; ctx.fillRect(this.cx - barW/2, barY, barW, 6);
+            ctx.fillStyle = COLORS.warn; ctx.fillRect(this.cx - barW/2, barY, barW * Math.max(0, this.missionTime/15), 6);
 
-        // ゲームエリア枠
+            ctx.font = 'bold 40px Arial';
+            ctx.fillStyle = COLORS.gold;
+            ctx.fillText(this.mission.textMain, this.cx, barY + 50);
+            
+            ctx.font = 'bold 16px Arial';
+            ctx.fillStyle = COLORS.accent;
+            ctx.fillText(this.mission.textSub, this.cx, barY + 80);
+
+            ctx.font = '14px Monospace';
+            ctx.fillStyle = '#CCC';
+            ctx.fillText("SCORE: " + this.score + "   TIME: " + Math.ceil(this.timeLeft), this.cx, barY + 100);
+        }
+
+        // --- エリア ---
         ctx.strokeStyle = '#003333'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(this.cx, this.areaCy, this.areaRadius, 0, 6.28); ctx.stroke();
 
-        // レーザー
+        // --- レーザー ---
         this.lasers = this.lasers.filter(function(l){
             ctx.strokeStyle = l.color; ctx.lineWidth = 5;
             ctx.beginPath(); ctx.moveTo(game.cx, game.height); ctx.lineTo(l.tx, l.ty); ctx.stroke();
             l.life -= 0.1; return l.life > 0;
         });
 
-        // バブル
+        // --- バブル ---
         for(var i=0; i<this.bubbles.length; i++) {
             var b = this.bubbles[i];
             var s = b.r * b.scale;
@@ -587,44 +489,64 @@ var game = {
             ctx.lineWidth = b.locked ? 4 : 2;
             ctx.stroke();
             
-            // 文字 (文字位置修正: dyを加味)
-            ctx.fillStyle = '#FFF'; ctx.font = 'bold 20px Arial';
-            ctx.textBaseline = 'middle';
-            var txt = (b.type==='num') ? b.val : OPS[b.val].label;
-            ctx.fillText(txt, b.x, b.y);
-            
-            // ロック順
             if(b.locked && b.order > 0) {
-                ctx.strokeStyle = COLORS.lock; ctx.lineWidth = 1;
                 ctx.beginPath(); ctx.arc(b.x, b.y, s+5, 0, 6.28); ctx.stroke();
             }
+
+            ctx.fillStyle = '#FFF'; ctx.font = 'bold 20px Arial';
+            ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; 
+            var txt = (b.type==='num') ? b.val : OPS[b.val].label;
+            ctx.fillText(txt, b.x, b.y);
         }
 
-        // ボタン描画
-        var ba = this.ui.btnAuto;
-        ctx.fillStyle = 'rgba(0,50,50,0.8)'; ctx.strokeStyle = COLORS.accent; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(ba.x, ba.y, ba.r, 0, 6.28); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = COLORS.accent; ctx.font = 'bold 14px Arial';
-        ctx.fillText("AUTO", ba.x, ba.y+5);
-
-        var bf = this.ui.btnFire;
-        // ロック数確認
-        var lockedCnt = 0;
-        for(var i=0;i<this.bubbles.length;i++) if(this.bubbles[i].locked) lockedCnt++;
-        var isReady = (lockedCnt > 0);
-
-        ctx.fillStyle = isReady ? 'rgba(255,65,54,0.9)' : 'rgba(50,0,0,0.5)';
-        ctx.strokeStyle = isReady ? '#FFF' : '#555';
-        ctx.beginPath(); ctx.rect(bf.x, bf.y, bf.w, bf.h); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = '#FFF'; ctx.font = 'bold 24px Arial';
-        ctx.fillText("SHOT", bf.x + bf.w/2, bf.y + bf.h/2);
-
-        // エフェクト
         this.effects = this.effects.filter(function(e){
-            ctx.fillStyle = e.color; ctx.font = 'bold 30px Arial';
+            ctx.fillStyle = e.color; ctx.font = 'bold 28px Arial';
             ctx.fillText(e.text, e.x, e.y);
             e.y -= 1; e.life -= 0.02; return e.life > 0;
         });
+
+        // --- ボタン ---
+        if (this.state === 'playing') {
+            var ba = this.ui.btnAuto;
+            ctx.fillStyle = 'rgba(0,50,50,0.8)';
+            ctx.strokeStyle = COLORS.accent;
+            ctx.beginPath(); ctx.arc(ba.x, ba.y, ba.r, 0, 6.28); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = COLORS.accent; ctx.font = 'bold 12px Arial';
+            ctx.fillText("AUTO", ba.x, ba.y - 5); ctx.fillText("LOCK", ba.x, ba.y + 10);
+
+            var bf = this.ui.btnFire;
+            var isReady = false; 
+            for(var i=0; i<this.bubbles.length; i++) if(this.bubbles[i].locked) isReady=true;
+            
+            ctx.fillStyle = isReady ? 'rgba(255,65,54,0.9)' : 'rgba(50,0,0,0.5)';
+            ctx.strokeStyle = isReady ? '#FFF' : '#555';
+            ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.rect(bf.x, bf.y, bf.w, bf.h); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#FFF'; ctx.font = 'bold 24px Arial';
+            ctx.fillText("SHOT", bf.x + bf.w/2, bf.y + bf.h/2);
+        }
+
+        // --- タイトル/終了 ---
+        if (this.state !== 'playing') {
+            ctx.fillStyle = 'rgba(0,0,0,0.85)';
+            ctx.fillRect(0, 0, this.width, this.height);
+            ctx.textAlign = 'center';
+            ctx.fillStyle = COLORS.accent; ctx.font = 'bold 40px Arial';
+            ctx.fillText("BUBBLE SHOT", this.cx, this.cy - 50);
+            
+            if (this.state === 'gameover') {
+                ctx.fillStyle = COLORS.warn;
+                ctx.fillText("FINISH", this.cx, this.cy - 100);
+                ctx.fillStyle = '#FFF';
+                ctx.fillText("SCORE: " + this.score, this.cx, this.cy);
+            }
+
+            ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 3;
+            ctx.strokeRect(this.cx - 100, this.cy + 30, 200, 60);
+            ctx.fillStyle = COLORS.gold; ctx.font = 'bold 24px Arial';
+            var msg = (this.state==='title') ? "TAP TO START" : "TAP TO RETRY";
+            ctx.fillText(msg, this.cx, this.cy + 65);
+        }
 
         requestAnimationFrame(function(){ game.loop(); });
     }
