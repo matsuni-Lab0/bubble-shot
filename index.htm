@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bubble Shot: Operator Mode</title>
+    <title>Bubble Shot: Real-time Monitor</title>
     <style>
         body { 
             margin: 0; padding: 0; overflow: hidden; background-color: #000; 
@@ -18,8 +18,8 @@
 
 <script>
 /**
- * Bubble Shot Ver 14.0
- * 厳密な順序判定 & オペレーター表示機能
+ * Bubble Shot Ver 15.0
+ * リアルタイム入力モニター機能搭載
  */
 
 // ★設定エリア
@@ -152,59 +152,35 @@ var game = {
         this.nextMission();
     },
 
-    // --- 司令官メッセージ更新 ---
     setCommanderMsg: function(text, mood, duration) {
         this.commander.text = text;
         this.commander.mood = mood;
-        this.commander.timer = duration || 0; // 0ならずっと表示
+        this.commander.timer = duration || 0;
     },
 
+    // ★重要変更：入力内容をそのまま表示するロジック
     updateOperatorGuidance: function() {
         var locked = this.getLocked();
         
         if (locked.length === 0) {
-            this.setCommanderMsg("ターゲットをロックせよ", "normal", 0);
+            this.setCommanderMsg("READY...", "normal", 0);
             return;
         }
 
-        // 入力内容の文字列化
-        var currentSeq = "";
-        for(var i=0; i<locked.length; i++) {
-            var b = locked[i];
-            var valStr = (b.type==='op') ? OPS[b.val].label : b.val;
-            currentSeq += valStr + " ";
-        }
-
         if (this.mission.type === 'formula') {
-            // 計算モードの場合の厳密なガイド
-            var len = locked.length;
-            var last = locked[len-1];
-            
-            // 順序チェックのフィードバック
-            if (len === 1) {
-                if (last.type === 'num') {
-                    this.setCommanderMsg("入力: " + currentSeq + "→ 次は記号だ！", "normal", 0);
-                } else {
-                    this.setCommanderMsg("入力: " + currentSeq + "(順序が違うぞ！最初は数字だ)", "panic", 0);
-                }
-            } else if (len === 2) {
-                if (locked[0].type === 'num' && last.type === 'op') {
-                    this.setCommanderMsg("入力: " + currentSeq + "→ 最後は数字だ！", "normal", 0);
-                } else {
-                    this.setCommanderMsg("入力: " + currentSeq + "(順序が違うぞ！)", "panic", 0);
-                }
-            } else if (len === 3) {
-                if (locked[0].type === 'num' && locked[1].type === 'op' && locked[2].type === 'num') {
-                    this.setCommanderMsg("式完成: " + currentSeq + "発射！", "happy", 0);
-                } else {
-                    this.setCommanderMsg("入力: " + currentSeq + "(無効な式だ！)", "panic", 0);
-                }
-            } else {
-                this.setCommanderMsg("入力: " + currentSeq + "(多すぎる！)", "panic", 0);
+            // 計算モード: 入力された式をそのまま文字列にする
+            var currentSeq = "";
+            for(var i=0; i<locked.length; i++) {
+                var b = locked[i];
+                var valStr = (b.type==='op') ? OPS[b.val].label : b.val;
+                currentSeq += valStr + "  "; // 少しスペースを空ける
             }
+            // そのまま表示
+            this.setCommanderMsg(currentSeq, "normal", 0);
+            
         } else {
-            // 偶数・奇数モード
-            this.setCommanderMsg("ロック数: " + locked.length + "体... 撃て！", "normal", 0);
+            // 偶数・奇数モード: 個数を表示
+            this.setCommanderMsg("LOCKED: " + locked.length, "normal", 0);
         }
     },
 
@@ -327,7 +303,7 @@ var game = {
             b.locked = true;
             b.order = cnt + 1;
         }
-        this.updateOperatorGuidance(); // ★タップ時にガイダンス更新
+        this.updateOperatorGuidance(); 
     },
 
     resetLocks: function() {
@@ -394,7 +370,7 @@ var game = {
         }
 
         if(found) this.addEffect("LOCKED", this.cx, this.cy, COLORS.lock);
-        this.updateOperatorGuidance();
+        this.updateOperatorGuidance(); // 更新
     },
 
     fire: function() {
@@ -406,8 +382,9 @@ var game = {
         var missedBubbles = [];
 
         if (this.mission.type === 'formula') {
-            // ★厳密な順序判定: Num -> Op -> Num
+            // 厳密な順序判定
             if (locked.length === 3) {
+                // [Num] [Op] [Num] の順序のみ許可
                 if (locked[0].type === 'num' && locked[1].type === 'op' && locked[2].type === 'num') {
                     var n1 = locked[0].val;
                     var opVal = locked[1].val;
@@ -430,7 +407,6 @@ var game = {
                 isHit = true;
                 gain = locked.length * 200;
             }
-            // 見落としチェック
             for(var i=0; i<this.bubbles.length; i++) {
                 var b = this.bubbles[i];
                 if (!b.locked && b.type === 'num' && b.val % 2 === rem) {
@@ -457,7 +433,7 @@ var game = {
                 for(var k=0; k<missedBubbles.length; k++) missedBubbles[k].missedTime = 1.5;
                 this.setCommanderMsg("まだ残っているぞ！", "angry", 2.0);
             } else {
-                this.setCommanderMsg("ターゲット排除完了！", "happy", 1.5);
+                this.setCommanderMsg("排除完了！", "happy", 1.5);
             }
 
             var _this = this;
@@ -465,9 +441,14 @@ var game = {
         } else {
             this.addEffect("MISS...", this.cx, this.cy-50, "#888");
             this.timeLeft -= 3;
-            // 失敗理由に応じたメッセージ
+            // 失敗理由
             if (this.mission.type === 'formula') {
-                this.setCommanderMsg("式か答えが間違っている！", "panic", 1.5);
+                // 順序チェック
+                if (locked.length===3 && locked[1].type!=='op') {
+                    this.setCommanderMsg("順序が違う！(数→記→数)", "panic", 2.0);
+                } else {
+                    this.setCommanderMsg("計算結果が違う！", "panic", 2.0);
+                }
             } else {
                 this.setCommanderMsg("違うターゲットだ！", "panic", 1.5);
             }
@@ -491,11 +472,10 @@ var game = {
             if (this.missionTime <= 0) this.nextMission();
             if (this.timeLeft <= 0) this.state = 'gameover';
             
-            // メッセージタイマー
             if (this.commander.timer > 0) {
                 this.commander.timer -= dt;
                 if (this.commander.timer <= 0) {
-                    this.updateOperatorGuidance(); // デフォルトに戻す
+                    this.updateOperatorGuidance();
                 }
             }
         }
@@ -510,7 +490,7 @@ var game = {
         ctx.fillStyle = COLORS.bg;
         ctx.fillRect(0, 0, this.width, this.height);
 
-        // --- 司令官 ---
+        // --- 司令官表示 ---
         var cmX = this.cx, cmY = 50;
         ctx.save();
         ctx.translate(cmX - 120, cmY);
@@ -523,7 +503,7 @@ var game = {
         ctx.beginPath(); ctx.ellipse(10,-5,10,6,0,0,6.28); ctx.fill();
         ctx.restore();
 
-        // メッセージボックス
+        // 吹き出し
         ctx.save();
         ctx.translate(cmX - 70, cmY - 20);
         ctx.fillStyle = 'rgba(0, 50, 80, 0.9)';
@@ -541,13 +521,16 @@ var game = {
             ctx.fillStyle = '#333'; ctx.fillRect(this.cx - 100, barY, 200, 6);
             ctx.fillStyle = COLORS.warn; ctx.fillRect(this.cx - 100, barY, 200 * Math.max(0, this.missionTime/15), 6);
 
-            ctx.font = 'bold 40px Arial'; ctx.fillStyle = COLORS.gold;
+            ctx.font = 'bold 40px Arial';
+            ctx.fillStyle = COLORS.gold;
             ctx.fillText(this.mission.textMain, this.cx, barY + 50);
             
-            ctx.font = 'bold 16px Arial'; ctx.fillStyle = COLORS.accent;
+            ctx.font = 'bold 16px Arial';
+            ctx.fillStyle = COLORS.accent;
             ctx.fillText(this.mission.textSub, this.cx, barY + 80);
 
-            ctx.font = '14px Monospace'; ctx.fillStyle = '#CCC';
+            ctx.font = '14px Monospace';
+            ctx.fillStyle = '#CCC';
             ctx.fillText("SCORE: " + this.score + "   TIME: " + Math.ceil(this.timeLeft), this.cx, barY + 105);
         }
 
@@ -591,21 +574,18 @@ var game = {
         });
 
         if (this.state === 'playing') {
-            // AUTO
             var ba = this.ui.btnAuto;
             ctx.fillStyle = 'rgba(0,50,50,0.8)'; ctx.strokeStyle = COLORS.accent; ctx.lineWidth = 2;
             ctx.beginPath(); ctx.arc(ba.x, ba.y, ba.r, 0, 6.28); ctx.fill(); ctx.stroke();
             ctx.fillStyle = COLORS.accent; ctx.font = 'bold 14px Arial';
             ctx.fillText(ba.label, ba.x, ba.y+5);
 
-            // RESET
             var br = this.ui.btnReset;
             ctx.fillStyle = 'rgba(50,50,50,0.8)'; ctx.strokeStyle = '#CCC';
             ctx.beginPath(); ctx.arc(br.x, br.y, br.r, 0, 6.28); ctx.fill(); ctx.stroke();
             ctx.fillStyle = '#CCC'; ctx.font = 'bold 10px Arial';
-            ctx.fillText(br.label, br.x, br.y+4);
+            ctx.fillText("RESET", br.x, br.y+4);
 
-            // FIRE
             var bf = this.ui.btnFire;
             var isReady = false; 
             for(var i=0; i<this.bubbles.length; i++) if(this.bubbles[i].locked) isReady=true;
