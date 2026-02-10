@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bubble Shot: Real-time Monitor</title>
+    <title>Bubble Shot: Feedback Master</title>
     <style>
         body { 
             margin: 0; padding: 0; overflow: hidden; background-color: #000; 
@@ -18,8 +18,8 @@
 
 <script>
 /**
- * Bubble Shot Ver 15.0
- * リアルタイム入力モニター機能搭載
+ * Bubble Shot Ver 16.0
+ * フィードバック強化版（正解率表示＆模範解答）
  */
 
 // ★設定エリア
@@ -158,7 +158,7 @@ var game = {
         this.commander.timer = duration || 0;
     },
 
-    // ★重要変更：入力内容をそのまま表示するロジック
+    // ★重要: フィードバック表示の更新ロジック
     updateOperatorGuidance: function() {
         var locked = this.getLocked();
         
@@ -168,20 +168,53 @@ var game = {
         }
 
         if (this.mission.type === 'formula') {
-            // 計算モード: 入力された式をそのまま文字列にする
+            // 計算モード: 入力式を表示
             var currentSeq = "";
             for(var i=0; i<locked.length; i++) {
                 var b = locked[i];
                 var valStr = (b.type==='op') ? OPS[b.val].label : b.val;
-                currentSeq += valStr + "  "; // 少しスペースを空ける
+                currentSeq += valStr + "  ";
             }
-            // そのまま表示
             this.setCommanderMsg(currentSeq, "normal", 0);
             
         } else {
-            // 偶数・奇数モード: 個数を表示
-            this.setCommanderMsg("LOCKED: " + locked.length, "normal", 0);
+            // ★偶数・奇数モード: 「正解数 / 該当数」を表示
+            var totalTargets = 0;
+            var rem = (this.mission.opKey === 'even') ? 0 : 1;
+            
+            // 盤面全体から正解候補をカウント
+            for(var i=0; i<this.bubbles.length; i++) {
+                var b = this.bubbles[i];
+                if (b.type === 'num' && b.val % 2 === rem) {
+                    totalTargets++;
+                }
+            }
+            
+            this.setCommanderMsg("LOCKED: " + locked.length + " / " + totalTargets, "normal", 0);
         }
+    },
+
+    // ★新規追加: 模範解答を探す関数
+    getExampleSolution: function() {
+        var nums = this.bubbles.filter(function(b){return b.type==='num'});
+        var ops = this.bubbles.filter(function(b){return b.type==='op'});
+        var t = this.mission.target;
+
+        // Num Op Num の組み合わせを探索
+        for(var k=0; k<ops.length; k++) {
+            var op = ops[k];
+            var func = OPS[op.val].calc;
+            for(var i=0; i<nums.length; i++) {
+                for(var j=0; j<nums.length; j++) {
+                    if(i===j) continue;
+                    if(func(nums[i].val, nums[j].val) === t) {
+                        // 正解発見
+                        return nums[i].val + " " + OPS[op.val].label + " " + nums[j].val;
+                    }
+                }
+            }
+        }
+        return "解なし";
     },
 
     nextMission: function() {
@@ -370,7 +403,7 @@ var game = {
         }
 
         if(found) this.addEffect("LOCKED", this.cx, this.cy, COLORS.lock);
-        this.updateOperatorGuidance(); // 更新
+        this.updateOperatorGuidance();
     },
 
     fire: function() {
@@ -382,9 +415,7 @@ var game = {
         var missedBubbles = [];
 
         if (this.mission.type === 'formula') {
-            // 厳密な順序判定
             if (locked.length === 3) {
-                // [Num] [Op] [Num] の順序のみ許可
                 if (locked[0].type === 'num' && locked[1].type === 'op' && locked[2].type === 'num') {
                     var n1 = locked[0].val;
                     var opVal = locked[1].val;
@@ -433,7 +464,7 @@ var game = {
                 for(var k=0; k<missedBubbles.length; k++) missedBubbles[k].missedTime = 1.5;
                 this.setCommanderMsg("まだ残っているぞ！", "angry", 2.0);
             } else {
-                this.setCommanderMsg("排除完了！", "happy", 1.5);
+                this.setCommanderMsg("ターゲット排除完了！", "happy", 1.5);
             }
 
             var _this = this;
@@ -441,14 +472,12 @@ var game = {
         } else {
             this.addEffect("MISS...", this.cx, this.cy-50, "#888");
             this.timeLeft -= 3;
-            // 失敗理由
+            
+            // ★重要: 失敗時の模範解答フィードバック
             if (this.mission.type === 'formula') {
-                // 順序チェック
-                if (locked.length===3 && locked[1].type!=='op') {
-                    this.setCommanderMsg("順序が違う！(数→記→数)", "panic", 2.0);
-                } else {
-                    this.setCommanderMsg("計算結果が違う！", "panic", 2.0);
-                }
+                var example = this.getExampleSolution();
+                // 表示時間を3秒と長めに設定
+                this.setCommanderMsg("不正解！ 正解例: " + example, "panic", 3.0);
             } else {
                 this.setCommanderMsg("違うターゲットだ！", "panic", 1.5);
             }
@@ -490,7 +519,7 @@ var game = {
         ctx.fillStyle = COLORS.bg;
         ctx.fillRect(0, 0, this.width, this.height);
 
-        // --- 司令官表示 ---
+        // --- 司令官 ---
         var cmX = this.cx, cmY = 50;
         ctx.save();
         ctx.translate(cmX - 120, cmY);
@@ -503,7 +532,7 @@ var game = {
         ctx.beginPath(); ctx.ellipse(10,-5,10,6,0,0,6.28); ctx.fill();
         ctx.restore();
 
-        // 吹き出し
+        // メッセージボックス
         ctx.save();
         ctx.translate(cmX - 70, cmY - 20);
         ctx.fillStyle = 'rgba(0, 50, 80, 0.9)';
@@ -584,7 +613,7 @@ var game = {
             ctx.fillStyle = 'rgba(50,50,50,0.8)'; ctx.strokeStyle = '#CCC';
             ctx.beginPath(); ctx.arc(br.x, br.y, br.r, 0, 6.28); ctx.fill(); ctx.stroke();
             ctx.fillStyle = '#CCC'; ctx.font = 'bold 10px Arial';
-            ctx.fillText("RESET", br.x, br.y+4);
+            ctx.fillText(br.label, br.x, br.y+4);
 
             var bf = this.ui.btnFire;
             var isReady = false; 
