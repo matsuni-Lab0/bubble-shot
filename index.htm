@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bubble Shot: Post-Feedback</title>
+    <title>Bubble Shot: Ultimate Fix</title>
     <style>
         body { 
             margin: 0; padding: 0; overflow: hidden; background-color: #000; 
@@ -18,11 +18,10 @@
 
 <script>
 /**
- * Bubble Shot Ver 17.0
- * フィードバックタイミング調整版（発射後に正解率を表示）
+ * Bubble Shot Ver 18.0
+ * roundRect非対応端末向けの完全互換パッチ適用版
  */
 
-// ★設定エリア
 var GAME_CONFIG = {
     totalTimeLimit: 60,
     missionTimeLimits: { attr: 15, formula: 20 },
@@ -76,6 +75,21 @@ var game = {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         
+        // 互換性チェック: 古いブラウザでも動くようにする
+        if (!this.ctx.roundRect) {
+            this.ctx.roundRect = function(x, y, w, h, r) {
+                if (w < 2 * r) r = w / 2;
+                if (h < 2 * r) r = h / 2;
+                this.beginPath();
+                this.moveTo(x + r, y);
+                this.arcTo(x + w, y, x + w, y + h, r);
+                this.arcTo(x + w, y + h, x, y + h, r);
+                this.arcTo(x, y + h, x, y, r);
+                this.arcTo(x, y, x + w, y, r);
+                this.closePath();
+            };
+        }
+
         this.canvas.addEventListener('pointerdown', function(e) {
             e.preventDefault();
             game.handleInput(e.clientX, e.clientY);
@@ -160,14 +174,11 @@ var game = {
 
     updateOperatorGuidance: function() {
         var locked = this.getLocked();
-        
         if (locked.length === 0) {
             this.setCommanderMsg("READY...", "normal", 0);
             return;
         }
-
         if (this.mission.type === 'formula') {
-            // 計算モード: 入力式を表示
             var currentSeq = "";
             for(var i=0; i<locked.length; i++) {
                 var b = locked[i];
@@ -175,9 +186,7 @@ var game = {
                 currentSeq += valStr + "  ";
             }
             this.setCommanderMsg(currentSeq, "normal", 0);
-            
         } else {
-            // ★変更点: 選択中は「現在選択した数」だけを表示（ヒント隠し）
             this.setCommanderMsg("LOCKED: " + locked.length, "normal", 0);
         }
     },
@@ -186,7 +195,6 @@ var game = {
         var nums = this.bubbles.filter(function(b){return b.type==='num'});
         var ops = this.bubbles.filter(function(b){return b.type==='op'});
         var t = this.mission.target;
-
         for(var k=0; k<ops.length; k++) {
             var op = ops[k];
             var func = OPS[op.val].calc;
@@ -211,7 +219,6 @@ var game = {
         } else {
             this.setupFormulaBuilder();
         }
-        
         this.missionTime = GAME_CONFIG.missionTimeLimits[this.mission.type] || 15;
         this.resetLocks();
     },
@@ -235,7 +242,6 @@ var game = {
         this.mission.opKey = null;
         this.mission.textMain = "TARGET: " + this.mission.target;
         this.mission.textSub = "数字と記号で式を作れ";
-        
         this.ensureAllOperators(); 
         this.ensureSolvableFormula();
     },
@@ -398,8 +404,8 @@ var game = {
         var isHit = false;
         var gain = 0;
         var missedBubbles = [];
-        var totalTargets = 0; // その盤面にあった正解総数
-        var hitCount = 0; // 今回選んだ中の正解数
+        var totalTargets = 0;
+        var hitCount = 0;
 
         if (this.mission.type === 'formula') {
             if (locked.length === 3) {
@@ -408,7 +414,6 @@ var game = {
                     var opVal = locked[1].val;
                     var n2 = locked[2].val;
                     var func = OPS[opVal].calc;
-                    
                     if (func(n1, n2) === this.mission.target) {
                         isHit = true;
                         gain = 1500;
@@ -418,8 +423,6 @@ var game = {
         } else if (this.mission.type === 'attr') {
             var rem = (this.mission.opKey === 'even') ? 0 : 1;
             var allOk = true;
-            
-            // ロックされたものが全て正解かチェック
             for(var i=0; i<locked.length; i++) {
                 if(locked[i].type!=='num' || locked[i].val%2 !== rem) allOk=false;
                 else hitCount++;
@@ -428,8 +431,6 @@ var game = {
                 isHit = true;
                 gain = locked.length * 200;
             }
-
-            // 見落とし＆全体数カウント
             for(var i=0; i<this.bubbles.length; i++) {
                 var b = this.bubbles[i];
                 if (b.type === 'num' && b.val % 2 === rem) {
@@ -450,21 +451,16 @@ var game = {
             this.score += gain + Math.floor(this.missionTime * 100);
             var bonus = GAME_CONFIG.timeBonus[this.mission.type] || 0;
             this.timeLeft += bonus;
-
             this.addEffect("HIT! +"+gain, this.cx, this.cy-50, COLORS.accent);
             
-            // ★重要：結果に応じたフィードバック
             if (this.mission.type === 'attr') {
                 if (missedBubbles.length > 0) {
-                    // 見落としがあった
                     for(var k=0; k<missedBubbles.length; k++) missedBubbles[k].missedTime = 1.5;
                     this.setCommanderMsg("撃ち漏らしあり！ (" + hitCount + "/" + totalTargets + ")", "angry", 2.0);
                 } else {
-                    // パーフェクト
                     this.setCommanderMsg("完全制圧！ (" + hitCount + "/" + totalTargets + ")", "happy", 1.5);
                 }
             } else {
-                // 計算モード
                 this.setCommanderMsg("ターゲット排除完了！", "happy", 1.5);
             }
 
@@ -473,7 +469,6 @@ var game = {
         } else {
             this.addEffect("MISS...", this.cx, this.cy-50, "#888");
             this.timeLeft -= 3;
-            
             if (this.mission.type === 'formula') {
                 var example = this.getExampleSolution();
                 this.setCommanderMsg("不正解！ 正解例: " + example, "panic", 3.0);
@@ -481,7 +476,6 @@ var game = {
                 this.setCommanderMsg("違うターゲットだ！", "panic", 1.5);
             }
         }
-        
         this.replenish(20);
     },
 
@@ -531,12 +525,23 @@ var game = {
         ctx.beginPath(); ctx.ellipse(10,-5,10,6,0,0,6.28); ctx.fill();
         ctx.restore();
 
-        // メッセージボックス
+        // メッセージボックス (互換性のため手動描画)
         ctx.save();
         ctx.translate(cmX - 70, cmY - 20);
         ctx.fillStyle = 'rgba(0, 50, 80, 0.9)';
         ctx.strokeStyle = '#00FFFF'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.roundRect(0, 0, 240, 40, 10); ctx.fill(); ctx.stroke();
+        
+        // roundRectを使わない描画
+        var rX=0, rY=0, rW=240, rH=40, rad=10;
+        ctx.beginPath();
+        ctx.moveTo(rX+rad, rY);
+        ctx.arcTo(rX+rW, rY, rX+rW, rY+rH, rad);
+        ctx.arcTo(rX+rW, rY+rH, rX, rY+rH, rad);
+        ctx.arcTo(rX, rY+rH, rX, rY, rad);
+        ctx.arcTo(rX, rY, rX+rW, rY, rad);
+        ctx.closePath();
+        
+        ctx.fill(); ctx.stroke();
         ctx.fillStyle = '#FFF'; ctx.font = 'bold 16px Arial';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(this.commander.text, 120, 20);
