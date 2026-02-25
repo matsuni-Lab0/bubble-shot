@@ -3,25 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bubble Shot: Layout Fix</title>
+    <title>Shrimp Shooting Ver 21.0</title>
     <style>
+        * { box-sizing: border-box; }
         body { 
             margin: 0; padding: 0; overflow: hidden; background-color: #000; 
             touch-action: none; user-select: none; -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none; -moz-user-select: none;
         }
-        canvas { display: block; width: 100%; height: 100%; }
+        canvas { display: block; }
+        #version-badge {
+            position: fixed;
+            top: 6px;
+            right: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            color: rgba(0,255,255,0.45);
+            letter-spacing: 1px;
+            pointer-events: none;
+            z-index: 999;
+        }
     </style>
 </head>
 <body>
-
+<div id="version-badge">Ver 21.0</div>
 <canvas id="gameCanvas"></canvas>
 
 <script>
 /**
- * Bubble Shot Ver 20.0
- * レイアウト重複防止 & 演算子出現保証パッチ
+ * Shrimp Shooting Ver 21.0
+ * ─────────────────────────────────────────────────────────────
+ * 改修内容：
+ *  - マルチロック → 一斉発射の演出強化（チャージ・連射・着弾）
+ *  - ロックオン時のリングパルス演出
+ *  - スマホ互換性強化（pointer/touch/mouseフォールバック）
+ *  - replenishの無限ループ対策
+ *  - dtキャップによるタブ非アクティブ時の時間跳躍対策
+ *  - filter内副作用の分離（描画とフィルタを分離）
+ *  - SHOTボタン状態表現強化（ロック数に応じた視覚変化）
+ *  - えびグラタン司令官セリフ強化
+ *  - 着弾エフェクト（スパーク）追加
+ *  - autoLockのRESETエフェクト誤発火修正
+ *  - バージョン表示
+ * ─────────────────────────────────────────────────────────────
  */
 
+// ─── 定数 ─────────────────────────────────────────────────────
 var GAME_CONFIG = {
     totalTimeLimit: 60,
     missionTimeLimits: { attr: 15, formula: 20 },
@@ -37,30 +64,89 @@ var COLORS = {
     bubbleNum: '#0074D9',
     bubbleOp: '#FF4136',
     lock: '#FF00FF',
-    missed: '#FFFF00'
+    missed: '#FFFF00',
+    charge: '#FF8800',
+    spark: '#FFAA00'
 };
 
 var OPS = {
-    add: { label: '＋', calc: function(a,b){return a+b} },
-    sub: { label: '－', calc: function(a,b){return a-b} },
-    mul: { label: '×', calc: function(a,b){return a*b} },
-    div: { label: '÷', calc: function(a,b){return (b!==0 && a%b===0)?a/b:null} }
+    add: { label: '＋', calc: function(a,b){return a+b;} },
+    sub: { label: '－', calc: function(a,b){return a-b;} },
+    mul: { label: '×', calc: function(a,b){return a*b;} },
+    div: { label: '÷', calc: function(a,b){return (b!==0 && a%b===0)?a/b:null;} }
 };
 
+// ─── 司令官セリフ定義 ─────────────────────────────────────────
+var COMMANDER_LINES = {
+    ready:   ["待機中...", "照準待ち", "命令を待て", "スタンバイ"],
+    lock1:   ["ロックオン！", "捕捉した！", "ターゲット確認", "狙いをつけろ"],
+    lock2:   ["2体捕捉！", "連続ロック！", "続けて狙え", "もう一体！"],
+    lock3:   ["3体制圧準備完了！", "フルロック！", "今だ、撃て！", "全照準完了"],
+    lockAll: ["全標的捕捉！今すぐ撃て！", "制圧態勢完了！", "発射準備よし！"],
+    fire:    ["発射！！", "撃ちます！", "ゴーゴーゴー！", "放て！！"],
+    hit:     ["命中！", "よくやった！", "完璧だ！", "やったぞ！"],
+    hitAll:  ["完全制圧！見事だ！", "全弾命中！天才か！", "ペルフェット！"],
+    miss:    ["外れた...くそ", "なんで...", "もう一度！", "ちゃんと狙え！"],
+    missOp:  ["式が違う！", "計算を確認しろ！", "数式が崩れた..."],
+    panic:   ["くそっ、急げ！", "時間がない！", "まずい！！"],
+    timelow: ["残り時間少ない！", "急いでくれ！", "もたもたするな！"]
+};
+
+function rndLine(key) {
+    var arr = COMMANDER_LINES[key] || ["..."];
+    return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// ─── スパークパーティクル ─────────────────────────────────────
+var sparks = [];
+function addSparks(x, y, count, color) {
+    count = Math.min(count, 12); // 上限で負荷対策
+    for (var i = 0; i < count; i++) {
+        var ang = Math.random() * Math.PI * 2;
+        var spd = 1.5 + Math.random() * 3;
+        sparks.push({
+            x: x, y: y,
+            vx: Math.cos(ang) * spd,
+            vy: Math.sin(ang) * spd,
+            life: 1.0,
+            color: color || COLORS.spark
+        });
+    }
+}
+
+// ─── ロックリングパルス ───────────────────────────────────────
+var lockPulses = [];
+function addLockPulse(x, y) {
+    lockPulses.push({ x: x, y: y, r: 10, life: 1.0 });
+}
+
+// ─── メインゲームオブジェクト ─────────────────────────────────
 var game = {
     canvas: null, ctx: null,
     width: 0, height: 0, cx: 0, cy: 0,
-    
-    state: 'title', 
+
+    state: 'title',
     score: 0, timeLeft: 0, missionTime: 0,
     bubbles: [], lasers: [], effects: [],
-    
-    mission: { 
-        type: 'none', 
-        target: 0, 
+    lastTime: 0,
+
+    // チャージステート管理
+    chargeState: 'idle', // 'idle' | 'charging' | 'firing'
+    chargeTimer: 0,
+    chargeDuration: 0.12, // 秒（0.08〜0.18の中間）
+    pendingFire: null,    // チャージ完了後に発射するデータ
+
+    // 連射タイミング管理
+    burstQueue: [],
+    burstInterval: 0.025, // 1発ずつの超短時差（秒）
+    burstTimer: 0,
+
+    mission: {
+        type: 'none',
+        target: 0,
         opKey: null,
-        textMain: '', 
-        textSub: '' 
+        textMain: '',
+        textSub: ''
     },
 
     commander: {
@@ -71,11 +157,12 @@ var game = {
 
     ui: {},
 
+    // ─── 初期化 ───────────────────────────────────────────────
     init: function() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
-        
-        // ポリフィル (roundRect) - 古いスマホ対策
+
+        // roundRectポリフィル（互換性確保。ただし現コードは直接arcToで描画するため保険）
         if (!this.ctx.roundRect) {
             this.ctx.roundRect = function(x, y, w, h, r) {
                 if (w < 2 * r) r = w / 2;
@@ -90,23 +177,58 @@ var game = {
             };
         }
 
-        this.canvas.addEventListener('pointerdown', function(e) {
-            e.preventDefault();
-            game.handleInput(e.clientX, e.clientY);
-        });
+        this._setupInputHandlers();
 
         window.addEventListener('resize', function() { game.resize(); });
         this.resize();
-        
+
         this.lastTime = Date.now();
         this.loop();
     },
 
+    // ─── 入力ハンドラ（pointer/touch/mouseフォールバック）────
+    _setupInputHandlers: function() {
+        var canvas = this.canvas;
+        var handled = false; // 重複発火防止
+
+        var onInput = function(x, y) {
+            game.handleInput(x, y);
+        };
+
+        // Pointer Events（優先）
+        if (window.PointerEvent) {
+            canvas.addEventListener('pointerdown', function(e) {
+                e.preventDefault();
+                handled = true;
+                onInput(e.clientX, e.clientY);
+            }, { passive: false });
+        }
+
+        // Touch Events（フォールバック）
+        canvas.addEventListener('touchstart', function(e) {
+            if (handled) { handled = false; return; }
+            e.preventDefault();
+            if (e.touches && e.touches.length > 0) {
+                onInput(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: false });
+
+        // Mouse Events（PCフォールバック）
+        canvas.addEventListener('mousedown', function(e) {
+            if (handled) { handled = false; return; }
+            onInput(e.clientX, e.clientY);
+        });
+    },
+
+    // ─── リサイズ ─────────────────────────────────────────────
     resize: function() {
         var dpr = window.devicePixelRatio || 1;
+        // 高DPR端末の負荷対策：3以上は2に丸める
+        if (dpr > 2.5) dpr = 2;
+
         this.width = window.innerWidth;
         this.height = window.innerHeight;
-        
+
         this.canvas.width = this.width * dpr;
         this.canvas.height = this.height * dpr;
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -114,38 +236,27 @@ var game = {
 
         this.cx = this.width / 2;
         this.cy = this.height / 2;
-        
-        // ★レイアウト調整 (重なり防止の徹底)
-        // 上部エリア: 0 ~ 25%
-        // 中部エリア(レーダー): 25% ~ 80%
-        // 下部エリア(ボタン): 80% ~ 100%
-        
-        // レーダーの中心を画面中央より少し下げる
-        this.areaCy = this.height * 0.55; 
-        
-        // 半径の計算：上部のテキストエリア(約200px)と下部のボタン(約150px)に被らないようにする
-        var availableHeight = this.height - 350; 
-        this.areaRadius = Math.min(this.width, availableHeight) / 2 - 20;
-        
-        // 安全策：半径が小さくなりすぎないように
-        if(this.areaRadius < 110) this.areaRadius = 110;
 
-        // ボタン位置
+        this.areaCy = this.height * 0.55;
+        var availableHeight = this.height - 350;
+        this.areaRadius = Math.min(this.width, availableHeight) / 2 - 20;
+        if (this.areaRadius < 110) this.areaRadius = 110;
+
         var bY = this.height - 90;
-        this.ui.btnAuto = { x: this.cx - 110, y: bY, r: 35, label: "AUTO" };
-        this.ui.btnReset = { x: this.cx - 30, y: bY, r: 25, label: "RESET" };
-        this.ui.btnFire = { x: this.cx + 20, y: bY - 35, w: 130, h: 70, label: "SHOT" };
+        this.ui.btnAuto  = { x: this.cx - 110, y: bY, r: 35, label: "AUTO" };
+        this.ui.btnReset = { x: this.cx - 30,  y: bY, r: 25, label: "RESET" };
+        this.ui.btnFire  = { x: this.cx + 20,  y: bY - 35, w: 130, h: 70, label: "SHOT" };
     },
 
+    // ─── 入力処理 ─────────────────────────────────────────────
     handleInput: function(x, y) {
-        if (this.state === 'title') {
-            this.startGame(); return;
-        }
-        if (this.state === 'gameover') {
-            location.reload(); return;
-        }
-        
+        if (this.state === 'title')    { this.startGame(); return; }
+        if (this.state === 'gameover') { location.reload(); return; }
+
         if (this.state === 'playing') {
+            // チャージ中はボタン操作を受け付けない
+            if (this.chargeState !== 'idle') return;
+
             if (Math.hypot(x - this.ui.btnAuto.x, y - this.ui.btnAuto.y) < this.ui.btnAuto.r + 10) {
                 this.autoLock(); return;
             }
@@ -154,7 +265,7 @@ var game = {
             }
             var bf = this.ui.btnFire;
             if (x > bf.x && x < bf.x + bf.w && y > bf.y && y < bf.y + bf.h) {
-                this.fire(); return;
+                this.startCharge(); return;
             }
             for (var i = 0; i < this.bubbles.length; i++) {
                 var b = this.bubbles[i];
@@ -165,15 +276,23 @@ var game = {
         }
     },
 
+    // ─── ゲーム開始 ───────────────────────────────────────────
     startGame: function() {
         this.state = 'playing';
         this.score = 0;
         this.timeLeft = GAME_CONFIG.totalTimeLimit;
         this.bubbles = [];
+        this.lasers = [];
+        this.effects = [];
+        sparks.length = 0;
+        lockPulses.length = 0;
+        this.chargeState = 'idle';
+        this.burstQueue = [];
         this.replenish(20);
         this.nextMission();
     },
 
+    // ─── 司令官メッセージ ─────────────────────────────────────
     setCommanderMsg: function(text, mood, duration) {
         this.commander.text = text;
         this.commander.mood = mood;
@@ -182,39 +301,158 @@ var game = {
 
     updateOperatorGuidance: function() {
         var locked = this.getLocked();
-        
+
         if (locked.length === 0) {
-            this.setCommanderMsg("READY...", "normal", 0);
+            this.setCommanderMsg(rndLine('ready'), "normal", 0);
             return;
         }
 
         if (this.mission.type === 'formula') {
-            var currentSeq = "";
-            for(var i=0; i<locked.length; i++) {
+            var seq = "";
+            for (var i = 0; i < locked.length; i++) {
                 var b = locked[i];
-                var valStr = (b.type==='op') ? OPS[b.val].label : b.val;
-                currentSeq += valStr + "  ";
+                seq += ((b.type === 'op') ? OPS[b.val].label : b.val) + "  ";
             }
-            this.setCommanderMsg(currentSeq, "normal", 0);
+            this.setCommanderMsg(seq, "normal", 0);
         } else {
-            // 選択中はヒントを出さず、選択数のみ表示
-            this.setCommanderMsg("LOCKED: " + locked.length, "normal", 0);
+            var cnt = locked.length;
+            if (cnt === 1) this.setCommanderMsg(rndLine('lock1'), "normal", 0);
+            else if (cnt === 2) this.setCommanderMsg(rndLine('lock2'), "normal", 0);
+            else this.setCommanderMsg(rndLine('lock3'), "normal", 0);
         }
     },
 
-    getExampleSolution: function() {
-        var nums = this.bubbles.filter(function(b){return b.type==='num'});
-        var ops = this.bubbles.filter(function(b){return b.type==='op'});
-        var t = this.mission.target;
+    // ─── チャージ開始（SHOT押下時）───────────────────────────
+    startCharge: function() {
+        var locked = this.getLocked();
+        if (locked.length === 0) return;
 
-        for(var k=0; k<ops.length; k++) {
-            var op = ops[k];
-            var func = OPS[op.val].calc;
-            for(var i=0; i<nums.length; i++) {
-                for(var j=0; j<nums.length; j++) {
-                    if(i===j) continue;
-                    if(func(nums[i].val, nums[j].val) === t) {
-                        return nums[i].val + " " + OPS[op.val].label + " " + nums[j].val;
+        this.chargeState = 'charging';
+        this.chargeTimer = 0;
+        this.setCommanderMsg(rndLine('fire'), "happy", 1.5);
+    },
+
+    // ─── チャージ完了後の発射処理 ─────────────────────────────
+    _executeFire: function() {
+        var locked = this.getLocked();
+        if (locked.length === 0) {
+            this.chargeState = 'idle';
+            return;
+        }
+
+        var isHit = false;
+        var gain = 0;
+        var missedBubbles = [];
+        var totalTargets = 0;
+        var hitCount = 0;
+
+        if (this.mission.type === 'formula') {
+            if (locked.length === 3 &&
+                locked[0].type === 'num' &&
+                locked[1].type === 'op' &&
+                locked[2].type === 'num') {
+                var n1 = locked[0].val;
+                var opVal = locked[1].val;
+                var n2 = locked[2].val;
+                var func = OPS[opVal].calc;
+                if (func(n1, n2) === this.mission.target) {
+                    isHit = true;
+                    gain = 1500;
+                }
+            }
+        } else if (this.mission.type === 'attr') {
+            var rem = (this.mission.opKey === 'even') ? 0 : 1;
+            var allOk = true;
+            for (var i = 0; i < locked.length; i++) {
+                if (locked[i].type !== 'num' || locked[i].val % 2 !== rem) {
+                    allOk = false;
+                } else {
+                    hitCount++;
+                }
+            }
+            if (allOk && locked.length > 0) {
+                isHit = true;
+                gain = hitCount * 200; // hitCountベースに修正
+            }
+            for (var i = 0; i < this.bubbles.length; i++) {
+                var b = this.bubbles[i];
+                if (!b.locked && b.type === 'num' && b.val % 2 === rem) {
+                    missedBubbles.push(b);
+                }
+            }
+            totalTargets = hitCount + missedBubbles.length;
+        }
+
+        // 連射キューを構築（超短時差）
+        this.burstQueue = [];
+        for (var i = 0; i < locked.length; i++) {
+            this.burstQueue.push({
+                tx: locked[i].x,
+                ty: locked[i].y,
+                color: isHit ? COLORS.accent : COLORS.warn,
+                delay: i * this.burstInterval
+            });
+        }
+        this.burstTimer = 0;
+        this.chargeState = 'firing';
+
+        // バブル除去
+        for (var i = 0; i < locked.length; i++) {
+            var idx = this.bubbles.indexOf(locked[i]);
+            if (idx > -1) this.bubbles.splice(idx, 1);
+        }
+
+        // 結果処理
+        if (isHit) {
+            this.score += gain + Math.floor(this.missionTime * 100);
+            var bonus = GAME_CONFIG.timeBonus[this.mission.type] || 0;
+            this.timeLeft += bonus;
+            this.addEffect("HIT! +" + gain, this.cx, this.cy - 50, COLORS.accent);
+
+            if (this.mission.type === 'attr') {
+                if (missedBubbles.length > 0) {
+                    for (var k = 0; k < missedBubbles.length; k++) missedBubbles[k].missedTime = 1.5;
+                    this.setCommanderMsg("撃ち漏らし! (" + hitCount + "/" + totalTargets + ")", "angry", 2.0);
+                } else {
+                    this.setCommanderMsg(rndLine('hitAll'), "happy", 1.5);
+                }
+            } else {
+                this.setCommanderMsg(rndLine('hit'), "happy", 1.5);
+            }
+
+            var _this = this;
+            setTimeout(function() { _this.nextMission(); }, 500);
+        } else {
+            this.addEffect("MISS...", this.cx, this.cy - 50, "#888");
+            this.timeLeft -= 3;
+            if (this.mission.type === 'formula') {
+                var example = this.getExampleSolution();
+                this.setCommanderMsg("不正解! 例: " + example, "panic", 3.0);
+            } else {
+                this.setCommanderMsg(rndLine('miss'), "panic", 1.5);
+            }
+            this.replenish(20);
+            this.chargeState = 'idle';
+        }
+    },
+
+    // ─── エフェクト追加 ───────────────────────────────────────
+    addEffect: function(t, x, y, c) {
+        this.effects.push({ text: t, x: x, y: y, color: c, life: 1.0 });
+    },
+
+    // ─── ミッション管理 ───────────────────────────────────────
+    getExampleSolution: function() {
+        var nums = this.bubbles.filter(function(b) { return b.type === 'num'; });
+        var ops  = this.bubbles.filter(function(b) { return b.type === 'op'; });
+        var t = this.mission.target;
+        for (var k = 0; k < ops.length; k++) {
+            var func = OPS[ops[k].val].calc;
+            for (var i = 0; i < nums.length; i++) {
+                for (var j = 0; j < nums.length; j++) {
+                    if (i === j) continue;
+                    if (func(nums[i].val, nums[j].val) === t) {
+                        return nums[i].val + " " + OPS[ops[k].val].label + " " + nums[j].val;
                     }
                 }
             }
@@ -231,9 +469,10 @@ var game = {
         } else {
             this.setupFormulaBuilder();
         }
-        
         this.missionTime = GAME_CONFIG.missionTimeLimits[this.mission.type] || 15;
         this.resetLocks();
+        this.chargeState = 'idle';
+        this.burstQueue = [];
     },
 
     setupAttribute: function(type) {
@@ -246,7 +485,7 @@ var game = {
             this.mission.textMain = "奇数 (ODD)";
             this.mission.textSub = "奇数をすべて撃て";
         }
-        this.cleanBoard('num'); // 属性モードは数字のみ
+        this.cleanBoard('num');
     },
 
     setupFormulaBuilder: function() {
@@ -255,17 +494,16 @@ var game = {
         this.mission.opKey = null;
         this.mission.textMain = "TARGET: " + this.mission.target;
         this.mission.textSub = "数字と記号で式を作れ";
-        
-        this.ensureAllOperators(); 
+        this.ensureAllOperators();
         this.ensureSolvableFormula();
     },
 
     cleanBoard: function(mode) {
-        for(var i=0; i<this.bubbles.length; i++) {
+        for (var i = 0; i < this.bubbles.length; i++) {
             var b = this.bubbles[i];
             if (mode === 'num' && b.type === 'op') {
                 b.type = 'num';
-                b.val = Math.floor(Math.random()*9)+1;
+                b.val = Math.floor(Math.random() * 9) + 1;
                 b.color = COLORS.bubbleNum;
             }
         }
@@ -273,10 +511,7 @@ var game = {
 
     ensureAllOperators: function() {
         var keys = ['add', 'sub', 'mul', 'div'];
-        // バブルが足りなければ補充
         if (this.bubbles.length < 4) this.replenish(10);
-        
-        // 最初の4つを強制的に演算子にする
         for (var i = 0; i < 4; i++) {
             this.bubbles[i].type = 'op';
             this.bubbles[i].val = keys[i];
@@ -287,80 +522,81 @@ var game = {
 
     ensureSolvableFormula: function() {
         var t = this.mission.target;
-        var n1 = 1, n2 = t-1;
-        if (n2 < 1) { n1=0; n2=t; }
-        
+        var n1 = 1, n2 = t - 1;
+        if (n2 < 1) { n1 = 0; n2 = t; }
         if (this.bubbles.length < 6) this.replenish(10);
-        // 演算子の後の2つを計算可能な数字ペアにする
-        this.bubbles[4].val = n1; this.bubbles[4].type = 'num'; this.bubbles[4].color = COLORS.bubbleNum;
-        this.bubbles[5].val = n2; this.bubbles[5].type = 'num'; this.bubbles[5].color = COLORS.bubbleNum;
+        this.bubbles[4].val = n1; this.bubbles[4].type = 'num'; this.bubbles[4].color = COLORS.bubbleNum; this.bubbles[4].locked = false;
+        this.bubbles[5].val = n2; this.bubbles[5].type = 'num'; this.bubbles[5].color = COLORS.bubbleNum; this.bubbles[5].locked = false;
     },
 
+    // ─── バブル補充（無限ループ対策済み）────────────────────
     replenish: function(count) {
-        while (this.bubbles.length < count) {
+        var attempts = 0;
+        var maxAttempts = count * 15; // 最大試行回数で無限ループを防止
+        while (this.bubbles.length < count && attempts < maxAttempts) {
             this.spawn();
+            attempts++;
         }
     },
 
     spawn: function() {
         var r = 24;
-        var x, y, safe=false;
-        for(var i=0; i<50; i++) {
+        var x, y, safe = false;
+        for (var i = 0; i < 50; i++) {
             var ang = Math.random() * 6.28;
             var d = Math.sqrt(Math.random()) * (this.areaRadius - r);
             x = this.cx + Math.cos(ang) * d;
             y = this.areaCy + Math.sin(ang) * d;
             safe = true;
-            for(var k=0; k<this.bubbles.length; k++) {
-                var b = this.bubbles[k];
-                if(Math.hypot(b.x-x, b.y-y) < r*2.2) { safe=false; break; }
+            for (var k = 0; k < this.bubbles.length; k++) {
+                if (Math.hypot(this.bubbles[k].x - x, this.bubbles[k].y - y) < r * 2.2) {
+                    safe = false; break;
+                }
             }
-            if(safe) break;
+            if (safe) break;
         }
-        if(!safe) return;
+        if (!safe) return;
 
-        // ★修正: 計算モード中は、演算子の数が少なければ優先的に出現させる
         var isOp = false;
         if (this.mission.type === 'formula') {
             var opCount = 0;
-            for(var k=0; k<this.bubbles.length; k++) if(this.bubbles[k].type==='op') opCount++;
-            
-            // 演算子が4つ未満なら高確率、それ以外は20%
-            if (opCount < 4) isOp = (Math.random() < 0.8);
-            else isOp = (Math.random() < 0.2);
+            for (var k = 0; k < this.bubbles.length; k++) if (this.bubbles[k].type === 'op') opCount++;
+            isOp = (opCount < 4) ? (Math.random() < 0.8) : (Math.random() < 0.2);
         }
 
         var type = isOp ? 'op' : 'num';
         var val;
-        if(type === 'num') val = Math.floor(Math.random()*9) + 1;
+        if (type === 'num') val = Math.floor(Math.random() * 9) + 1;
         else {
-            var keys = ['add','sub','mul','div'];
-            val = keys[Math.floor(Math.random()*4)];
+            var keys = ['add', 'sub', 'mul', 'div'];
+            val = keys[Math.floor(Math.random() * 4)];
         }
 
         this.bubbles.push({
             x: x, y: y, r: r, val: val, type: type,
             locked: false, order: 0, scale: 0,
-            color: type==='num' ? COLORS.bubbleNum : COLORS.bubbleOp,
+            color: type === 'num' ? COLORS.bubbleNum : COLORS.bubbleOp,
             missedTime: 0
         });
     },
 
+    // ─── ロック管理 ───────────────────────────────────────────
     toggleLock: function(b) {
-        if(b.locked) {
+        if (b.locked) {
             b.locked = false; b.order = 0;
             this.reorderLocks();
         } else {
             var cnt = this.getLockedCount();
-            if(this.mission.type === 'formula' && cnt >= 3) return;
+            if (this.mission.type === 'formula' && cnt >= 3) return;
             b.locked = true;
             b.order = cnt + 1;
+            addLockPulse(b.x, b.y); // ロックパルス演出
         }
-        this.updateOperatorGuidance(); 
+        this.updateOperatorGuidance();
     },
 
     resetLocks: function() {
-        for(var i=0; i<this.bubbles.length; i++) {
+        for (var i = 0; i < this.bubbles.length; i++) {
             this.bubbles[i].locked = false;
             this.bubbles[i].order = 0;
         }
@@ -368,191 +604,318 @@ var game = {
         this.updateOperatorGuidance();
     },
 
+    // autoLock専用の内部リセット（RESETエフェクト発火しない）
+    _silentResetLocks: function() {
+        for (var i = 0; i < this.bubbles.length; i++) {
+            this.bubbles[i].locked = false;
+            this.bubbles[i].order = 0;
+        }
+    },
+
     reorderLocks: function() {
         var locked = this.getLocked();
-        for(var i=0; i<locked.length; i++) locked[i].order = i+1;
+        for (var i = 0; i < locked.length; i++) locked[i].order = i + 1;
     },
 
     getLocked: function() {
         var arr = [];
-        for(var i=0; i<this.bubbles.length; i++) if(this.bubbles[i].locked) arr.push(this.bubbles[i]);
-        arr.sort(function(a,b){ return a.order - b.order; });
+        for (var i = 0; i < this.bubbles.length; i++) if (this.bubbles[i].locked) arr.push(this.bubbles[i]);
+        arr.sort(function(a, b) { return a.order - b.order; });
         return arr;
     },
 
     getLockedCount: function() {
         var c = 0;
-        for(var i=0; i<this.bubbles.length; i++) if(this.bubbles[i].locked) c++;
+        for (var i = 0; i < this.bubbles.length; i++) if (this.bubbles[i].locked) c++;
         return c;
     },
 
     autoLock: function() {
-        this.resetLocks();
-        var nums = this.bubbles.filter(function(b){return b.type==='num'});
-        var ops = this.bubbles.filter(function(b){return b.type==='op'});
+        this._silentResetLocks(); // ★RESETエフェクト誤発火を修正
+        var nums = this.bubbles.filter(function(b) { return b.type === 'num'; });
+        var ops  = this.bubbles.filter(function(b) { return b.type === 'op'; });
         var found = false;
 
         if (this.mission.type === 'attr') {
             var rem = (this.mission.opKey === 'even') ? 0 : 1;
             var c = 1;
-            for(var i=0; i<nums.length; i++) {
-                if(nums[i].val % 2 === rem) {
+            for (var i = 0; i < nums.length; i++) {
+                if (nums[i].val % 2 === rem) {
                     nums[i].locked = true;
                     nums[i].order = c++;
+                    addLockPulse(nums[i].x, nums[i].y);
                 }
             }
-            if(c>1) found=true;
+            if (c > 1) found = true;
 
         } else if (this.mission.type === 'formula') {
-            for(var k=0; k<ops.length; k++) {
+            for (var k = 0; k < ops.length; k++) {
                 var func = OPS[ops[k].val].calc;
-                for(var i=0; i<nums.length; i++) {
-                    for(var j=0; j<nums.length; j++) {
-                        if(i===j) continue;
-                        if(func(nums[i].val, nums[j].val) === this.mission.target) {
-                            nums[i].locked=true; nums[i].order=1;
-                            ops[k].locked=true; ops[k].order=2;
-                            nums[j].locked=true; nums[j].order=3;
-                            found=true; break;
+                for (var i = 0; i < nums.length; i++) {
+                    for (var j = 0; j < nums.length; j++) {
+                        if (i === j) continue;
+                        if (func(nums[i].val, nums[j].val) === this.mission.target) {
+                            nums[i].locked = true; nums[i].order = 1;
+                            ops[k].locked  = true; ops[k].order  = 2;
+                            nums[j].locked = true; nums[j].order = 3;
+                            addLockPulse(nums[i].x, nums[i].y);
+                            addLockPulse(ops[k].x,  ops[k].y);
+                            addLockPulse(nums[j].x, nums[j].y);
+                            found = true; break;
                         }
                     }
-                    if(found) break;
+                    if (found) break;
                 }
-                if(found) break;
+                if (found) break;
             }
         }
 
-        if(found) this.addEffect("LOCKED", this.cx, this.cy, COLORS.lock);
+        if (found) this.addEffect("AUTO LOCK", this.cx, this.cy, COLORS.lock);
         this.updateOperatorGuidance();
     },
 
-    fire: function() {
-        var locked = this.getLocked();
-        if(locked.length === 0) return;
+    // ─── メインループ ─────────────────────────────────────────
+    loop: function() {
+        try {
+            var now = Date.now();
+            // dtキャップ：タブ非アクティブ時の時間跳躍対策
+            var dt = Math.min((now - this.lastTime) / 1000, 0.1);
+            this.lastTime = now;
 
-        var isHit = false;
-        var gain = 0;
-        var missedBubbles = [];
-        var totalTargets = 0;
-        var hitCount = 0;
+            // ── ロジック更新 ─────────────────────────────────
+            if (this.state === 'playing') {
+                this.timeLeft -= dt;
+                this.missionTime -= dt;
+                if (this.missionTime <= 0) this.nextMission();
+                if (this.timeLeft <= 0) { this.timeLeft = 0; this.state = 'gameover'; }
 
-        if (this.mission.type === 'formula') {
-            if (locked.length === 3) {
-                if (locked[0].type === 'num' && locked[1].type === 'op' && locked[2].type === 'num') {
-                    var n1 = locked[0].val;
-                    var opVal = locked[1].val;
-                    var n2 = locked[2].val;
-                    var func = OPS[opVal].calc;
-                    
-                    if (func(n1, n2) === this.mission.target) {
-                        isHit = true;
-                        gain = 1500;
+                if (this.commander.timer > 0) {
+                    this.commander.timer -= dt;
+                    if (this.commander.timer <= 0) this.updateOperatorGuidance();
+                }
+
+                // 残り時間少ない警告
+                if (this.timeLeft < 10 && this.timeLeft > 9.9 && this.commander.timer <= 0) {
+                    this.setCommanderMsg(rndLine('timelow'), "panic", 1.5);
+                }
+
+                // チャージ処理
+                if (this.chargeState === 'charging') {
+                    this.chargeTimer += dt;
+                    if (this.chargeTimer >= this.chargeDuration) {
+                        this._executeFire();
+                    }
+                }
+
+                // 連射キュー処理
+                if (this.chargeState === 'firing' && this.burstQueue.length > 0) {
+                    this.burstTimer += dt;
+                    while (this.burstQueue.length > 0 && this.burstTimer >= this.burstQueue[0].delay) {
+                        var shot = this.burstQueue.shift();
+                        var laserColor = shot.color;
+                        var lineW = 3 + this.getLockedCount() * 0.5;
+                        this.lasers.push({
+                            tx: shot.tx, ty: shot.ty,
+                            color: laserColor,
+                            life: 1.0,
+                            lineW: lineW
+                        });
+                        addSparks(shot.tx, shot.ty, 8, laserColor);
+                    }
+                    if (this.burstQueue.length === 0) {
+                        this.chargeState = 'idle';
+                        if (this.state === 'playing') this.replenish(20);
                     }
                 }
             }
-        } else if (this.mission.type === 'attr') {
-            var rem = (this.mission.opKey === 'even') ? 0 : 1;
-            var allOk = true;
-            for(var i=0; i<locked.length; i++) {
-                if(locked[i].type!=='num' || locked[i].val%2 !== rem) allOk=false;
-                else hitCount++;
-            }
-            if(allOk && locked.length > 0) {
-                isHit = true;
-                gain = locked.length * 200;
-            }
-            for(var i=0; i<this.bubbles.length; i++) {
+
+            // バブルアニメーション
+            for (var i = 0; i < this.bubbles.length; i++) {
                 var b = this.bubbles[i];
-                if (!b.locked && b.type === 'num' && b.val % 2 === rem) {
-                    missedBubbles.push(b);
-                }
-            }
-            totalTargets = hitCount + missedBubbles.length;
-        }
-
-        for(var i=0; i<locked.length; i++) {
-            var b = locked[i];
-            this.lasers.push({ tx: b.x, ty: b.y, color: isHit?COLORS.accent:COLORS.warn, life:1.0 });
-            var idx = this.bubbles.indexOf(b);
-            if(idx > -1) this.bubbles.splice(idx, 1);
-        }
-
-        if(isHit) {
-            this.score += gain + Math.floor(this.missionTime * 100);
-            var bonus = GAME_CONFIG.timeBonus[this.mission.type] || 0;
-            this.timeLeft += bonus;
-            this.addEffect("HIT! +"+gain, this.cx, this.cy-50, COLORS.accent);
-            
-            if (this.mission.type === 'attr') {
-                if (missedBubbles.length > 0) {
-                    for(var k=0; k<missedBubbles.length; k++) missedBubbles[k].missedTime = 1.5;
-                    this.setCommanderMsg("撃ち漏らし! (" + hitCount + "/" + totalTargets + ")", "angry", 2.0);
-                } else {
-                    this.setCommanderMsg("完全制圧! (" + hitCount + "/" + totalTargets + ")", "happy", 1.5);
-                }
-            } else {
-                this.setCommanderMsg("ターゲット排除完了!", "happy", 1.5);
+                if (b.scale < 1) b.scale += 0.1;
+                if (b.missedTime > 0) b.missedTime -= dt;
             }
 
-            var _this = this;
-            setTimeout(function(){ _this.nextMission(); }, 500);
-        } else {
-            this.addEffect("MISS...", this.cx, this.cy-50, "#888");
-            this.timeLeft -= 3;
-            if (this.mission.type === 'formula') {
-                var example = this.getExampleSolution();
-                this.setCommanderMsg("不正解! 正解例: " + example, "panic", 3.0);
-            } else {
-                this.setCommanderMsg("違うターゲットだ!", "panic", 1.5);
+            // スパーク更新
+            for (var i = sparks.length - 1; i >= 0; i--) {
+                var s = sparks[i];
+                s.x += s.vx; s.y += s.vy;
+                s.vy += 0.08; // 重力
+                s.life -= 0.04;
+                if (s.life <= 0) sparks.splice(i, 1);
             }
+
+            // ロックパルス更新
+            for (var i = lockPulses.length - 1; i >= 0; i--) {
+                var p = lockPulses[i];
+                p.r += 3;
+                p.life -= 0.08;
+                if (p.life <= 0) lockPulses.splice(i, 1);
+            }
+
+            // ── 描画 ─────────────────────────────────────────
+            this._draw(dt);
+
+        } catch(e) {
+            // 例外でもゲームを止めない防御的実装
+            console.error('loop error:', e);
         }
-        this.replenish(20);
+
+        requestAnimationFrame(function() { game.loop(); });
     },
 
-    addEffect: function(t, x, y, c) {
-        this.effects.push({ text:t, x:x, y:y, color:c, life:1.0 });
-    },
-
-    loop: function() {
-        var now = Date.now();
-        var dt = (now - this.lastTime) / 1000;
-        this.lastTime = now;
-
-        if (this.state === 'playing') {
-            this.timeLeft -= dt;
-            this.missionTime -= dt;
-            if (this.missionTime <= 0) this.nextMission();
-            if (this.timeLeft <= 0) this.state = 'gameover';
-            
-            if (this.commander.timer > 0) {
-                this.commander.timer -= dt;
-                if (this.commander.timer <= 0) {
-                    this.updateOperatorGuidance();
-                }
-            }
-        }
-
-        for(var i=0; i<this.bubbles.length; i++) {
-            var b = this.bubbles[i];
-            if(b.scale < 1) b.scale += 0.1;
-            if(b.missedTime > 0) b.missedTime -= dt;
-        }
-
+    // ─── 描画処理 ─────────────────────────────────────────────
+    _draw: function(dt) {
         var ctx = this.ctx;
         ctx.fillStyle = COLORS.bg;
         ctx.fillRect(0, 0, this.width, this.height);
 
-        // --- 司令官 ---
+        this._drawCommander(ctx);
+        if (this.state === 'playing') this._drawMissionInfo(ctx);
+
+        // レーダーリング
+        ctx.strokeStyle = '#003333';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(this.cx, this.areaCy, this.areaRadius, 0, 6.28); ctx.stroke();
+
+        // チャージエフェクト
+        if (this.chargeState === 'charging') {
+            var prog = this.chargeTimer / this.chargeDuration;
+            var flashAlpha = prog * 0.6;
+            // 発射元付近の集光
+            var grad = ctx.createRadialGradient(this.cx, this.height, 0, this.cx, this.height, 80 * prog);
+            grad.addColorStop(0, 'rgba(255,136,0,' + flashAlpha + ')');
+            grad.addColorStop(1, 'rgba(255,136,0,0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, this.width, this.height);
+        }
+
+        // ロックパルス描画（バブルより前）
+        for (var i = 0; i < lockPulses.length; i++) {
+            var p = lockPulses[i];
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, 6.28);
+            ctx.strokeStyle = 'rgba(255,0,255,' + p.life + ')';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // ロック済みバブル間の接続線
+        this._drawLockConnections(ctx);
+
+        // レーザー描画（副作用分離）
+        for (var i = 0; i < this.lasers.length; i++) {
+            var l = this.lasers[i];
+            ctx.strokeStyle = l.color;
+            ctx.lineWidth = l.lineW || 5;
+            ctx.globalAlpha = l.life;
+            ctx.beginPath(); ctx.moveTo(this.cx, this.height); ctx.lineTo(l.tx, l.ty); ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+        // レーザー寿命管理（描画と分離）
+        for (var i = this.lasers.length - 1; i >= 0; i--) {
+            this.lasers[i].life -= 0.1;
+            if (this.lasers[i].life <= 0) this.lasers.splice(i, 1);
+        }
+
+        // バブル描画
+        for (var i = 0; i < this.bubbles.length; i++) {
+            this._drawBubble(ctx, this.bubbles[i]);
+        }
+
+        // スパーク描画
+        for (var i = 0; i < sparks.length; i++) {
+            var s = sparks[i];
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, 2.5, 0, 6.28);
+            ctx.fillStyle = s.color;
+            ctx.globalAlpha = s.life;
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        // エフェクトテキスト（副作用分離）
+        ctx.font = 'bold 28px Arial';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        for (var i = 0; i < this.effects.length; i++) {
+            var e = this.effects[i];
+            ctx.globalAlpha = e.life;
+            ctx.fillStyle = e.color;
+            ctx.fillText(e.text, e.x, e.y);
+            e.y -= 1; e.life -= 0.02;
+        }
+        ctx.globalAlpha = 1;
+        // エフェクト寿命管理（描画と分離）
+        for (var i = this.effects.length - 1; i >= 0; i--) {
+            if (this.effects[i].life <= 0) this.effects.splice(i, 1);
+        }
+
+        if (this.state === 'playing') this._drawButtons(ctx);
+        if (this.state !== 'playing') this._drawOverlay(ctx);
+    },
+
+    // ─── ロック接続線描画 ─────────────────────────────────────
+    _drawLockConnections: function(ctx) {
+        var locked = this.getLocked();
+        if (locked.length < 2) return;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,0,255,0.25)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 6]);
+        ctx.beginPath();
+        ctx.moveTo(locked[0].x, locked[0].y);
+        for (var i = 1; i < locked.length; i++) {
+            ctx.lineTo(locked[i].x, locked[i].y);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+    },
+
+    // ─── バブル描画 ───────────────────────────────────────────
+    _drawBubble: function(ctx, b) {
+        var s = b.r * b.scale;
+        ctx.beginPath(); ctx.arc(b.x, b.y, s, 0, 6.28);
+        ctx.fillStyle = b.locked ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.5)';
+        ctx.fill();
+
+        var strokeCol = b.color;
+        var lineW = 2;
+        if (b.missedTime > 0)  { strokeCol = COLORS.missed; lineW = 4; }
+        else if (b.locked)     { strokeCol = COLORS.lock;   lineW = 4; }
+
+        ctx.strokeStyle = strokeCol; ctx.lineWidth = lineW; ctx.stroke();
+
+        if (b.locked && b.order > 0) {
+            ctx.beginPath(); ctx.arc(b.x, b.y, s + 5, 0, 6.28); ctx.stroke();
+            // order番号をバブル右上に表示
+            ctx.fillStyle = COLORS.lock;
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(b.order, b.x + s * 0.7, b.y - s * 0.7);
+        }
+
+        ctx.fillStyle = '#FFF';
+        ctx.font = 'bold 20px Arial';
+        ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+        var txt = (b.type === 'num') ? b.val : OPS[b.val].label;
+        ctx.fillText(txt, b.x, b.y);
+    },
+
+    // ─── 司令官描画 ───────────────────────────────────────────
+    _drawCommander: function(ctx) {
         var cmX = this.cx, cmY = 50;
         ctx.save();
         ctx.translate(cmX - 120, cmY);
         var mood = this.commander.mood;
-        var faceColor = (mood==='happy') ? '#FF6666' : (mood==='panic' ? '#6666FF' : (mood==='angry' ? '#FF4400' : '#FFD700'));
-        ctx.fillStyle = faceColor; ctx.beginPath(); ctx.arc(0,0,30,0,6.28); ctx.fill();
+        var faceColor = (mood === 'happy') ? '#FF6666' :
+                        (mood === 'panic') ? '#6666FF' :
+                        (mood === 'angry') ? '#FF4400' : '#FFD700';
+        ctx.fillStyle = faceColor; ctx.beginPath(); ctx.arc(0, 0, 30, 0, 6.28); ctx.fill();
         ctx.strokeStyle = '#FFF'; ctx.lineWidth = 2; ctx.stroke();
-        ctx.fillStyle = '#D35400'; 
-        ctx.beginPath(); ctx.ellipse(-10,-5,8,5,0,0,6.28); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(10,-5,10,6,0,0,6.28); ctx.fill();
+        ctx.fillStyle = '#D35400';
+        ctx.beginPath(); ctx.ellipse(-10, -5, 8, 5, 0, 0, 6.28); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(10, -5, 10, 6, 0, 0, 6.28); ctx.fill();
         ctx.restore();
 
         // メッセージボックス
@@ -560,133 +923,130 @@ var game = {
         ctx.translate(cmX - 70, cmY - 20);
         ctx.fillStyle = 'rgba(0, 50, 80, 0.9)';
         ctx.strokeStyle = '#00FFFF'; ctx.lineWidth = 2;
-        
-        var rX=0, rY=0, rW=240, rH=40, rad=10;
+        var rX = 0, rY = 0, rW = 240, rH = 40, rad = 10;
         ctx.beginPath();
-        ctx.moveTo(rX+rad, rY);
-        ctx.arcTo(rX+rW, rY, rX+rW, rY+rH, rad);
-        ctx.arcTo(rX+rW, rY+rH, rX, rY+rH, rad);
-        ctx.arcTo(rX, rY+rH, rX, rY, rad);
-        ctx.arcTo(rX, rY, rX+rW, rY, rad);
+        ctx.moveTo(rX + rad, rY);
+        ctx.arcTo(rX + rW, rY, rX + rW, rY + rH, rad);
+        ctx.arcTo(rX + rW, rY + rH, rX, rY + rH, rad);
+        ctx.arcTo(rX, rY + rH, rX, rY, rad);
+        ctx.arcTo(rX, rY, rX + rW, rY, rad);
         ctx.closePath();
-        
         ctx.fill(); ctx.stroke();
         ctx.fillStyle = '#FFF'; ctx.font = 'bold 16px Arial';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(this.commander.text, 120, 20);
         ctx.restore();
+    },
 
-        // --- ミッション ---
-        if (this.state === 'playing') {
-            ctx.textAlign = 'center';
-            var barY = 110;
-            ctx.fillStyle = '#333'; ctx.fillRect(this.cx - 100, barY, 200, 6);
-            ctx.fillStyle = COLORS.warn; ctx.fillRect(this.cx - 100, barY, 200 * Math.max(0, this.missionTime/15), 6);
+    // ─── ミッション情報描画 ───────────────────────────────────
+    _drawMissionInfo: function(ctx) {
+        ctx.textAlign = 'center';
+        var barY = 110;
+        ctx.fillStyle = '#333'; ctx.fillRect(this.cx - 100, barY, 200, 6);
+        var prog = Math.max(0, this.missionTime / 15);
+        ctx.fillStyle = prog < 0.3 ? COLORS.warn : COLORS.accent;
+        ctx.fillRect(this.cx - 100, barY, 200 * prog, 6);
 
-            ctx.font = 'bold 36px Arial'; // フォント少し縮小して被り防止
-            ctx.fillStyle = COLORS.gold;
-            ctx.fillText(this.mission.textMain, this.cx, barY + 50);
-            
-            ctx.font = 'bold 16px Arial';
-            ctx.fillStyle = COLORS.accent;
-            ctx.fillText(this.mission.textSub, this.cx, barY + 80);
+        ctx.font = 'bold 36px Arial';
+        ctx.fillStyle = COLORS.gold;
+        ctx.fillText(this.mission.textMain, this.cx, barY + 50);
 
-            ctx.font = '14px Monospace';
-            ctx.fillStyle = '#CCC';
-            ctx.fillText("SCORE: " + this.score + "   TIME: " + Math.ceil(this.timeLeft), this.cx, barY + 105);
+        ctx.font = 'bold 16px Arial';
+        ctx.fillStyle = COLORS.accent;
+        ctx.fillText(this.mission.textSub, this.cx, barY + 80);
+
+        ctx.font = '14px Monospace';
+        ctx.fillStyle = '#CCC';
+        ctx.fillText("SCORE: " + this.score + "   TIME: " + Math.ceil(this.timeLeft), this.cx, barY + 105);
+    },
+
+    // ─── ボタン描画 ───────────────────────────────────────────
+    _drawButtons: function(ctx) {
+        var lockedCount = this.getLockedCount();
+        var isCharging = (this.chargeState === 'charging');
+
+        // AUTOボタン
+        var ba = this.ui.btnAuto;
+        ctx.fillStyle = 'rgba(0,50,50,0.8)'; ctx.strokeStyle = COLORS.accent; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(ba.x, ba.y, ba.r, 0, 6.28); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = COLORS.accent; ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(ba.label, ba.x, ba.y + 5);
+
+        // RESETボタン
+        var br = this.ui.btnReset;
+        ctx.fillStyle = 'rgba(50,50,50,0.8)'; ctx.strokeStyle = '#CCC'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(br.x, br.y, br.r, 0, 6.28); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#CCC'; ctx.font = 'bold 10px Arial';
+        ctx.fillText(br.label, br.x, br.y + 4);
+
+        // SHOTボタン：ロック数に応じた状態表現
+        var bf = this.ui.btnFire;
+        var btnState;
+        if (isCharging)      btnState = 'charge';
+        else if (lockedCount === 0) btnState = 'empty';
+        else if (lockedCount >= 3) btnState = 'full';
+        else                 btnState = 'ready';
+
+        var fillColor, strokeColor, glowColor;
+        if (btnState === 'empty')  { fillColor = 'rgba(50,0,0,0.5)';    strokeColor = '#555'; glowColor = null; }
+        if (btnState === 'ready')  { fillColor = 'rgba(180,20,10,0.85)'; strokeColor = '#FFA0A0'; glowColor = 'rgba(255,80,60,0.3)'; }
+        if (btnState === 'full')   { fillColor = 'rgba(255,30,10,0.95)'; strokeColor = '#FFF'; glowColor = 'rgba(255,50,30,0.6)'; }
+        if (btnState === 'charge') { fillColor = 'rgba(255,136,0,0.9)';  strokeColor = '#FFF'; glowColor = 'rgba(255,136,0,0.7)'; }
+
+        // グロー
+        if (glowColor) {
+            ctx.shadowColor = glowColor;
+            ctx.shadowBlur = (btnState === 'full' || btnState === 'charge') ? 20 : 10;
         }
 
-        ctx.strokeStyle = '#003333'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(this.cx, this.areaCy, this.areaRadius, 0, 6.28); ctx.stroke();
+        ctx.fillStyle = fillColor;
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = (btnState === 'full' || btnState === 'charge') ? 3 : 2;
+        ctx.beginPath(); ctx.rect(bf.x, bf.y, bf.w, bf.h); ctx.fill(); ctx.stroke();
+        ctx.shadowBlur = 0;
 
-        this.lasers = this.lasers.filter(function(l){
-            ctx.strokeStyle = l.color; ctx.lineWidth = 5;
-            ctx.beginPath(); ctx.moveTo(game.cx, game.height); ctx.lineTo(l.tx, l.ty); ctx.stroke();
-            l.life -= 0.1; return l.life > 0;
-        });
+        ctx.fillStyle = '#FFF'; ctx.font = 'bold 24px Arial';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
-        for(var i=0; i<this.bubbles.length; i++) {
-            var b = this.bubbles[i];
-            var s = b.r * b.scale;
-            ctx.beginPath(); ctx.arc(b.x, b.y, s, 0, 6.28);
-            ctx.fillStyle = b.locked ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.5)';
-            ctx.fill();
-            
-            var strokeCol = b.color;
-            var lineW = 2;
-            if (b.missedTime > 0) { strokeCol = COLORS.missed; lineW = 4; }
-            else if (b.locked) { strokeCol = COLORS.lock; lineW = 4; }
-            
-            ctx.strokeStyle = strokeCol; ctx.lineWidth = lineW; ctx.stroke();
-            
-            if(b.locked && b.order > 0) {
-                ctx.beginPath(); ctx.arc(b.x, b.y, s+5, 0, 6.28); ctx.stroke();
-            }
+        // チャージ中はラベルをプログレスで変化
+        var label = 'SHOT';
+        if (btnState === 'charge') {
+            var prog = this.chargeTimer / this.chargeDuration;
+            label = (prog < 0.5) ? 'READY...' : 'FIRE!!';
+        } else if (btnState === 'full') {
+            label = 'SHOT! ×' + lockedCount;
+        } else if (btnState === 'ready') {
+            label = 'SHOT ×' + lockedCount;
+        }
+        ctx.fillText(label, bf.x + bf.w / 2, bf.y + bf.h / 2);
+    },
 
-            ctx.fillStyle = '#FFF'; ctx.font = 'bold 20px Arial';
-            ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; 
-            var txt = (b.type==='num') ? b.val : OPS[b.val].label;
-            ctx.fillText(txt, b.x, b.y);
+    // ─── タイトル/ゲームオーバーオーバーレイ ─────────────────
+    _drawOverlay: function(ctx) {
+        ctx.fillStyle = 'rgba(0,0,0,0.85)';
+        ctx.fillRect(0, 0, this.width, this.height);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = COLORS.accent; ctx.font = 'bold 40px Arial';
+        ctx.textBaseline = 'middle';
+        ctx.fillText("SHRIMP SHOOTING", this.cx, this.cy - 50);
+
+        if (this.state === 'gameover') {
+            ctx.fillStyle = COLORS.warn; ctx.font = 'bold 32px Arial';
+            ctx.fillText("FINISH", this.cx, this.cy - 100);
+            ctx.fillStyle = '#FFF'; ctx.font = 'bold 28px Arial';
+            ctx.fillText("SCORE: " + this.score, this.cx, this.cy);
         }
 
-        this.effects = this.effects.filter(function(e){
-            ctx.fillStyle = e.color; ctx.font = 'bold 28px Arial';
-            ctx.fillText(e.text, e.x, e.y);
-            e.y -= 1; e.life -= 0.02; return e.life > 0;
-        });
-
-        if (this.state === 'playing') {
-            var ba = this.ui.btnAuto;
-            ctx.fillStyle = 'rgba(0,50,50,0.8)'; ctx.strokeStyle = COLORS.accent; ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.arc(ba.x, ba.y, ba.r, 0, 6.28); ctx.fill(); ctx.stroke();
-            ctx.fillStyle = COLORS.accent; ctx.font = 'bold 14px Arial';
-            ctx.fillText(ba.label, ba.x, ba.y+5);
-
-            var br = this.ui.btnReset;
-            ctx.fillStyle = 'rgba(50,50,50,0.8)'; ctx.strokeStyle = '#CCC';
-            ctx.beginPath(); ctx.arc(br.x, br.y, br.r, 0, 6.28); ctx.fill(); ctx.stroke();
-            ctx.fillStyle = '#CCC'; ctx.font = 'bold 10px Arial';
-            ctx.fillText(br.label, br.x, br.y+4);
-
-            var bf = this.ui.btnFire;
-            var isReady = false; 
-            for(var i=0; i<this.bubbles.length; i++) if(this.bubbles[i].locked) isReady=true;
-            
-            ctx.fillStyle = isReady ? 'rgba(255,65,54,0.9)' : 'rgba(50,0,0,0.5)';
-            ctx.strokeStyle = isReady ? '#FFF' : '#555';
-            ctx.lineWidth = 3;
-            ctx.beginPath(); ctx.rect(bf.x, bf.y, bf.w, bf.h); ctx.fill(); ctx.stroke();
-            ctx.fillStyle = '#FFF'; ctx.font = 'bold 24px Arial';
-            ctx.fillText(bf.label, bf.x + bf.w/2, bf.y + bf.h/2);
-        }
-
-        if (this.state !== 'playing') {
-            ctx.fillStyle = 'rgba(0,0,0,0.85)';
-            ctx.fillRect(0, 0, this.width, this.height);
-            ctx.textAlign = 'center';
-            ctx.fillStyle = COLORS.accent; ctx.font = 'bold 40px Arial';
-            ctx.fillText("BUBBLE SHOT", this.cx, this.cy - 50);
-            
-            if (this.state === 'gameover') {
-                ctx.fillStyle = COLORS.warn;
-                ctx.fillText("FINISH", this.cx, this.cy - 100);
-                ctx.fillStyle = '#FFF';
-                ctx.fillText("SCORE: " + this.score, this.cx, this.cy);
-            }
-
-            ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 3;
-            ctx.strokeRect(this.cx - 100, this.cy + 30, 200, 60);
-            ctx.fillStyle = COLORS.gold; ctx.font = 'bold 24px Arial';
-            var msg = (this.state==='title') ? "TAP TO START" : "TAP TO RETRY";
-            ctx.fillText(msg, this.cx, this.cy + 65);
-        }
-
-        requestAnimationFrame(function(){ game.loop(); });
+        ctx.strokeStyle = COLORS.gold; ctx.lineWidth = 3;
+        ctx.strokeRect(this.cx - 100, this.cy + 30, 200, 60);
+        ctx.fillStyle = COLORS.gold; ctx.font = 'bold 24px Arial';
+        var msg = (this.state === 'title') ? "TAP TO START" : "TAP TO RETRY";
+        ctx.fillText(msg, this.cx, this.cy + 65);
     }
 };
 
 window.onload = function() { game.init(); };
-
 </script>
 </body>
 </html>
