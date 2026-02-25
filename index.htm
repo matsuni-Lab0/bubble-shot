@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Shrimp Shooting Ver 21.0</title>
+    <title>Shrimp Shooting Ver 21.1</title>
     <style>
         * { box-sizing: border-box; }
         body { 
@@ -26,25 +26,17 @@
     </style>
 </head>
 <body>
-<div id="version-badge">Ver 21.0</div>
+<div id="version-badge">Ver 21.1</div>
 <canvas id="gameCanvas"></canvas>
 
 <script>
 /**
- * Shrimp Shooting Ver 21.0
+ * Shrimp Shooting Ver 21.1
  * ─────────────────────────────────────────────────────────────
- * 改修内容：
- *  - マルチロック → 一斉発射の演出強化（チャージ・連射・着弾）
- *  - ロックオン時のリングパルス演出
- *  - スマホ互換性強化（pointer/touch/mouseフォールバック）
- *  - replenishの無限ループ対策
- *  - dtキャップによるタブ非アクティブ時の時間跳躍対策
- *  - filter内副作用の分離（描画とフィルタを分離）
- *  - SHOTボタン状態表現強化（ロック数に応じた視覚変化）
- *  - えびグラタン司令官セリフ強化
- *  - 着弾エフェクト（スパーク）追加
- *  - autoLockのRESETエフェクト誤発火修正
- *  - バージョン表示
+ * Ver 21.0 → 21.1 差分修正（3点）：
+ *  1. ミッション時間バーの分母をmission種別ごとの制限時間に修正
+ *  2. レーザー線幅のロック数連動：発射時点のロック数を保持して反映
+ *  3. nextMission()内のresetLocksをsilent化（RESETエフェクト抑制）
  * ─────────────────────────────────────────────────────────────
  */
 
@@ -384,13 +376,16 @@ var game = {
         }
 
         // 連射キューを構築（超短時差）
+        // ★発射時点のロック数を保持 → バブル除去後に参照しないよう先にキャプチャ
+        var shotCount = locked.length;
         this.burstQueue = [];
         for (var i = 0; i < locked.length; i++) {
             this.burstQueue.push({
                 tx: locked[i].x,
                 ty: locked[i].y,
                 color: isHit ? COLORS.accent : COLORS.warn,
-                delay: i * this.burstInterval
+                delay: i * this.burstInterval,
+                shotCount: shotCount  // 発射時点のロック数を各ショットに持たせる
             });
         }
         this.burstTimer = 0;
@@ -470,7 +465,8 @@ var game = {
             this.setupFormulaBuilder();
         }
         this.missionTime = GAME_CONFIG.missionTimeLimits[this.mission.type] || 15;
-        this.resetLocks();
+        this._silentResetLocks(); // ★ミッション遷移時はRESETエフェクトを出さない
+        this.updateOperatorGuidance(); // ロック解除後の司令官表示を更新
         this.chargeState = 'idle';
         this.burstQueue = [];
     },
@@ -713,7 +709,7 @@ var game = {
                     while (this.burstQueue.length > 0 && this.burstTimer >= this.burstQueue[0].delay) {
                         var shot = this.burstQueue.shift();
                         var laserColor = shot.color;
-                        var lineW = 3 + this.getLockedCount() * 0.5;
+                        var lineW = 3 + shot.shotCount * 0.5;
                         this.lasers.push({
                             tx: shot.tx, ty: shot.ty,
                             color: laserColor,
@@ -943,7 +939,8 @@ var game = {
         ctx.textAlign = 'center';
         var barY = 110;
         ctx.fillStyle = '#333'; ctx.fillRect(this.cx - 100, barY, 200, 6);
-        var prog = Math.max(0, this.missionTime / 15);
+        var missionLimit = GAME_CONFIG.missionTimeLimits[this.mission.type] || 15;
+        var prog = Math.max(0, this.missionTime / missionLimit);
         ctx.fillStyle = prog < 0.3 ? COLORS.warn : COLORS.accent;
         ctx.fillRect(this.cx - 100, barY, 200 * prog, 6);
 
